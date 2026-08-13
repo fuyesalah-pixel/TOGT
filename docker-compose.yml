@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: togt-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-togt_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_in_local_env}
+      POSTGRES_DB: ${POSTGRES_DB:-togt_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - togt-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-togt_admin} -d ${POSTGRES_DB:-togt_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  valkey:
+    image: valkey/valkey:7-alpine
+    container_name: togt-valkey
+    restart: unless-stopped
+    ports:
+      - "${VALKEY_PORT:-6379}:6379"
+    volumes:
+      - valkey_data:/data
+    networks:
+      - togt-network
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  togt-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  valkey_data:

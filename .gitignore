@@ -1,0 +1,70 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Env files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Next.js
+.next/
+out/
+togt-web/.next/
+togt-web/out/
+togt-web/build/
+
+# NestJS / Node build output
+dist/
+togt-api/dist/
+build/
+
+# Prisma
+togt-api/prisma/*.db
+togt-api/prisma/migrations/dev.db
+
+# React Native / Expo
+togt-mobile/.expo/
+togt-mobile/dist/
+togt-mobile/web-build/
+togt-mobile/*.jks
+togt-mobile/*.p8
+togt-mobile/*.p12
+togt-mobile/*.key
+togt-mobile/*.mobileprovision
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing / coverage
+coverage/
+.nyc_output/
+
+# Docker volumes (bind mounts, if any local)
+docker-data/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# TypeScript
+*.tsbuildinfo
+
+# Misc
+.cache/
+.turbo/
