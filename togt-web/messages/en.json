@@ -1,0 +1,197 @@
+{
+  "Nav": {
+    "home": "Home",
+    "about": "About",
+    "umrah": "Umrah",
+    "domestic": "Domestic Tours",
+    "foreigner": "Foreigner Tours",
+    "ticket": "Ticket Office",
+    "visa": "Visa Processing",
+    "smartForm": "Get Started",
+    "faq": "FAQ",
+    "testimonials": "Testimonials",
+    "contact": "Contact",
+    "login": "Sign In"
+  },
+  "Hero": {
+    "badge": "IATA Accredited Agency \u00b7 Addis Ababa, Ethiopia",
+    "title": "Your Journey, Our Mission",
+    "subtitle": "Ticketing, Umrah, Domestic & International Tours, Visa Processing, and Travel Consulting \u2014 all under one trusted roof.",
+    "ctaPrimary": "Explore Our Services",
+    "ctaSecondary": "Talk to an Expert",
+    "EXPLORE_ETHIOPIA": "Explore Ethiopia",
+    "HERO_DOMESTIC_TITLE": "Discover the Beauty of Domestic Tours",
+    "HERO_DOMESTIC_SUBTITLE": "Unforgettable journeys across Ethiopia's breathtaking landscapes",
+    "HERO_DOMESTIC_CTA": "Book Your Adventure",
+    "HERO_UMRAH_EYEBROW": "Spiritual Journey",
+    "HERO_UMRAH_TITLE": "Complete Your Umrah with TOGT",
+    "HERO_UMRAH_SUBTITLE": "Guided packages with experienced Imams, full support from start to end",
+    "HERO_UMRAH_CTA": "Explore Umrah Packages",
+    "HERO_TICKET_EYEBROW": "Fly With Confidence",
+    "HERO_TICKET_TITLE": "IATA-Certified Flight Ticketing",
+    "HERO_TICKET_SUBTITLE": "Best fares, instant booking, and professional refund processing",
+    "HERO_TICKET_CTA": "Book a Ticket",
+    "HERO_IATA_EYEBROW": "Trusted Partner",
+    "HERO_IATA_TITLE": "Proud IATA Member Agency",
+    "HERO_IATA_SUBTITLE": "Your guarantee of professional, reliable, and secure travel services",
+    "HERO_IATA_CTA": "Why Choose TOGT",
+    "HERO_VISA_EYEBROW": "Hassle-Free Visas",
+    "HERO_VISA_TITLE": "Visa Processing Made Simple",
+    "HERO_VISA_SUBTITLE": "Visit, medical, and family visas — we handle the paperwork",
+    "HERO_VISA_CTA": "Start Visa Application"
+  },
+  "About": {
+    "title": "About TOGT Tour & Travel",
+    "body": "TOGT Tour & Travel is a full-service, IATA-accredited travel agency based in Addis Ababa, Ethiopia. For years we have guided pilgrims to Umrah, connected travelers to the world through official airline ticketing, and welcomed visitors to explore Ethiopia's rich heritage.",
+    "videoTitle": "See TOGT in Action"
+  },
+  "Umrah": {
+    "title": "Umrah Packages",
+    "subtitle": "Economy, VIP, Honeymoon, or fully Custom \u2014 travel to the Holy Cities with peace of mind.",
+    "economy": "Economy",
+    "vip": "VIP",
+    "honeymoon": "Honeymoon",
+    "custom": "Custom Package",
+    "gift": "Give the Gift of Umrah",
+    "giftBody": "Send a full or half-sponsored Umrah package to a loved one, friend, or top performer.",
+    "cta": "Book This Package",
+    "customCta": "Build Your Own Package"
+  },
+  "WhyTogt": {
+    "title": "Why TOGT Is Different",
+    "iata": "IATA Accredited Member",
+    "iataBody": "Direct access to official airline ticketing systems \u2014 no middlemen, transparent fares.",
+    "experience": "Years of Trusted Service",
+    "experienceBody": "Thousands of pilgrims and travelers served across Umrah, tours, and visa processing.",
+    "support": "24/7 Support",
+    "supportBody": "Real humans and AI assistance whenever you need us, in your language."
+  },
+  "Ticket": {
+    "title": "Ticket Office",
+    "body": "As an IATA member, we issue, reissue, and refund flight tickets through official airline systems \u2014 with transparent fares and dedicated support.",
+    "cta": "Request a Ticket"
+  },
+  "Domestic": {
+    "title": "Domestic Tours",
+    "subtitle": "School trips, honeymoons, friends' getaways, and corporate retreats across Ethiopia.",
+    "customCta": "Design a Custom Tour"
+  },
+  "Foreigner": {
+    "title": "Foreigner Tours",
+    "subtitle": "Airport-to-airport service for international visitors exploring Ethiopia.",
+    "customCta": "Design a Custom Tour"
+  },
+  "Visa": {
+    "title": "Visa Processing",
+    "body": "Visit, medical, and family visas \u2014 we handle documentation, submission, and status tracking from start to finish.",
+    "cta": "Start Visa Application"
+  },
+  "SmartForm": {
+    "title": "Smart Form",
+    "subtitle": "Tell us what you need \u2014 we'll take it from there.",
+    "tabs": {
+      "ticket": "Ticket",
+      "umrah": "Umrah",
+      "domestic": "Domestic",
+      "tourist": "Tourist",
+      "visa": "Visa",
+      "contact": "Contact Us"
+    },
+    "common": {
+      "fullName": "Full Name (as per passport)",
+      "phone": "Phone Number",
+      "email": "Email Address",
+      "passportNumber": "Passport Number",
+      "passportExpiry": "Passport Expiry Date",
+      "submit": "Submit Request",
+      "submitting": "Submitting...",
+      "successTitle": "Request Received!",
+      "successBody": "Thank you. Our team will contact you shortly. Reference will be sent to your email.",
+      "selectedPackage": "Selected Package",
+      "required": "This field is required"
+    },
+    "ticket": {
+      "dob": "Date of Birth",
+      "nationality": "Nationality",
+      "origin": "Origin",
+      "destination": "Destination",
+      "departureDate": "Departure Date",
+      "returnDate": "Return Date (optional)",
+      "cabinClass": "Cabin Class",
+      "passengerCount": "Number of Passengers",
+      "specialRequirements": "Special Requirements (optional)"
+    },
+    "umrah": {
+      "packageType": "Package Type",
+      "hotelTier": "Hotel Tier",
+      "transportType": "Transport Type",
+      "groupSize": "Group Size",
+      "includeImam": "Include Imam Guide",
+      "preferredDates": "Preferred Travel Dates",
+      "numberOfTravelers": "Number of Travelers",
+      "mahramRelationship": "Mahram Relationship (required for women under 45)",
+      "isGift": "This is a gift",
+      "giftType": "Gift Type",
+      "giftFull": "Full Gift (100% paid by sender)",
+      "giftHalf": "Half Gift (50% paid by sender)",
+      "recipientName": "Recipient Full Name",
+      "recipientPhone": "Recipient Phone",
+      "recipientEmail": "Recipient Email",
+      "giftHalfNote": "Recipient will need to pay the remaining 50% before travel."
+    },
+    "domestic": {
+      "segment": "Trip Type",
+      "segmentSchool": "School Trip",
+      "segmentHoneymoon": "Honeymoon",
+      "segmentFriends": "Friends Vacation",
+      "segmentCorporate": "Corporate Trip",
+      "segmentCustom": "Custom",
+      "destinations": "Preferred Destinations",
+      "dates": "Preferred Dates",
+      "groupSize": "Group Size",
+      "transportPreference": "Transport Preference",
+      "hotelTier": "Hotel Tier"
+    },
+    "tourist": {
+      "route": "Preferred Route",
+      "arrivalDate": "Arrival Date",
+      "departureDate": "Departure Date",
+      "preferredLanguage": "Preferred Guide Language",
+      "interests": "Interests",
+      "numberOfTravelers": "Number of Travelers",
+      "nationality": "Nationality"
+    },
+    "visa": {
+      "visaType": "Visa Type",
+      "visaVisit": "Visit Visa",
+      "visaMedical": "Medical Visa",
+      "visaFamily": "Family Visa",
+      "destinationCountry": "Destination Country",
+      "purposeDetails": "Purpose Details",
+      "sponsorRelationship": "Sponsor Relationship (family visa)",
+      "hospitalName": "Hospital Name (medical visa)"
+    },
+    "contact": {
+      "subject": "Subject",
+      "message": "Message"
+    }
+  },
+  "Faq": {
+    "title": "Frequently Asked Questions"
+  },
+  "Testimonials": {
+    "title": "What Our Travelers Say",
+    "seeMore": "See More",
+    "noMore": "No more reviews"
+  },
+  "Footer": {
+    "rights": "All rights reserved.",
+    "quickLinks": "Quick Links",
+    "services": "Services",
+    "contact": "Contact Us"
+  },
+  "Floating": {
+    "whatsapp": "Chat on WhatsApp",
+    "ai": "Ask our AI Assistant"
+  }
+}
