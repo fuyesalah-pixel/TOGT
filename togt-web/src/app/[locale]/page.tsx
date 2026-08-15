@@ -24,14 +24,14 @@ export default function HomePage() {
         <Hero />
         <About />
         <UmrahSection />
+        <DomesticSection />
+        <ForeignerSection />
+        <GallerySection />
         <WhyTogt />
         <IATASection />
         <TicketSection />
-        <DomesticSection />
-        <ForeignerSection />
         <VisaSection />
         <SmartFormSection />
-        <GallerySection />
         <FaqSection />
         <TestimonialsSection />
       </main>

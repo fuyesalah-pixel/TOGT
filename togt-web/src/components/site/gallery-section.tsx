@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MapPin, Calendar, ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { galleryItems, CATEGORY_COLORS, type GalleryItem } from "@/lib/data/gallery";
 
 const EASE = [0.22, 1, 0.36, 1] as [number, number, number, number];
@@ -163,9 +164,13 @@ function GalleryModal({
 function AllGalleryModal({
   onClose,
   onSelect,
+  browseAll,
+  fullGallery,
 }: {
   onClose: () => void;
   onSelect: (item: GalleryItem) => void;
+  browseAll: string;
+  fullGallery: string;
 }) {
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -204,10 +209,10 @@ function AllGalleryModal({
         <div className="flex-shrink-0 bg-white/95 backdrop-blur-md border-b border-gray-100 px-4 md:px-8 py-4 flex items-center justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#FF9300] mb-0.5">
-              Browse All
+              {browseAll}
             </p>
             <h3 className="text-lg md:text-2xl font-extrabold text-[#12394F]">
-              Full Gallery
+              {fullGallery}
             </h3>
           </div>
           <button
@@ -242,10 +247,12 @@ function GalleryCard({
   item,
   index,
   onClick,
+  viewGalleryLabel,
 }: {
   item: GalleryItem;
   index: number;
   onClick: () => void;
+  viewGalleryLabel: string;
 }) {
   const badgeColor = CATEGORY_COLORS[item.category] ?? "#FF9300";
 
@@ -294,7 +301,7 @@ function GalleryCard({
             className="bg-white text-[#12394F] font-bold text-sm px-5 py-2.5 rounded-full shadow-xl
                        translate-y-4 group-hover:translate-y-0 transition-transform duration-400"
           >
-            View Gallery →
+            {viewGalleryLabel}
           </span>
         </div>
       </div>
@@ -304,80 +311,59 @@ function GalleryCard({
 
 /* ── Main gallery section ───────────────────────────────────────────── */
 export function GallerySection() {
+  const t = useTranslations("Gallery");
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
   const [showAllModal, setShowAllModal] = useState(false);
-
   const preview = galleryItems.slice(0, PREVIEW_COUNT);
 
   return (
     <section id="gallery" className="py-20 md:py-24 bg-gradient-to-b from-gray-50 to-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
-        {/* ── Header ───────────────────────────────────────────── */}
-        <motion.div
-          className="text-center mb-12 md:mb-14"
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, ease: EASE }}
+        <motion.div className="text-center mb-12 md:mb-14"
+          initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }} transition={{ duration: 0.6, ease: EASE }}
         >
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="h-[2px] w-10 bg-gradient-to-r from-transparent to-[#FF9300] rounded-full" />
-            <span className="text-[#FF9300] font-bold tracking-[0.25em] text-xs uppercase">
-              Gallery
-            </span>
+            <span className="text-[#FF9300] font-bold tracking-[0.25em] text-xs uppercase">{t("eyebrow")}</span>
             <div className="h-[2px] w-10 bg-gradient-to-l from-transparent to-[#FF9300] rounded-full" />
           </div>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#12394F]">
-            Explore Our <span className="text-[#FF9300]">World</span>
+            {t("titleMain")} <span className="text-[#FF9300]">{t("titleHighlight")}</span>
           </h2>
-          <p className="mt-4 text-sm md:text-base text-gray-500 max-w-xl mx-auto">
-            Travel moments and milestones captured by the TOGT team
-          </p>
+          <p className="mt-4 text-sm md:text-base text-gray-500 max-w-xl mx-auto">{t("subtitle")}</p>
         </motion.div>
 
-        {/* ── Cards grid ───────────────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
           {preview.map((item, i) => (
-            <GalleryCard
-              key={item.id}
-              item={item}
-              index={i}
-              onClick={() => setSelectedItem(item)}
-            />
+            <GalleryCard key={item.id} item={item} index={i}
+              viewGalleryLabel={t("viewGallery")}
+              onClick={() => setSelectedItem(item)} />
           ))}
         </div>
 
-        {/* ── See More button ───────────────────────────────────── */}
         <div className="flex justify-center mt-10 md:mt-12">
-          <button
-            onClick={() => setShowAllModal(true)}
+          <button onClick={() => setShowAllModal(true)}
             className="group inline-flex items-center gap-2 px-7 md:px-10 py-3.5 md:py-4 rounded-full font-bold text-sm border-2 border-[#FF9300] text-[#FF9300] overflow-hidden relative transition-all duration-300 hover:text-white hover:shadow-lg hover:shadow-[#FF9300]/30"
           >
             <span className="absolute inset-0 bg-[#FF9300] scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300" />
-            <span className="relative z-10">See More Gallery</span>
+            <span className="relative z-10">{t("seeMore")}</span>
             <ArrowRight className="relative z-10 w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
           </button>
         </div>
-
       </div>
 
-      {/* ── Gallery detail modal ──────────────────────────────── */}
       <AnimatePresence>
-        {selectedItem && (
-          <GalleryModal
-            item={selectedItem}
-            onClose={() => setSelectedItem(null)}
-          />
-        )}
+        {selectedItem && <GalleryModal item={selectedItem} onClose={() => setSelectedItem(null)} />}
       </AnimatePresence>
 
-      {/* ── All gallery modal ─────────────────────────────────── */}
       <AnimatePresence>
         {showAllModal && (
           <AllGalleryModal
             onClose={() => setShowAllModal(false)}
             onSelect={item => setSelectedItem(item)}
+            browseAll={t("browseAll")}
+            fullGallery={t("fullGallery")}
           />
         )}
       </AnimatePresence>

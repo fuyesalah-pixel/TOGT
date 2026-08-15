@@ -17,8 +17,6 @@ export function WhyTogt() {
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-
-      {/* Unified section header */}
       <motion.div
         className="text-center mb-12 md:mb-16"
         initial={{ opacity: 0, y: 28 }}
@@ -29,15 +27,15 @@ export function WhyTogt() {
         <div className="flex items-center justify-center gap-3 mb-4">
           <div className="h-[2px] w-8 md:w-10 bg-gradient-to-r from-transparent to-[#FF9300] rounded-full" />
           <span className="text-[#FF9300] font-semibold tracking-[0.25em] text-xs md:text-sm uppercase">
-            Why Choose Us
+            {t("eyebrow")}
           </span>
           <div className="h-[2px] w-8 md:w-10 bg-gradient-to-l from-transparent to-[#FF9300] rounded-full" />
         </div>
         <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#12394F]">
-          Why TOGT Is <span className="text-[#FF9300]">Different</span>
+          {t("titleMain")} <span className="text-[#FF9300]">{t("titleHighlight")}</span>
         </h2>
         <p className="text-gray-500 mt-4 text-sm md:text-base max-w-2xl mx-auto">
-          What sets us apart from every other travel agency
+          {t("subtitle")}
         </p>
       </motion.div>
 

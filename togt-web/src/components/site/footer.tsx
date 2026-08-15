@@ -107,7 +107,7 @@ export function Footer() {
 
             {/* Description */}
             <p className="text-white/55 text-sm leading-relaxed max-w-xs">
-              Your trusted, IATA-certified travel partner in Addis Ababa, Ethiopia. Specialising in ticketing, Umrah packages, domestic and international tours, and visa services.
+              {t("description")}
             </p>
 
             {/* IATA badge */}
@@ -117,7 +117,7 @@ export function Footer() {
             >
               <span className="text-[#FF9300] font-extrabold text-xs tracking-widest uppercase">IATA</span>
               <span className="w-px h-3 bg-white/20" />
-              <span className="text-white/55 text-xs">Accredited Agency</span>
+              <span className="text-white/55 text-xs">{t("iataBadge")}</span>
             </div>
 
             {/* Social icons */}
@@ -168,14 +168,14 @@ export function Footer() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.08, ease: EASE }}
           >
-            <ColHeading>Services</ColHeading>
+            <ColHeading>{t("services")}</ColHeading>
             <ul className="space-y-2.5">
-              <FooterLink href="#ticket">Flight Ticketing</FooterLink>
+              <FooterLink href="#ticket">{t("flightTicketing")}</FooterLink>
               <FooterLink href="#umrah">{nav("umrah")}</FooterLink>
               <FooterLink href="#domestic">{nav("domestic")}</FooterLink>
               <FooterLink href="#foreigner">{nav("foreigner")}</FooterLink>
               <FooterLink href="#visa">{nav("visa")}</FooterLink>
-              <FooterLink href="#smart-form">Travel Consulting</FooterLink>
+              <FooterLink href="#smart-form">{t("travelConsulting")}</FooterLink>
             </ul>
           </motion.div>
 
@@ -186,14 +186,14 @@ export function Footer() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.14, ease: EASE }}
           >
-            <ColHeading>Quick Links</ColHeading>
+            <ColHeading>{t("quickLinks")}</ColHeading>
             <ul className="space-y-2.5">
               <FooterLink href="#about">{nav("about")}</FooterLink>
-              <FooterLink href="#iata">Why TOGT</FooterLink>
-              <FooterLink href="#gallery">Gallery</FooterLink>
-              <FooterLink href="#faq">FAQ</FooterLink>
-              <FooterLink href="#testimonials">Reviews</FooterLink>
-              <FooterLink href="#smart-form">Contact Us</FooterLink>
+              <FooterLink href="#iata">{t("whyTogt")}</FooterLink>
+              <FooterLink href="#gallery">{t("gallery")}</FooterLink>
+              <FooterLink href="#faq">{nav("faq")}</FooterLink>
+              <FooterLink href="#testimonials">{t("reviews")}</FooterLink>
+              <FooterLink href="#smart-form">{nav("contact")}</FooterLink>
             </ul>
           </motion.div>
 
@@ -243,15 +243,15 @@ export function Footer() {
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.25, ease: EASE }}
         >
-          <ColHeading>Resources</ColHeading>
+          <ColHeading>{t("resources")}</ColHeading>
           <ul className="flex flex-wrap gap-x-6 gap-y-2.5">
-            <FooterLink href="/blog" external>Travel Blog</FooterLink>
-            <FooterLink href="/umrah-guide">Umrah Guide</FooterLink>
-            <FooterLink href="/visa-requirements">Visa Requirements</FooterLink>
-            <FooterLink href="/terms">Terms &amp; Conditions</FooterLink>
-            <FooterLink href="/privacy">Privacy Policy</FooterLink>
-            <FooterLink href="/refund-policy">Refund Policy</FooterLink>
-            <FooterLink href="/support">Customer Support</FooterLink>
+            <FooterLink href="/blog" external>{t("blog")}</FooterLink>
+            <FooterLink href="/umrah-guide">{t("umrahGuide")}</FooterLink>
+            <FooterLink href="/visa-requirements">{t("visaRequirements")}</FooterLink>
+            <FooterLink href="/terms">{t("terms")}</FooterLink>
+            <FooterLink href="/privacy">{t("privacy")}</FooterLink>
+            <FooterLink href="/refund-policy">{t("refundPolicy")}</FooterLink>
+            <FooterLink href="/support">{t("support")}</FooterLink>
           </ul>
         </motion.div>
 
@@ -261,7 +261,7 @@ export function Footer() {
             &copy; {year} TOGT Tour &amp; Travel. {t("rights")}
           </p>
           <p className="text-white/25 text-xs">
-            IATA Accredited Agency &middot; Addis Ababa, Ethiopia
+            {t("iataFooterNote")}
           </p>
         </div>
 

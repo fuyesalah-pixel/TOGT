@@ -41,6 +41,10 @@
     "HERO_VISA_CTA": "Start Visa Application"
   },
   "About": {
+    "eyebrow": "About Us",
+    "titleMain": "Who We",
+    "titleHighlight": "Are",
+    "subtitle": "Your trusted, IATA-accredited travel partner in Addis Ababa, Ethiopia",
     "title": "About TOGT Tour & Travel",
     "body": "TOGT Tour & Travel is a full-service, IATA-accredited travel agency based in Addis Ababa, Ethiopia. For years we have guided pilgrims to Umrah, connected travelers to the world through official airline ticketing, and welcomed visitors to explore Ethiopia's rich heritage.",
     "videoTitle": "See TOGT in Action"
@@ -58,6 +62,10 @@
     "customCta": "Build Your Own Package"
   },
   "WhyTogt": {
+    "eyebrow": "Why Choose Us",
+    "titleMain": "Why TOGT Is",
+    "titleHighlight": "Different",
+    "subtitle": "What sets us apart from every other travel agency",
     "title": "Why TOGT Is Different",
     "iata": "IATA Accredited Member",
     "iataBody": "Direct access to official airline ticketing systems \u2014 no middlemen, transparent fares.",
@@ -176,8 +184,41 @@
       "message": "Message"
     }
   },
+  "Iata": {
+    "eyebrow": "IATA Accredited Member Agency",
+    "title": "Proud IATA Member Agency",
+    "description": "We work with the International Air Transport Association (IATA) — connecting you to over 370 member airlines across 120+ countries, covering 85% of global air traffic.",
+    "counter1Label": "Member Airlines",
+    "counter1Sub": "worldwide",
+    "counter2Label": "Countries",
+    "counter2Sub": "served globally",
+    "counter3Label": "Global Air Traffic",
+    "counter3Sub": "coverage",
+    "partnerAirlines": "Our Partner Airlines",
+    "andMore": "and 360+ more IATA member airlines worldwide",
+    "badge1Title": "IATA Accredited",
+    "badge1Body": "Direct access to official airline ticketing systems — no middlemen, transparent fares.",
+    "badge2Title": "Transparent Fares",
+    "badge2Body": "Best available fares through the official IATA distribution network.",
+    "badge3Title": "Global Reach",
+    "badge3Body": "Book flights to any destination served by IATA member carriers."
+  },
+  "Gallery": {
+    "eyebrow": "Gallery",
+    "titleMain": "Explore Our",
+    "titleHighlight": "World",
+    "subtitle": "Travel moments and milestones captured by the TOGT team",
+    "seeMore": "See More Gallery",
+    "viewGallery": "View Gallery →",
+    "browseAll": "Browse All",
+    "fullGallery": "Full Gallery"
+  },
   "Faq": {
-    "title": "Frequently Asked Questions"
+    "eyebrow": "FAQ",
+    "title": "Frequently Asked Questions",
+    "subtitle": "Everything you need to know about our travel services",
+    "contactCta": "Still have questions?",
+    "contactButton": "Contact Us"
   },
   "Testimonials": {
     "title": "What Our Travelers Say",
@@ -188,7 +229,23 @@
     "rights": "All rights reserved.",
     "quickLinks": "Quick Links",
     "services": "Services",
-    "contact": "Contact Us"
+    "contact": "Contact Us",
+    "resources": "Resources",
+    "description": "Your trusted, IATA-certified travel partner in Addis Ababa, Ethiopia. Specialising in ticketing, Umrah packages, domestic and international tours, and visa services.",
+    "iataBadge": "Accredited Agency",
+    "iataFooterNote": "IATA Accredited Agency \u00b7 Addis Ababa, Ethiopia",
+    "flightTicketing": "Flight Ticketing",
+    "travelConsulting": "Travel Consulting",
+    "whyTogt": "Why TOGT",
+    "gallery": "Gallery",
+    "reviews": "Reviews",
+    "blog": "Travel Blog",
+    "umrahGuide": "Umrah Guide",
+    "visaRequirements": "Visa Requirements",
+    "terms": "Terms & Conditions",
+    "privacy": "Privacy Policy",
+    "refundPolicy": "Refund Policy",
+    "support": "Customer Support"
   },
   "Floating": {
     "whatsapp": "Chat on WhatsApp",
