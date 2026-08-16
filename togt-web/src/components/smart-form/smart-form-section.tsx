@@ -4,8 +4,6 @@ import { useTranslations } from "next-intl";
 import {
   Tabs,
   TabsContent,
-  TabsList,
-  TabsTrigger,
 } from "@/components/ui/tabs";
 import { useSmartForm, type SmartFormTab } from "./smart-form-context";
 import { TicketFormTab } from "./tabs/ticket-form-tab";

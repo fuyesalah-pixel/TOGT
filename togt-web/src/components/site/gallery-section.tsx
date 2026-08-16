@@ -252,7 +252,7 @@ function GalleryCard({
   item: GalleryItem;
   index: number;
   onClick: () => void;
-  viewGalleryLabel: string;
+  viewGalleryLabel?: string;
 }) {
   const badgeColor = CATEGORY_COLORS[item.category] ?? "#FF9300";
 
