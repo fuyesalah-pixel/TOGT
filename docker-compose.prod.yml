@@ -2,9 +2,7 @@ version: "3.9"
 
 services:
   togt-web:
-    build:
-      context: https://github.com/fuyesalah-pixel/TOGT.git#main
-      dockerfile: togt-web/Dockerfile
+    image: ghcr.io/fuyesalah-pixel/togt-web:main
     container_name: togt-web
     restart: unless-stopped
     environment:
@@ -12,17 +10,10 @@ services:
       - PORT=3000
       - HOSTNAME=0.0.0.0
       - NEXT_PUBLIC_APP_URL=https://travel.togttrading.com
-    networks:
-      - traefik_default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=traefik_default"
       - "traefik.http.routers.togt-web.rule=Host(`travel.togttrading.com`)"
-      - "traefik.http.routers.togt-web.entrypoints=https"
+      - "traefik.http.routers.togt-web.entrypoints=websecure"
       - "traefik.http.routers.togt-web.tls=true"
       - "traefik.http.routers.togt-web.tls.certresolver=letsencrypt"
       - "traefik.http.services.togt-web.loadbalancer.server.port=3000"
-
-networks:
-  traefik_default:
-    external: true
