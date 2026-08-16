@@ -30,8 +30,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./togt-web
-          file: ./togt-web/Dockerfile
+          file: Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/togt-web:main
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
