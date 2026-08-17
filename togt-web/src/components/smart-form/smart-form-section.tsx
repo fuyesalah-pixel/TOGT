@@ -11,17 +11,19 @@ import { UmrahFormTab } from "./tabs/umrah-form-tab";
 import { DomesticFormTab } from "./tabs/domestic-form-tab";
 import { TouristFormTab } from "./tabs/tourist-form-tab";
 import { VisaFormTab } from "./tabs/visa-form-tab";
+import { ForeignTravelFormTab } from "./tabs/foreign-travel-form-tab";
 import { ContactFormTab } from "./tabs/contact-form-tab";
-import { Plane, Mosque, Mountain, Globe, BadgeCheck, MessageSquare } from "lucide-react";
+import { Plane, Mosque, Mountain, Globe, BadgeCheck, MessageSquare, PlaneTakeoff } from "lucide-react";
 
 /* ── Tab definitions ──────────────────────────────────────────────────── */
 const TAB_CONFIG: { value: SmartFormTab; icon: React.ReactNode; labelKey: string }[] = [
-  { value: "ticket",   icon: <Plane        className="h-4 w-4 flex-shrink-0" />, labelKey: "tabs.ticket"   },
-  { value: "umrah",    icon: <Mosque       className="h-4 w-4 flex-shrink-0" />, labelKey: "tabs.umrah"    },
-  { value: "domestic", icon: <Mountain     className="h-4 w-4 flex-shrink-0" />, labelKey: "tabs.domestic" },
-  { value: "tourist",  icon: <Globe        className="h-4 w-4 flex-shrink-0" />, labelKey: "tabs.tourist"  },
-  { value: "visa",     icon: <BadgeCheck   className="h-4 w-4 flex-shrink-0" />, labelKey: "tabs.visa"     },
-  { value: "contact",  icon: <MessageSquare className="h-4 w-4 flex-shrink-0" />, labelKey: "tabs.contact" },
+  { value: "ticket",        icon: <Plane         className="h-4 w-4 flex-shrink-0" />, labelKey: "tabs.ticket"        },
+  { value: "umrah",         icon: <Mosque        className="h-4 w-4 flex-shrink-0" />, labelKey: "tabs.umrah"         },
+  { value: "domestic",      icon: <Mountain      className="h-4 w-4 flex-shrink-0" />, labelKey: "tabs.domestic"      },
+  { value: "tourist",       icon: <Globe         className="h-4 w-4 flex-shrink-0" />, labelKey: "tabs.tourist"       },
+  { value: "visa",          icon: <BadgeCheck    className="h-4 w-4 flex-shrink-0" />, labelKey: "tabs.visa"          },
+  { value: "foreignTravel", icon: <PlaneTakeoff  className="h-4 w-4 flex-shrink-0" />, labelKey: "tabs.foreignTravel" },
+  { value: "contact",       icon: <MessageSquare className="h-4 w-4 flex-shrink-0" />, labelKey: "tabs.contact"       },
 ];
 
 export function SmartFormSection() {
@@ -96,8 +98,9 @@ export function SmartFormSection() {
                 <TabsContent value="umrah"  className="sf-tab-content mt-0 data-[state=inactive]:hidden"><UmrahFormTab /></TabsContent>
                 <TabsContent value="domestic" className="sf-tab-content mt-0 data-[state=inactive]:hidden"><DomesticFormTab /></TabsContent>
                 <TabsContent value="tourist"  className="sf-tab-content mt-0 data-[state=inactive]:hidden"><TouristFormTab /></TabsContent>
-                <TabsContent value="visa"     className="sf-tab-content mt-0 data-[state=inactive]:hidden"><VisaFormTab /></TabsContent>
-                <TabsContent value="contact"  className="sf-tab-content mt-0 data-[state=inactive]:hidden"><ContactFormTab /></TabsContent>
+                <TabsContent value="visa"          className="sf-tab-content mt-0 data-[state=inactive]:hidden"><VisaFormTab /></TabsContent>
+                <TabsContent value="foreignTravel" className="sf-tab-content mt-0 data-[state=inactive]:hidden"><ForeignTravelFormTab /></TabsContent>
+                <TabsContent value="contact"       className="sf-tab-content mt-0 data-[state=inactive]:hidden"><ContactFormTab /></TabsContent>
               </div>
             </Tabs>
 

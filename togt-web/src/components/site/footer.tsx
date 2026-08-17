@@ -174,6 +174,7 @@ export function Footer() {
               <FooterLink href="#umrah">{nav("umrah")}</FooterLink>
               <FooterLink href="#domestic">{nav("domestic")}</FooterLink>
               <FooterLink href="#foreigner">{nav("foreigner")}</FooterLink>
+              <FooterLink href="#foreign-travel">{t("foreignTravel")}</FooterLink>
               <FooterLink href="#visa">{nav("visa")}</FooterLink>
               <FooterLink href="#smart-form">{t("travelConsulting")}</FooterLink>
             </ul>

@@ -121,11 +121,30 @@ const CONFIGS: Record<string, CustomCardConfig> = {
     ],
     Icon: FileCheck2,
   },
+  "foreign-travel": {
+    badge: "CUSTOM FOREIGN TRAVEL",
+    badgeColor: "rgba(255,147,0,0.15)",
+    badgeTextColor: "#9A4D00",
+    iconBg: "rgba(255,147,0,0.10)",
+    iconColor: "#FF9300",
+    accentBorder: "border-[#FF9300]/50",
+    title: "Design Your Own International Trip",
+    description:
+      "Tell us where in the world you want to go and we will design a fully personalized international travel package — flights, hotel, tours, visa support, the works. Any destination, any duration, any budget.",
+    bullets: [
+      "Any destination worldwide",
+      "Flexible duration — 3 days to 4+ weeks",
+      "Flight, hotel, tours, and visa bundled",
+      "Solo, couple, family, or group",
+      "IATA-certified bookings & 24/7 support",
+    ],
+    Icon: Globe,
+  },
 };
 
 /* ── Component ──────────────────────────────────────────────────────────── */
 interface CustomPackageCardProps {
-  serviceType: "umrah" | "domestic" | "tourist" | "ticket" | "visa";
+  serviceType: "umrah" | "domestic" | "tourist" | "ticket" | "visa" | "foreign-travel";
   tab: SmartFormTab;
   ctaLabel: string;
   heightClass?: string;

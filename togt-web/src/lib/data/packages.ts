@@ -6,7 +6,8 @@ export type PackageType =
   | "umrah_vip"
   | "umrah_honeymoon"
   | "domestic_prebuilt"
-  | "tourist_prebuilt";
+  | "tourist_prebuilt"
+  | "foreign_prebuilt";
 
 export interface PackageItineraryDay {
   day: number;
@@ -42,6 +43,8 @@ export interface MockPackage {
   details: PackageDetails;
   highlights: string[];
   itinerary?: PackageItineraryDay[];
+  /** Used by foreign-travel packages to pre-fill the destination in the smart form */
+  destination?: string;
 }
 
 export const mockPackages: MockPackage[] = [
@@ -420,6 +423,178 @@ export const mockPackages: MockPackage[] = [
       { day: 1, title: "Arrival & Museum",  description: "Airport pickup, National Museum (Lucy), hotel check-in." },
       { day: 2, title: "Culture & Markets", description: "Mercato, Ethnological Museum, coffee ceremony experience." },
       { day: 3, title: "Departure",         description: "Final city drive, airport transfer." },
+    ],
+  },
+  {
+    id: "foreign-dubai-1",
+    type: "foreign_prebuilt",
+    title: "Dubai Getaway - 5 Days",
+    price: 45000,
+    currency: "ETB",
+    durationDays: 5,
+    image: "/images/packages/dubai.jpg",
+    images: ["/images/packages/dubai.jpg"],
+    destination: "United Arab Emirates",
+    includes: [
+      "Round-trip airfare (Ethiopian Airlines)",
+      "4-star hotel in central Dubai (4 nights)",
+      "Airport transfers in Dubai",
+      "Burj Khalifa observation deck entry",
+      "Desert safari with BBQ dinner",
+      "Daily breakfast",
+    ],
+    excluded: [
+      "UAE visa fee (handled separately, ~$90 USD)",
+      "Lunches and most dinners",
+      "Personal shopping",
+      "Travel insurance",
+      "Optional tour add-ons",
+    ],
+    fullDescription:
+      "Experience the luxury, wonder, and modernity of Dubai on this 5-day curated getaway from Addis Ababa. Stay in a 4-star hotel in central Dubai, take in the views from the top of Burj Khalifa, and end your trip with a thrilling desert safari. TOGT handles all flights, transfers, and bookings so you can focus on enjoying Dubai.",
+    highlights: [
+      "Curated 5-day Dubai experience from Ethiopia",
+      "Burj Khalifa observation deck included",
+      "Desert safari with traditional BBQ dinner",
+      "IATA-certified booking & 24/7 support",
+      "Pre-departure orientation included",
+    ],
+    details: {
+      duration: "5 days / 4 nights",
+      groupSize: "Flexible — solo, couple, or group",
+      departureDate: "Weekly departures available",
+      returnDate: "5 days after departure",
+      hotel: "4-star hotel in central Dubai",
+      transport: "Round-trip Ethiopian Airlines + private transfers",
+      guide: "English-speaking local guide for tours",
+      meals: "Daily breakfast + 1 BBQ dinner",
+      visa: "UAE visa on arrival or e-visa (handled separately)",
+    },
+    itinerary: [
+      { day: 1, title: "Arrival Dubai",       description: "Fly Addis Ababa → Dubai. Airport transfer to hotel. Evening at leisure." },
+      { day: 2, title: "Modern Dubai",        description: "Burj Khalifa, Dubai Mall, Dubai Fountain show." },
+      { day: 3, title: "Old Dubai",           description: "Gold Souk, Spice Souk, Abra boat ride, Al Fahidi district." },
+      { day: 4, title: "Desert Safari",       description: "Afternoon desert safari with dune bashing, camel ride, BBQ dinner, and live entertainment." },
+      { day: 5, title: "Departure",           description: "Transfer to Dubai airport, fly back to Addis Ababa." },
+    ],
+  },
+  {
+    id: "foreign-istanbul-1",
+    type: "foreign_prebuilt",
+    title: "Istanbul Adventure - 7 Days",
+    price: 65000,
+    currency: "ETB",
+    durationDays: 7,
+    image: "/images/packages/istanbul.jpg",
+    images: ["/images/packages/istanbul.jpg"],
+    destination: "Turkey",
+    includes: [
+      "Round-trip airfare (Ethiopian Airlines / Turkish Airlines)",
+      "4-star hotel in Sultanahmet (6 nights)",
+      "Airport transfers in Istanbul",
+      "Hagia Sophia, Blue Mosque, Topkapi Palace entry",
+      "Bosphorus cruise",
+      "Daily breakfast",
+      "English-speaking local guide",
+    ],
+    excluded: [
+      "Turkey e-visa fee (~$50 USD)",
+      "Lunches and most dinners",
+      "Personal shopping",
+      "Travel insurance",
+    ],
+    fullDescription:
+      "Discover the magic of Istanbul, the only city in the world that spans two continents. From the Byzantine glory of Hagia Sophia to the Ottoman elegance of the Blue Mosque, from the bustling Grand Bazaar to the serene Bosphorus, this 7-day adventure immerses you in 3,000 years of history. TOGT handles all logistics for a seamless experience.",
+    highlights: [
+      "Two continents in one city — Europe meets Asia",
+      "Hagia Sophia, Blue Mosque, Topkapi Palace included",
+      "Bosphorus cruise between continents",
+      "Expert English-speaking local guide",
+      "Authentic Turkish cuisine recommendations",
+    ],
+    details: {
+      duration: "7 days / 6 nights",
+      groupSize: "Flexible",
+      departureDate: "Bi-weekly departures",
+      returnDate: "7 days after departure",
+      hotel: "4-star hotel in historic Sultanahmet",
+      transport: "Round-trip flights + private transfers",
+      guide: "English-speaking expert local guide",
+      meals: "Daily breakfast",
+      visa: "Turkey e-visa required (~$50 USD, handled separately)",
+    },
+    itinerary: [
+      { day: 1, title: "Arrival Istanbul",   description: "Fly to Istanbul, transfer to Sultanahmet hotel. Evening Bosphorus cruise." },
+      { day: 2, title: "Byzantine Heritage", description: "Hagia Sophia, Blue Mosque, Basilica Cistern guided tour." },
+      { day: 3, title: "Ottoman Grandeur",   description: "Topkapi Palace, Harem, Grand Bazaar." },
+      { day: 4, title: "Asian Side",          description: "Ferry to Kadikoy, Uskudar, Maiden's Tower, Spice Bazaar." },
+      { day: 5, title: "Bosphorus & Beylerbeyi", description: "Bosphorus boat tour, Beylerbeyi Palace, Camlica Hill." },
+      { day: 6, title: "Free Day",            description: "Explore at your own pace — optional Princes' Islands day trip." },
+      { day: 7, title: "Departure",           description: "Transfer to airport, fly back to Addis Ababa." },
+    ],
+  },
+  {
+    id: "foreign-europe-1",
+    type: "foreign_prebuilt",
+    title: "European Highlights - 14 Days",
+    price: 250000,
+    currency: "ETB",
+    durationDays: 14,
+    image: "/images/packages/europe.jpg",
+    images: ["/images/packages/europe.jpg"],
+    destination: "Europe",
+    includes: [
+      "Round-trip airfare (Addis Ababa → Europe)",
+      "4-star hotels in each city (13 nights)",
+      "Inter-city flights within Europe",
+      "Schengen visa processing support",
+      "Expert multi-lingual tour guide",
+      "All UNESCO site entrance fees",
+      "Daily breakfast + welcome & farewell dinners",
+      "High-speed train between select cities",
+    ],
+    excluded: [
+      "Schengen visa fee (~€80 EUR)",
+      "Lunches and most dinners",
+      "Personal shopping",
+      "Travel insurance (strongly recommended)",
+      "Optional museum entries",
+    ],
+    fullDescription:
+      "Experience the very best of Europe in one comprehensive 14-day journey. From the romantic canals of Venice to the historic ruins of Rome, from the art of Paris to the alpine beauty of Switzerland — this carefully curated multi-country tour delivers Europe's greatest hits with expert guides, premium accommodation, and seamless logistics. The ultimate bucket-list adventure for Ethiopian travelers.",
+    highlights: [
+      "5 countries in 14 days — Italy, France, Switzerland, Germany, Netherlands",
+      "Schengen visa processing support included",
+      "All UNESCO site entrances included",
+      "Expert multi-lingual guide throughout",
+      "Premium 4-star accommodation in every city",
+    ],
+    details: {
+      duration: "14 days / 13 nights",
+      groupSize: "Small group (max 16)",
+      departureDate: "Monthly departures",
+      returnDate: "14 days after departure",
+      hotel: "4-star hotels in each city",
+      transport: "Inter-city flights + high-speed train",
+      guide: "Expert multi-lingual tour guide",
+      meals: "Daily breakfast + 2 special dinners",
+      visa: "Schengen visa required (~$85 USD, supported by TOGT)",
+    },
+    itinerary: [
+      { day: 1,  title: "Arrival Rome",         description: "Fly to Rome via Addis. Transfer to hotel. Welcome dinner." },
+      { day: 2,  title: "Ancient Rome",         description: "Colosseum, Roman Forum, Palatine Hill, Trevi Fountain." },
+      { day: 3,  title: "Vatican City",         description: "St. Peter's Basilica, Vatican Museums, Sistine Chapel." },
+      { day: 4,  title: "Rome → Florence",      description: "High-speed train to Florence. Afternoon Duomo & Ponte Vecchio." },
+      { day: 5,  title: "Florence",             description: "Uffizi Gallery, Accademia (David), Tuscan cuisine." },
+      { day: 6,  title: "Florence → Venice",    description: "Train to Venice. Gondola ride, St. Mark's Square." },
+      { day: 7,  title: "Venice → Lucerne",     description: "Fly Venice → Zurich, transfer to Lucerne. Lake cruise." },
+      { day: 8,  title: "Swiss Alps",           description: "Mt. Pilatus or Mt. Titlis excursion (optional)." },
+      { day: 9,  title: "Lucerne → Paris",      description: "High-speed train to Paris. Evening Seine cruise." },
+      { day: 10, title: "Paris Landmarks",      description: "Eiffel Tower, Arc de Triomphe, Champs-Élysées." },
+      { day: 11, title: "Louvre & Versailles", description: "Louvre Museum, Palace of Versailles, gardens." },
+      { day: 12, title: "Paris → Amsterdam",    description: "Train to Amsterdam. Canal cruise, Anne Frank House." },
+      { day: 13, title: "Amsterdam",            description: "Rijksmuseum, Van Gogh Museum, free exploration." },
+      { day: 14, title: "Departure",            description: "Transfer to airport, fly back to Addis Ababa." },
     ],
   },
 ];

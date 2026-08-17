@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { MockPackage } from "@/lib/data/packages";
 
-export type SmartFormTab = "ticket" | "umrah" | "domestic" | "tourist" | "visa" | "contact";
+export type SmartFormTab = "ticket" | "umrah" | "domestic" | "tourist" | "visa" | "foreignTravel" | "contact";
 
 interface SmartFormState {
   activeTab: SmartFormTab;

@@ -15,7 +15,7 @@ interface PackagesModalProps {
   packages: MockPackage[];
   tab: SmartFormTab;
   ctaLabel: string;
-  customServiceType?: "umrah" | "domestic" | "tourist";
+  customServiceType?: "umrah" | "domestic" | "tourist" | "ticket" | "visa" | "foreign-travel";
   customCtaLabel?: string;
 }
 

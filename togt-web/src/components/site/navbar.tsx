@@ -14,10 +14,11 @@ export function Navbar() {
 
   const links = [
     { href: "#about", label: t("about") },
+    { href: "#flight-booking", label: t("ticket") },
     { href: "#umrah", label: t("umrah") },
     { href: "#domestic", label: t("domestic") },
     { href: "#foreigner", label: t("foreigner") },
-    { href: "#ticket", label: t("ticket") },
+    { href: "#foreign-travel", label: t("foreignTravel") },
     { href: "#visa", label: t("visa") },
     { href: "#faq", label: t("faq") },
   ];

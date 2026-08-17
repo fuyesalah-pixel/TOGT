@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ticketFormSchema, AIRLINES, type TicketFormValues } from "@/lib/schemas/smart-form";
+import { foreignTravelFormSchema, AIRLINES, COUNTRIES, type ForeignTravelFormValues } from "@/lib/schemas/smart-form";
 import { useMockSubmit } from "../use-mock-submit";
+import { useSmartForm } from "../smart-form-context";
 import { FormSuccess } from "../form-success";
 import {
   Form,
@@ -25,43 +27,67 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function TicketFormTab() {
+export function ForeignTravelFormTab() {
   const tc = useTranslations("SmartForm.common");
-  const tt = useTranslations("SmartForm.ticket");
+  const tt = useTranslations("SmartForm.foreignTravel");
+  const tkt = useTranslations("SmartForm.ticket");
   const { submit, isSubmitting, isSuccess, reset } = useMockSubmit();
+  const { selectedPackage } = useSmartForm();
 
-  const form = useForm<TicketFormValues>({
-    resolver: zodResolver(ticketFormSchema),
+  const form = useForm<ForeignTravelFormValues>({
+    resolver: zodResolver(foreignTravelFormSchema),
     defaultValues: {
       fullName: "",
       phone: "",
       email: "",
+      destinationCountry: "",
+      departureDate: "",
+      returnDate: "",
+      adults: 1,
+      children: 0,
+      infants: 0,
+      cabinClass: "economy",
+      airlinePreference: "Ethiopian Airlines",
       passportNumber: "",
       passportIssuedDate: "",
       passportExpiry: "",
-      dob: "",
-      nationality: "",
-      origin: "",
-      destination: "",
-      departureDate: "",
-      returnDate: "",
-      cabinClass: "economy",
-      passengerCount: 1,
-      children: 0,
-      infants: 0,
-      airlinePreference: "Ethiopian Airlines",
-      specialRequirements: "",
+      additionalRequirements: "",
     },
   });
+
+  /* Pre-fill destination when a foreign package is selected (e.g. from the
+     "Travel Abroad" section's "Book Now" button). */
+  useEffect(() => {
+    if (selectedPackage && selectedPackage.type === "foreign_prebuilt" && selectedPackage.destination) {
+      form.setValue("destinationCountry", selectedPackage.destination, { shouldValidate: true });
+    }
+  }, [selectedPackage, form]);
 
   if (isSuccess) return <FormSuccess onReset={reset} />;
 
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit((values) => submit("ticket", values))}
+        onSubmit={form.handleSubmit((values) => submit("foreignTravel", values))}
         className="grid gap-4 sm:grid-cols-2"
       >
+        <FormField control={form.control} name="destinationCountry" render={({ field }) => (
+          <FormItem className="sm:col-span-2">
+            <FormLabel>{tt("destinationCountry")}</FormLabel>
+            <FormControl>
+              <div>
+                <Input list="countries-list" placeholder="United Arab Emirates" {...field} />
+                <datalist id="countries-list">
+                  {COUNTRIES.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </div>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
+
         <FormField control={form.control} name="fullName" render={({ field }) => (
           <FormItem><FormLabel>{tc("fullName")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
         )} />
@@ -71,35 +97,26 @@ export function TicketFormTab() {
         <FormField control={form.control} name="email" render={({ field }) => (
           <FormItem><FormLabel>{tc("email")}</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
-        <FormField control={form.control} name="dob" render={({ field }) => (
-          <FormItem><FormLabel>{tt("dob")}</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-        )} />
-        <FormField control={form.control} name="nationality" render={({ field }) => (
-          <FormItem><FormLabel>{tt("nationality")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-        )} />
-        <FormField control={form.control} name="passportNumber" render={({ field }) => (
-          <FormItem><FormLabel>{tc("passportNumber")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-        )} />
-        <FormField control={form.control} name="passportIssuedDate" render={({ field }) => (
-          <FormItem><FormLabel>{tc("passportIssuedDate")}</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-        )} />
-        <FormField control={form.control} name="passportExpiry" render={({ field }) => (
-          <FormItem><FormLabel>{tc("passportExpiry")}</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-        )} />
-        <FormField control={form.control} name="origin" render={({ field }) => (
-          <FormItem><FormLabel>{tt("origin")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-        )} />
-        <FormField control={form.control} name="destination" render={({ field }) => (
-          <FormItem><FormLabel>{tt("destination")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-        )} />
         <FormField control={form.control} name="departureDate" render={({ field }) => (
           <FormItem><FormLabel>{tt("departureDate")}</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="returnDate" render={({ field }) => (
           <FormItem><FormLabel>{tt("returnDate")}</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
-        <FormField control={form.control} name="passengerCount" render={({ field }) => (
-          <FormItem><FormLabel>{tt("passengerCount")}</FormLabel><FormControl><Input type="number" min={1} {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.valueAsNumber)} /></FormControl><FormMessage /></FormItem>
+
+        <FormField control={form.control} name="adults" render={({ field }) => (
+          <FormItem>
+            <FormLabel>{tt("adults")}</FormLabel>
+            <Select value={String(field.value ?? 1)} onValueChange={(v) => field.onChange(Number(v))}>
+              <FormControl><SelectTrigger className="w-full"><SelectValue /></SelectTrigger></FormControl>
+              <SelectContent>
+                {[1,2,3,4,5,6].map((n) => (
+                  <SelectItem key={n} value={String(n)}>{String(n)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
         )} />
         <FormField control={form.control} name="children" render={({ field }) => (
           <FormItem>
@@ -129,16 +146,17 @@ export function TicketFormTab() {
             <FormMessage />
           </FormItem>
         )} />
+
         <FormField control={form.control} name="cabinClass" render={({ field }) => (
           <FormItem>
             <FormLabel>{tt("cabinClass")}</FormLabel>
             <Select value={field.value} onValueChange={field.onChange}>
               <FormControl><SelectTrigger className="w-full"><SelectValue /></SelectTrigger></FormControl>
               <SelectContent>
-                <SelectItem value="economy">{tt("cabinEconomy")}</SelectItem>
-                <SelectItem value="premium_economy">{tt("cabinPremiumEconomy")}</SelectItem>
-                <SelectItem value="business">{tt("cabinBusiness")}</SelectItem>
-                <SelectItem value="first">{tt("cabinFirst")}</SelectItem>
+                <SelectItem value="economy">{tkt("cabinEconomy")}</SelectItem>
+                <SelectItem value="premium_economy">{tkt("cabinPremiumEconomy")}</SelectItem>
+                <SelectItem value="business">{tkt("cabinBusiness")}</SelectItem>
+                <SelectItem value="first">{tkt("cabinFirst")}</SelectItem>
               </SelectContent>
             </Select>
             <FormMessage />
@@ -149,11 +167,7 @@ export function TicketFormTab() {
             <FormLabel>{tt("airlinePreference")}</FormLabel>
             <FormControl>
               <div>
-                <Input
-                  list="airlines-list"
-                  placeholder={tt("airlineHint")}
-                  {...field}
-                />
+                <Input list="airlines-list" placeholder={tkt("airlineHint")} {...field} />
                 <datalist id="airlines-list">
                   {AIRLINES.map((a) => (
                     <option key={a} value={a} />
@@ -164,8 +178,19 @@ export function TicketFormTab() {
             <FormMessage />
           </FormItem>
         )} />
-        <FormField control={form.control} name="specialRequirements" render={({ field }) => (
-          <FormItem className="sm:col-span-2"><FormLabel>{tt("specialRequirements")}</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+
+        <FormField control={form.control} name="passportNumber" render={({ field }) => (
+          <FormItem><FormLabel>{tc("passportNumber")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="passportIssuedDate" render={({ field }) => (
+          <FormItem><FormLabel>{tc("passportIssuedDate")}</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="passportExpiry" render={({ field }) => (
+          <FormItem><FormLabel>{tc("passportExpiry")}</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+
+        <FormField control={form.control} name="additionalRequirements" render={({ field }) => (
+          <FormItem className="sm:col-span-2"><FormLabel>{tt("additionalRequirements")}</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
         )} />
 
         <Button type="submit" disabled={isSubmitting} className="sm:col-span-2 w-full py-3.5 rounded-full font-bold text-white text-sm transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100" style={{ background: 'linear-gradient(135deg, #FF9300 0%, #e07d00 100%)', boxShadow: '0 4px 20px rgba(255,147,0,0.32)' }}>
