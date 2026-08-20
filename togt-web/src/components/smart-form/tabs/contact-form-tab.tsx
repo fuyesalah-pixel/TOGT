@@ -1,10 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { contactFormSchema, type ContactFormValues } from "@/lib/schemas/smart-form";
 import { useMockSubmit } from "../use-mock-submit";
+import { useProfilePrefill } from "../use-profile-prefill";
+import { useSmartForm } from "../smart-form-context";
 import { FormSuccess } from "../form-success";
 import {
   Form,
@@ -17,21 +20,26 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { CONTACT } from "@/lib/contact";
 
 export function ContactFormTab() {
   const t = useTranslations("SmartForm");
   const tc = useTranslations("SmartForm.common");
   const { submit, isSubmitting, isSuccess, reset } = useMockSubmit();
+  const { selectedPackage } = useSmartForm();
 
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
-    defaultValues: { fullName: "", phone: "", email: "", subject: "", message: "" },
+    defaultValues: { fullName: "", phone: "", email: "", packageId: "", subject: "", message: "" },
   });
+  useProfilePrefill(form);
+  useEffect(() => { if (selectedPackage?.id) form.setValue("packageId", selectedPackage.id); }, [selectedPackage, form]);
 
   if (isSuccess) return <FormSuccess onReset={reset} />;
 
   return (
     <Form {...form}>
+      <div className="mb-5 rounded-xl border border-togt-blue/15 bg-togt-blue/5 p-4 text-sm text-togt-navy"><p className="font-bold">TOGT Customer Support</p><p className="mt-1">{CONTACT.address}</p><p className="mt-1">{CONTACT.phones.map((phone) => <a key={phone.href} href={phone.href} className="mr-3 text-togt-blue hover:underline">{phone.display}</a>)}<a href={`mailto:${CONTACT.email}`} className="text-togt-blue hover:underline">{CONTACT.email}</a></p><a href={CONTACT.map} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block font-semibold text-togt-orange hover:underline">View on Google Maps</a></div>
       <form
         onSubmit={form.handleSubmit((values) => submit("consulting", values))}
         className="grid gap-4 sm:grid-cols-2"

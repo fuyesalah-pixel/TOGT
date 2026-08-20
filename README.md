@@ -27,14 +27,13 @@ Style: Aviation-inspired, modern, professional, trustworthy.
 | Frontend | Next.js 14 (App Router), TypeScript, TailwindCSS, shadcn/ui |
 | Backend | NestJS, TypeScript, Prisma ORM |
 | Database | PostgreSQL 16 |
-| Cache / Queue | Valkey (Redis-compatible) + BullMQ |
+| Cache / Session Store | Valkey (Redis-compatible) |
 | Real-time | Socket.io |
 | Mobile | React Native (Expo) |
 | Storage | Cloudflare R2 (S3-compatible) |
 | Email | Resend |
 | SMS | SMSEthiopia |
-| AI | OpenAI (GPT-3.5 Turbo) |
-| Monitoring | GlitchTip |
+| Content / Reviews | API-backed PostgreSQL content and reviews |
 | Hosting | Hostinger VPS (Docker) |
 | CI/CD | GitHub Actions |
 
@@ -83,7 +82,17 @@ npm install
 npm run dev
 ```
 
-Frontend runs at `http://localhost:3000`, backend API at `http://localhost:3001` (see `togt-api/.env`).
+Frontend runs at `http://localhost:3000`, backend API at `http://localhost:3001/api` by default (see `togt-api/.env`).
+
+### 4. Initialize the database
+
+```bash
+cd togt-api
+npm run prisma:migrate -- --name init
+npm run seed
+```
+
+Google OAuth requires a callback URL of `http://localhost:3001/api/auth/google/callback` in the Google Cloud console. Configure R2, Resend, and SMSEthiopia credentials in `togt-api/.env` when those integrations are enabled.
 
 ## Documentation
 

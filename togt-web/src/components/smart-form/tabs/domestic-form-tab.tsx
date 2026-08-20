@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { domesticFormSchema, type DomesticFormValues } from "@/lib/schemas/smart-form";
 import { useMockSubmit } from "../use-mock-submit";
+import { useProfilePrefill } from "../use-profile-prefill";
 import { useSmartForm } from "../smart-form-context";
 import { FormSuccess } from "../form-success";
 import {
@@ -44,6 +45,7 @@ export function DomesticFormTab() {
       groupSize: 1,
     },
   });
+  useProfilePrefill(form);
 
   useEffect(() => {
     if (selectedPackage && selectedPackage.type === "domestic_prebuilt") {

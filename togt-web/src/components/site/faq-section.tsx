@@ -4,12 +4,13 @@ import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { useSmartForm } from "@/components/smart-form/smart-form-context";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { faqItems } from "@/lib/data/faq";
+import { useFaq } from "@/hooks/useContent";
 import { ArrowRight, Plus, Minus } from "lucide-react";
 
 export function FaqSection() {
   const t = useTranslations("Faq");
   const { openTab } = useSmartForm();
+  const { data: faqItems = [], isLoading } = useFaq();
 
   return (
     <section id="faq" className="relative py-20 md:py-28 overflow-hidden bg-gradient-to-br from-white via-gray-50/60 to-white">
@@ -37,6 +38,9 @@ export function FaqSection() {
         </motion.div>
 
         <Accordion className="w-full space-y-3 md:space-y-4">
+          {isLoading && Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-16 animate-pulse rounded-2xl border border-gray-200 bg-white/80" />
+          ))}
           {faqItems.map((item, index) => (
             <motion.div key={item.id}
               initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}

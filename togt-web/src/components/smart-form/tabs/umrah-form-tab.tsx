@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { umrahFormSchema, type UmrahFormValues } from "@/lib/schemas/smart-form";
 import { useMockSubmit } from "../use-mock-submit";
 import { useSmartForm } from "../smart-form-context";
+import { useProfilePrefill } from "../use-profile-prefill";
 import { FormSuccess } from "../form-success";
 import {
   Form,
@@ -37,6 +38,7 @@ export function UmrahFormTab() {
     resolver: zodResolver(umrahFormSchema),
     defaultValues: {
       fullName: "",
+      emergencyContactAddress: "",
       phone: "",
       email: "",
       packageType: "umrah_custom",
@@ -49,6 +51,7 @@ export function UmrahFormTab() {
       isGift: false,
     },
   });
+  useProfilePrefill(form);
 
   useEffect(() => {
     if (selectedPackage && selectedPackage.type.startsWith("umrah_")) {
@@ -102,6 +105,9 @@ export function UmrahFormTab() {
         )} />
         <FormField control={form.control} name="email" render={({ field }) => (
           <FormItem><FormLabel>{tc("email")}</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="emergencyContactAddress" render={({ field }) => (
+          <FormItem className="sm:col-span-2"><FormLabel>Emergency contact address</FormLabel><FormControl><Input placeholder="Bole, Addis Ababa" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="passportNumber" render={({ field }) => (
           <FormItem><FormLabel>{tc("passportNumber")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>

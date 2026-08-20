@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { foreignTravelFormSchema, AIRLINES, COUNTRIES, type ForeignTravelFormValues } from "@/lib/schemas/smart-form";
 import { useMockSubmit } from "../use-mock-submit";
+import { useProfilePrefill } from "../use-profile-prefill";
 import { useSmartForm } from "../smart-form-context";
 import { FormSuccess } from "../form-success";
 import {
@@ -54,12 +55,14 @@ export function ForeignTravelFormTab() {
       additionalRequirements: "",
     },
   });
+  useProfilePrefill(form);
 
   /* Pre-fill destination when a foreign package is selected (e.g. from the
      "Travel Abroad" section's "Book Now" button). */
   useEffect(() => {
-    if (selectedPackage && selectedPackage.type === "foreign_prebuilt" && selectedPackage.destination) {
-      form.setValue("destinationCountry", selectedPackage.destination, { shouldValidate: true });
+    if (selectedPackage && selectedPackage.type === "foreign_prebuilt") {
+      form.setValue("packageId", selectedPackage.id, { shouldValidate: true });
+      if (selectedPackage.destination) form.setValue("destinationCountry", selectedPackage.destination, { shouldValidate: true });
     }
   }, [selectedPackage, form]);
 

@@ -9,6 +9,11 @@ import {
   Landmark, Download, CheckCircle2, RotateCcw, Baby,
 } from "lucide-react";
 import { COUNTRIES } from "@/lib/schemas/smart-form";
+import { useAuth } from "@/hooks/useAuth";
+import { useLocale } from "next-intl";
+import { BookingAccessDialog } from "./booking-access-dialog";
+import { useTicketMutations } from "@/hooks/useTickets";
+import { generateTicketPDF } from "@/lib/ticket-pdf";
 
 const EASE = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
@@ -490,6 +495,9 @@ type PassengerForm = {
 /* ── Main section ─────────────────────────────────────────────────── */
 export function FlightBookingSection() {
   const t = useTranslations("FlightBooking");
+  const locale = useLocale();
+  const { user, isLoading: authLoading } = useAuth();
+  const { create: createTicket } = useTicketMutations();
 
   // ── Search state ──────────────────────────────────────────────────
   const [tripType, setTripType] = useState<"round" | "oneway" | "multi">("round");
@@ -516,7 +524,23 @@ export function FlightBookingSection() {
   const [paying, setPaying] = useState(false);
   const [bookingRef, setBookingRef] = useState("");
   const [flowError, setFlowError] = useState<string | null>(null);
+  const [roleDenied, setRoleDenied] = useState(false);
   const [passengerForms, setPassengerForms] = useState<PassengerForm[]>([]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    try {
+      const pending = window.localStorage.getItem("pendingBooking") ?? window.localStorage.getItem("pendingFlightBooking");
+      if (!pending || !user) return;
+      const saved = JSON.parse(pending) as { flight?: FlightResult; selectedFlight?: FlightResult; from?: Airport; to?: Airport; searchData?: { from: Airport; to: Airport; departureDate: string; returnDate: string; adults: number; children: number; infants: number }; departureDate?: string; returnDate?: string; adults?: number; children?: number; infants?: number };
+      const search = saved.searchData ?? { from: saved.from!, to: saved.to!, departureDate: saved.departureDate!, returnDate: saved.returnDate ?? "", adults: saved.adults ?? 1, children: saved.children ?? 0, infants: saved.infants ?? 0 };
+      const savedFlight = saved.selectedFlight ?? saved.flight;
+      if (!savedFlight || !search.from || !search.to) return;
+      setFrom(search.from); setTo(search.to); setDepartureDate(search.departureDate); setReturnDate(search.returnDate); setAdults(search.adults); setChildren(search.children); setInfants(search.infants);
+      const flight = MOCK_RESULTS.find((result) => result.flight === savedFlight.flight) ?? savedFlight;
+      setSelectedFlight(flight); setPassengerForms(Array.from({ length: search.adults + search.children + search.infants }, () => ({ firstName: "", lastName: "", passportNumber: "", passportExpiry: "", dob: "", nationality: "" }))); setCurrentStep(3); window.localStorage.removeItem("pendingBooking"); window.localStorage.removeItem("pendingFlightBooking");
+    } catch { window.localStorage.removeItem("pendingBooking"); window.localStorage.removeItem("pendingFlightBooking"); }
+  }, [authLoading, user]);
 
   const passengerList = useMemo<PaxType[]>(() => {
     const list: PaxType[] = [];
@@ -595,6 +619,15 @@ export function FlightBookingSection() {
     : MOCK_RESULTS;
 
   const handleSelectFlight = (r: FlightResult) => {
+    if (authLoading) return;
+    if (user && user.role !== "CUSTOMER") { setRoleDenied(true); return; }
+    if (!user) {
+      const pendingBooking = { currentStep: 3, selectedFlight: r, searchData: { from, to, departureDate, returnDate, adults, children, infants } };
+      window.localStorage.setItem("pendingBooking", JSON.stringify(pendingBooking));
+      window.localStorage.setItem("pendingFlightBooking", JSON.stringify({ flight: r, from, to, departureDate, returnDate, adults, children, infants }));
+      window.location.href = `/${locale}/login?redirect=flight-booking`;
+      return;
+    }
     setSelectedFlight(r);
     setSelectedSeats([]);
     setBaggage(false);
@@ -630,103 +663,37 @@ export function FlightBookingSection() {
     goToStep(4);
   };
 
-  const handlePay = () => {
+  const handlePay = async () => {
+    if (!user || user.role !== "CUSTOMER" || !selectedFlight || !from || !to) return;
     setPaying(true);
-    window.setTimeout(() => {
+    try {
+      await new Promise((resolve) => window.setTimeout(resolve, 1600));
+      const ticket = await createTicket.mutateAsync({
+        airline: selectedFlight.airline,
+        flightNumber: selectedFlight.flight,
+        origin: from.code,
+        destination: to.code,
+        departureAt: new Date(`${departureDate}T${selectedFlight.departure}:00`).toISOString(),
+        passengerName: passengerForms.map((p) => `${p.firstName} ${p.lastName}`).join(", "),
+        passengerDetails: passengerForms,
+        seat: selectedSeats.join(", "),
+        cabinClass: "Economy",
+        paymentMethod,
+        totalAmount: grandTotal,
+      });
       setPaying(false);
-      setBookingRef(
-        `TOGT-2026-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
-      );
+      setBookingRef(ticket.ticketNumber);
       setCurrentStep(5);
       document.getElementById("flight-booking-flow")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 1600);
+    } catch (err) {
+      setPaying(false);
+      setFlowError(err instanceof Error ? err.message : "Could not complete the booking");
+    }
   };
 
   const handleDownloadTicket = async () => {
-    const names = passengerForms
-      .map((p, i) => `${i + 1}. ${p.firstName.trim()} ${p.lastName.trim()}`)
-      .filter(Boolean)
-      .join(", ");
-    const route = `${from?.code ?? "—"} → ${to?.code ?? "—"}`;
-    const asciiRoute = `${from?.code ?? "-"} to ${to?.code ?? "-"}`;
-    const date = departureDate || "—";
-    const cityFrom = from?.city ?? "";
-    const cityTo = to?.city ?? "";
-
-    // Dynamically load jsPDF (only downloaded on demand, keeps bundle lean)
-    const { jsPDF } = await import("jspdf");
-    const doc = new jsPDF();
-
-    // TOGT Logo at top (centered) — loaded from public folder
-    try {
-      const logoUrl = "/images/logo/TOGT_Tour_Travel_Final Logo Png.png";
-      const img = new Image();
-      img.src = logoUrl;
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error("logo load failed"));
-      });
-      // Downscale to a small PNG data URL so the PDF stays light
-      const scaleW = 240;
-      const scaleH = Math.round((scaleW * img.height) / img.width);
-      const canvas = document.createElement("canvas");
-      canvas.width = scaleW;
-      canvas.height = scaleH;
-      const ctx = canvas.getContext("2d");
-      ctx?.drawImage(img, 0, 0, scaleW, scaleH);
-      const dataUrl = canvas.toDataURL("image/png");
-      // Fixed logo height (y=10 → bottom=30) and width from the real aspect ratio
-      const logoH = 20;
-      const logoW = logoH * (scaleW / scaleH);
-      doc.addImage(dataUrl, "PNG", (210 - logoW) / 2, 10, logoW, logoH);
-    } catch {
-      // Logo unavailable — fall back to a plain text header
-      doc.setFontSize(16);
-      doc.setTextColor(31, 103, 177);
-      doc.text("TOGT TOUR & TRAVEL", 105, 18, { align: "center" });
-    }
-
-    // Title — 10px below logo bottom (logo bottom = 30, title baseline = 40)
-    doc.setFontSize(20);
-    doc.setTextColor(31, 103, 177); // TOGT Blue
-    doc.text("TOGT TOUR & TRAVEL", 105, 40, { align: "center" });
-
-    doc.setFontSize(16);
-    doc.setTextColor(255, 147, 0); // TOGT Orange
-    doc.text("E-TICKET", 105, 50, { align: "center" });
-
-    // Divider
-    doc.setDrawColor(31, 103, 177);
-    doc.setLineWidth(0.6);
-    doc.line(20, 55, 190, 55);
-
-    // Booking details
-    doc.setFontSize(12);
-    doc.setTextColor(18, 57, 79); // TOGT Navy
-    doc.text(`Booking Ref:  ${bookingRef}`, 20, 70);
-    doc.text(`Flight:  ${selectedFlight?.airline ?? "—"}  ${selectedFlight?.flight ?? "—"}`, 20, 80);
-    doc.text(`Route:  ${asciiRoute}  (${cityFrom} - ${cityTo})`, 20, 90);
-    doc.text(`Date:  ${date}`, 20, 100);
-    doc.text(`Departure / Arrival:  ${selectedFlight?.departure ?? "—"}  -  ${selectedFlight?.arrival ?? "—"}  (${selectedFlight?.duration ?? ""})`, 20, 110);
-    doc.text(`Passenger(s):  ${names || "—"}`, 20, 120);
-    doc.text(`Seat(s):  ${selectedSeats.length ? selectedSeats.join(", ") : "—"}`, 20, 130);
-    doc.text(`Payment Method:  ${paymentMethod}`, 20, 140);
-
-    // Total
-    doc.setFontSize(15);
-    doc.setTextColor(255, 147, 0);
-    doc.text(`Total Paid:  ${grandTotal.toLocaleString()} ETB`, 20, 155);
-
-    // Footer
-    doc.setDrawColor(31, 103, 177);
-    doc.line(20, 158, 190, 158);
-    doc.setFontSize(9);
-    doc.setTextColor(128, 128, 128);
-    doc.text("IATA Accredited Agency | Addis Ababa, Ethiopia", 105, 166, { align: "center" });
-    doc.text("info@togttrading.com | +251 911 234 567", 105, 173, { align: "center" });
-    doc.text(`Thank you for choosing TOGT Tour & Travel — ${route}`, 105, 180, { align: "center" });
-
-    doc.save(`TOGT-E-Ticket-${bookingRef}.pdf`);
+    if (!selectedFlight || !from || !to) return;
+    await generateTicketPDF({ ticketNumber: bookingRef, bookingReference: bookingRef, airline: selectedFlight.airline, flightNumber: selectedFlight.flight, origin: from.code, destination: to.code, departureAt: new Date(`${departureDate}T${selectedFlight.departure}:00`).toISOString(), passengerName: passengerForms.map((p) => `${p.firstName.trim()} ${p.lastName.trim()}`).join(", "), seat: selectedSeats.join(", "), cabinClass: "Economy", totalAmount: grandTotal, currency: "ETB" });
   };
 
   const handleFinish = () => {
@@ -1395,7 +1362,8 @@ export function FlightBookingSection() {
 
           {/* ── STEP 5: CONFIRMATION (only visible) ───────────────────── */}
           <AnimatePresence>
-            {currentStep === 5 && (
+      {roleDenied && user && user.role !== "CUSTOMER" && <BookingAccessDialog role={user.role} onClose={() => setRoleDenied(false)} />}
+      {currentStep === 5 && (
               <motion.div
                 key="confirmed"
                 initial={{ opacity: 0, scale: 0.96 }}

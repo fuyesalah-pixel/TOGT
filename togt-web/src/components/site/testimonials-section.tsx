@@ -4,7 +4,15 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, CheckCircle, ArrowDown, ChevronUp } from "lucide-react";
-import { testimonials } from "@/lib/data/testimonials";
+import { useVisibleReviews } from "@/hooks/useReviews";
+
+interface TestimonialItem {
+  id: string;
+  name: string;
+  service: string;
+  rating: number;
+  text: string;
+}
 
 const PAGE_SIZE = 3;
 const EASE = [0.22, 1, 0.36, 1] as [number, number, number, number];
@@ -37,7 +45,7 @@ function TestimonialCard({
   rev,
   index,
 }: {
-  rev: (typeof testimonials)[number];
+  rev: TestimonialItem;
   index: number;
 }) {
   const getInitials = (name: string) =>
@@ -103,6 +111,17 @@ export function TestimonialsSection() {
   const t = useTranslations("Testimonials");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [hasExpanded, setHasExpanded] = useState(false);
+  const { data: reviews = [], isLoading } = useVisibleReviews();
+
+  const testimonials: TestimonialItem[] = reviews
+    .filter((review) => review.reviewText)
+    .map((review) => ({
+      id: review.id,
+      name: review.user?.fullName ?? "TOGT Customer",
+      service: "Verified TOGT customer",
+      rating: review.rating,
+      text: review.reviewText ?? "",
+    }));
 
   const visible = testimonials.slice(0, visibleCount);
   const hasMore = visibleCount < testimonials.length;
@@ -162,6 +181,9 @@ export function TestimonialsSection() {
 
         {/* Grid — always 3 columns on lg, no row-span */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {isLoading && Array.from({ length: PAGE_SIZE }).map((_, index) => (
+            <div key={index} className="h-48 animate-pulse rounded-2xl bg-white shadow-md" />
+          ))}
           {visible.map((rev, index) => (
             <TestimonialCard key={rev.id} rev={rev} index={index} />
           ))}

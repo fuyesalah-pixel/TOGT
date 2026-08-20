@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface ImageGalleryProps {
   images: string[];
@@ -11,6 +12,7 @@ interface ImageGalleryProps {
 
 export function ImageGallery({ images, alt }: ImageGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const safeImages = images.length ? images : ["/images/packages/world-custom.jpg"];
 
   return (
     <div className="flex flex-col gap-3">
@@ -26,7 +28,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
             className="absolute inset-0"
           >
             <Image
-              src={images[activeIndex]}
+              src={safeImages[activeIndex]}
               alt={`${alt} — image ${activeIndex + 1}`}
               fill
               className="object-cover"
@@ -35,12 +37,17 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
             />
           </motion.div>
         </AnimatePresence>
+        {safeImages.length > 1 && <>
+          <button type="button" onClick={() => setActiveIndex((index) => (index - 1 + safeImages.length) % safeImages.length)} className="absolute left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white hover:bg-togt-orange" aria-label="Previous image"><ChevronLeft className="h-5 w-5" /></button>
+          <button type="button" onClick={() => setActiveIndex((index) => (index + 1) % safeImages.length)} className="absolute right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white hover:bg-togt-orange" aria-label="Next image"><ChevronRight className="h-5 w-5" /></button>
+          <span className="absolute bottom-3 right-3 z-10 rounded-full bg-black/55 px-2 py-1 text-xs font-semibold text-white">{activeIndex + 1}/{safeImages.length}</span>
+        </>}
       </div>
 
       {/* Thumbnails — only shown if more than 1 image */}
-      {images.length > 1 && (
+      {safeImages.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {images.map((src, i) => (
+          {safeImages.map((src, i) => (
             <button
               key={i}
               onClick={() => setActiveIndex(i)}

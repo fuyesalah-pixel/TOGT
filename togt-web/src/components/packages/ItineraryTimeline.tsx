@@ -1,4 +1,4 @@
-import type { PackageItineraryDay } from "@/lib/data/packages";
+import type { PackageItineraryDay } from "@/lib/api/packages";
 
 interface ItineraryTimelineProps {
   itinerary: PackageItineraryDay[];

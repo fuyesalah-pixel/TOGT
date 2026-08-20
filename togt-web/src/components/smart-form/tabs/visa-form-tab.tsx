@@ -1,10 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { visaFormSchema, COUNTRIES, AIRLINES, type VisaFormValues } from "@/lib/schemas/smart-form";
 import { useMockSubmit } from "../use-mock-submit";
+import { useProfilePrefill } from "../use-profile-prefill";
+import { useSmartForm } from "../smart-form-context";
 import { FormSuccess } from "../form-success";
 import {
   Form,
@@ -31,11 +34,14 @@ export function VisaFormTab() {
   const tkt = useTranslations("SmartForm.ticket");
   const tt = useTranslations("SmartForm.tourist");
   const { submit, isSubmitting, isSuccess, reset } = useMockSubmit();
+  const { selectedPackage } = useSmartForm();
 
   const form = useForm<VisaFormValues>({
     resolver: zodResolver(visaFormSchema),
     defaultValues: {
       fullName: "",
+      packageId: "",
+      permanentAddress: "",
       phone: "",
       email: "",
       visaType: "visit",
@@ -48,6 +54,8 @@ export function VisaFormTab() {
       needTicket: false,
     },
   });
+  useProfilePrefill(form);
+  useEffect(() => { if (selectedPackage?.id) form.setValue("packageId", selectedPackage.id); }, [selectedPackage, form]);
 
   const visaType = form.watch("visaType");
   const needTicket = form.watch("needTicket");
@@ -114,6 +122,12 @@ export function VisaFormTab() {
         )} />
         <FormField control={form.control} name="phone" render={({ field }) => (
           <FormItem><FormLabel>{tc("phone")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="permanentAddress" render={({ field }) => (
+          <FormItem className="sm:col-span-2"><FormLabel>Permanent address</FormLabel><FormControl><Input placeholder="Bole, Addis Ababa" {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="birthday" render={({ field }) => (
+          <FormItem><FormLabel>Birthday</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="email" render={({ field }) => (
           <FormItem><FormLabel>{tc("email")}</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>

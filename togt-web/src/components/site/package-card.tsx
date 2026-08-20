@@ -7,9 +7,11 @@ import {
   Wallet, Crown, Heart, Mountain, Palmtree,
   Landmark, Building2, Plane, Info,
 } from "lucide-react";
-import type { MockPackage } from "@/lib/data/packages";
+import type { MockPackage } from "@/lib/api/packages";
 import { useSmartForm, type SmartFormTab } from "@/components/smart-form/smart-form-context";
 import { PackageDetailsModal } from "@/components/packages/PackageDetailsModal";
+import { useAuth } from "@/hooks/useAuth";
+import { BookingAccessDialog } from "./booking-access-dialog";
 
 const getIconForPackage = (title: string) => {
   if (title.includes("Economy")) return Wallet;
@@ -39,6 +41,8 @@ export function PackageCard({
   const { openWithPackage } = useSmartForm();
   const IconComponent = getIconForPackage(pkg.title);
   const [modalOpen, setModalOpen] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
+  const { user } = useAuth();
   const moreInfoRef = useRef<HTMLButtonElement>(null);
 
   const description = pkg.includes.slice(0, 3).join(" • ");
@@ -49,6 +53,7 @@ export function PackageCard({
   };
 
   const handleBook = () => {
+    if (user && user.role !== "CUSTOMER") { setAccessDenied(true); return; }
     if (onBeforeBook) {
       onBeforeBook();
       setTimeout(() => openWithPackage(tab, pkg), 320);
@@ -135,6 +140,7 @@ export function PackageCard({
         isOpen={modalOpen}
         onClose={handleModalClose}
       />
+      {accessDenied && user && user.role !== "CUSTOMER" && <BookingAccessDialog role={user.role} onClose={() => setAccessDenied(false)} />}
     </>
   );
 }

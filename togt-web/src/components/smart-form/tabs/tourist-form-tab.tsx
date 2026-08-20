@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { touristFormSchema, AIRLINES, type TouristFormValues } from "@/lib/schemas/smart-form";
 import { useMockSubmit } from "../use-mock-submit";
+import { useProfilePrefill } from "../use-profile-prefill";
 import { useSmartForm } from "../smart-form-context";
 import { FormSuccess } from "../form-success";
 import {
@@ -49,6 +50,7 @@ export function TouristFormTab() {
       needTicket: false,
     },
   });
+  useProfilePrefill(form);
 
   useEffect(() => {
     if (selectedPackage && selectedPackage.type === "tourist_prebuilt") {

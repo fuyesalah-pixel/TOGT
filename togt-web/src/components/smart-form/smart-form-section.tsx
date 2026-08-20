@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
 import {
   Tabs,
   TabsContent,
@@ -14,6 +15,9 @@ import { VisaFormTab } from "./tabs/visa-form-tab";
 import { ForeignTravelFormTab } from "./tabs/foreign-travel-form-tab";
 import { ContactFormTab } from "./tabs/contact-form-tab";
 import { Plane, Mosque, Mountain, Globe, BadgeCheck, MessageSquare, PlaneTakeoff } from "lucide-react";
+import { CalendarDays, CreditCard } from "lucide-react";
+
+type PaymentOptions = { packageName: string; amount: number; currency: string; onPayNow: () => Promise<void>; onPayLater: () => Promise<void> };
 
 /* ── Tab definitions ──────────────────────────────────────────────────── */
 const TAB_CONFIG: { value: SmartFormTab; icon: React.ReactNode; labelKey: string }[] = [
@@ -29,9 +33,21 @@ const TAB_CONFIG: { value: SmartFormTab; icon: React.ReactNode; labelKey: string
 export function SmartFormSection() {
   const t = useTranslations("SmartForm");
   const { activeTab, openTab } = useSmartForm();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentOptions, setPaymentOptions] = useState<PaymentOptions | null>(null);
+  useEffect(() => {
+    const start = () => setIsSubmitting(true);
+    const end = () => setIsSubmitting(false);
+    window.addEventListener("togt:submit-start", start);
+    window.addEventListener("togt:submit-end", end);
+    return () => { window.removeEventListener("togt:submit-start", start); window.removeEventListener("togt:submit-end", end); };
+  }, []);
+  useEffect(() => { const open = (event: Event) => setPaymentOptions((event as CustomEvent<PaymentOptions>).detail); window.addEventListener("togt:payment-options", open); return () => window.removeEventListener("togt:payment-options", open); }, []);
 
   return (
     <section id="smart-form" className="py-16 md:py-20 px-4 sm:px-6 lg:px-8">
+      {isSubmitting && <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-togt-navy/45 px-4 backdrop-blur-sm"><div className="rounded-2xl bg-white p-8 text-center shadow-2xl"><div className="mx-auto flex h-16 w-16 animate-bounce items-center justify-center rounded-full bg-togt-orange/15"><Plane className="h-8 w-8 -rotate-12 text-togt-orange" /></div><h3 className="mt-4 font-bold text-togt-navy">Submitting your request</h3><p className="mt-1 text-sm text-gray-500">Please wait a moment...</p><p className="mt-2 text-xs font-semibold text-togt-orange">Redirecting to your dashboard</p></div></div>}
+      {paymentOptions && <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-togt-navy/45 px-4 backdrop-blur-sm"><div className="w-full max-w-md rounded-2xl bg-white p-7 shadow-2xl"><h3 className="text-xl font-bold text-togt-navy">Request Summary</h3><p className="mt-3 text-sm text-gray-500">Package: <b className="text-togt-navy">{paymentOptions.packageName}</b></p><p className="mt-1 text-sm text-gray-500">Price: <b className="text-togt-navy">{paymentOptions.amount.toLocaleString()} {paymentOptions.currency}</b></p><p className="mt-5 text-sm font-semibold text-togt-navy">Choose how to proceed:</p><div className="mt-4 grid gap-3"><button disabled={!paymentOptions.amount} onClick={async () => { const choice = paymentOptions; setPaymentOptions(null); try { await choice.onPayNow(); } catch { /* the request flow reports the server error */ } }} className="flex items-center justify-center gap-2 rounded-xl bg-togt-orange px-4 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"><CreditCard className="h-4 w-4" />Pay Now - {paymentOptions.amount.toLocaleString()} {paymentOptions.currency}</button><button onClick={async () => { const choice = paymentOptions; setPaymentOptions(null); try { await choice.onPayLater(); } catch { /* the request flow reports the server error */ } }} className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-3 font-bold text-togt-navy hover:border-togt-blue"><CalendarDays className="h-4 w-4" />Pay Later</button></div><button onClick={() => setPaymentOptions(null)} className="mt-4 w-full text-sm text-gray-400 hover:text-gray-600">Cancel</button></div></div>}
       <div className="max-w-4xl mx-auto">
 
         {/* ── Section header ─────────────────────────────────────── */}

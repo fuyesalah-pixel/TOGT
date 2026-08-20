@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight, ArrowRight, Phone } from 'lucide-react';
 import { useSmartForm } from '@/components/smart-form/smart-form-context';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CONTACT } from '@/lib/contact';
 
 /* ─── Slide data ──────────────────────────────────────────────────────────── */
 const slides = [
@@ -264,7 +265,7 @@ export function Hero() {
                 </motion.button>
 
                 <motion.a
-                  href="tel:+251911234567"
+                  href={CONTACT.phones[0].href}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.97 }}
                   className="inline-flex items-center gap-2.5 px-7 md:px-9 py-3.5 md:py-4 rounded-full font-semibold text-white text-sm md:text-base transition-all duration-300"

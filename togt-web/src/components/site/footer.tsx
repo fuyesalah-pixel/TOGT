@@ -4,6 +4,8 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { MapPin, Phone, Mail, Clock, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
+import { CONTACT } from "@/lib/contact";
+import { useLocale } from "next-intl";
 
 const EASE = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
@@ -23,11 +25,12 @@ function SocialLink({ href, label, children }: { href: string; label: string; ch
 }
 
 /* ── Footer link ────────────────────────────────────────────────────── */
-function FooterLink({ href, children, external = false }: { href: string; children: React.ReactNode; external?: boolean }) {
+function FooterLink({ href, children, external = false, onClick }: { href: string; children: React.ReactNode; external?: boolean; onClick?: () => void }) {
   return (
     <li>
       <a
         href={href}
+        onClick={onClick}
         target={external ? "_blank" : undefined}
         rel={external ? "noopener noreferrer" : undefined}
         className="text-white/55 hover:text-[#FF9300] text-sm transition-colors duration-200 inline-flex items-center gap-1 group"
@@ -53,6 +56,7 @@ export function Footer() {
   const t   = useTranslations("Footer");
   const nav = useTranslations("Nav");
   const year = new Date().getFullYear();
+  const locale = useLocale();
 
   return (
     <footer className="relative bg-[#0e2d3f] text-white overflow-hidden">
@@ -130,7 +134,7 @@ export function Footer() {
               </SocialLink>
 
               {/* Instagram */}
-              <SocialLink href="https://instagram.com/togt" label="Instagram">
+              <SocialLink href={CONTACT.socials.instagram} label="Instagram">
                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
                   <circle cx="12" cy="12" r="4" />
@@ -139,14 +143,14 @@ export function Footer() {
               </SocialLink>
 
               {/* Telegram */}
-              <SocialLink href="https://t.me/togt" label="Telegram">
+              <SocialLink href={CONTACT.socials.telegram} label="Telegram">
                 <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.244-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
                 </svg>
               </SocialLink>
 
               {/* TikTok */}
-              <SocialLink href="https://tiktok.com/@togt" label="TikTok">
+              <SocialLink href={CONTACT.socials.tiktok} label="TikTok">
                 <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.22 8.22 0 004.86 1.57V6.81a4.85 4.85 0 01-1.09-.12z" />
                 </svg>
@@ -210,19 +214,17 @@ export function Footer() {
               <li className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-[#FF9300] flex-shrink-0 mt-0.5" />
                 <span className="text-white/55 text-sm leading-snug">
-                  Bole Road, Addis Ababa, Ethiopia
+                  <a href={CONTACT.map} target="_blank" rel="noopener noreferrer" className="hover:text-[#FF9300]">{CONTACT.address}</a>
                 </span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-[#FF9300] flex-shrink-0" />
-                <a href="tel:+251900000000" className="text-white/55 hover:text-[#FF9300] text-sm transition-colors">
-                  +251 900 000 000
-                </a>
+                 <div className="flex flex-col gap-1">{CONTACT.phones.map((phone) => <a key={phone.href} href={phone.href} className="text-white/55 hover:text-[#FF9300] text-sm transition-colors">{phone.display}</a>)}</div>
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-[#FF9300] flex-shrink-0" />
-                <a href="mailto:info@togt.com" className="text-white/55 hover:text-[#FF9300] text-sm transition-colors">
-                  info@togt.com
+                 <a href={`mailto:${CONTACT.email}`} className="text-white/55 hover:text-[#FF9300] text-sm transition-colors">
+                   {CONTACT.email}
                 </a>
               </li>
               <li className="flex items-start gap-2.5">
@@ -246,13 +248,13 @@ export function Footer() {
         >
           <ColHeading>{t("resources")}</ColHeading>
           <ul className="flex flex-wrap gap-x-6 gap-y-2.5">
-            <FooterLink href="/blog" external>{t("blog")}</FooterLink>
-            <FooterLink href="/umrah-guide">{t("umrahGuide")}</FooterLink>
-            <FooterLink href="/visa-requirements">{t("visaRequirements")}</FooterLink>
-            <FooterLink href="/terms">{t("terms")}</FooterLink>
-            <FooterLink href="/privacy">{t("privacy")}</FooterLink>
-            <FooterLink href="/refund-policy">{t("refundPolicy")}</FooterLink>
-            <FooterLink href="/support">{t("support")}</FooterLink>
+             <FooterLink href={`/${locale}/blog`}>{t("blog")}</FooterLink>
+             <FooterLink href={`/${locale}/umrah-guide`}>{t("umrahGuide")}</FooterLink>
+             <FooterLink href={`/${locale}/visa-requirements`}>{t("visaRequirements")}</FooterLink>
+             <FooterLink href={`/${locale}/terms`}>{t("terms")}</FooterLink>
+             <FooterLink href={`/${locale}/privacy`}>{t("privacy")}</FooterLink>
+             <FooterLink href={`/${locale}/refund-policy`}>{t("refundPolicy")}</FooterLink>
+             <FooterLink href={`/${locale}#smart-form`} onClick={() => { window.localStorage.setItem("supportContact", "1"); window.dispatchEvent(new CustomEvent("selectService", { detail: "contact" })); }}>{t("support")}</FooterLink>
           </ul>
         </motion.div>
 

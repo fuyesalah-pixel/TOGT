@@ -4,6 +4,7 @@ import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { notFound } from "next/navigation";
 import { Inter } from "next/font/google";
 import { routing } from "@/i18n/routing";
+import { Providers } from "@/components/providers";
 import "../globals.css";
 
 import { Playfair_Display } from "next/font/google";
@@ -47,7 +48,9 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={dir} className={`${inter.variable} ${playfair.variable}`}>
       <body className="font-sans antialiased bg-background text-foreground">
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider>
+          <Providers>{children}</Providers>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

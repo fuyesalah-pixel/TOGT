@@ -4,13 +4,15 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
-import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "./language-switcher";
 import { Menu, X } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export function Navbar() {
   const t = useTranslations("Nav");
   const [open, setOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
 
   const links = [
     { href: "#about", label: t("about") },
@@ -51,10 +53,24 @@ export function Navbar() {
 
         <div className="hidden items-center gap-3 lg:flex">
           <LanguageSwitcher />
-          <Button
-            className="bg-togt-orange text-white hover:bg-togt-orange/90"
-            render={<a href="#smart-form">{t("smartForm")}</a>}
-          />
+          {isAuthenticated ? (
+            <div className="relative">
+              <button onClick={() => setAccountOpen((value) => !value)} className="flex items-center gap-2 rounded-full border border-togt-blue/15 px-3 py-1.5 text-sm font-semibold text-togt-navy">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-togt-blue text-xs text-white">{user?.fullName.slice(0, 2).toUpperCase()}</span>
+                <span className="max-w-28 truncate">{user?.fullName}</span>
+              </button>
+              {accountOpen && (
+                <div className="absolute right-0 top-11 z-50 w-44 rounded-xl border border-gray-100 bg-white p-1.5 shadow-xl">
+                  <Link href="/dashboard" className="block rounded-lg px-3 py-2 text-sm text-togt-navy hover:bg-slate-50">Dashboard</Link>
+                  <Link href="/dashboard" className="block rounded-lg px-3 py-2 text-sm text-togt-navy hover:bg-slate-50">Settings</Link>
+                  <button onClick={() => void logout()} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">Logout</button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link href="/login" className="rounded-lg border border-togt-blue px-3 py-2 text-sm font-semibold text-togt-blue hover:bg-togt-blue hover:text-white">Sign In</Link>
+          )}
+          <a href="#smart-form" className="inline-flex h-8 items-center justify-center rounded-lg bg-togt-orange px-2.5 text-sm font-medium text-white hover:bg-togt-orange/90">{t("smartForm")}</a>
         </div>
 
         <button
@@ -81,10 +97,15 @@ export function Navbar() {
             ))}
             <div className="flex items-center justify-between pt-2">
               <LanguageSwitcher />
-              <Button
-                className="bg-togt-orange text-white hover:bg-togt-orange/90"
-                render={<a href="#smart-form">{t("smartForm")}</a>}
-              />
+              {isAuthenticated ? (
+                <div className="flex items-center gap-2">
+                  <Link href="/dashboard" onClick={() => setOpen(false)} className="text-sm font-semibold text-togt-blue">Dashboard</Link>
+                  <button onClick={() => { setOpen(false); void logout(); }} className="text-sm font-semibold text-red-600">Logout</button>
+                </div>
+              ) : (
+                <Link href="/login" onClick={() => setOpen(false)} className="rounded-lg border border-togt-blue px-3 py-2 text-sm font-semibold text-togt-blue">Sign In</Link>
+              )}
+              <a href="#smart-form" className="inline-flex h-8 items-center justify-center rounded-lg bg-togt-orange px-2.5 text-sm font-medium text-white hover:bg-togt-orange/90">{t("smartForm")}</a>
             </div>
           </nav>
         </div>

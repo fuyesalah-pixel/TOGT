@@ -1,11 +1,14 @@
 "use client";
 
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ticketFormSchema, AIRLINES, type TicketFormValues } from "@/lib/schemas/smart-form";
 import { useMockSubmit } from "../use-mock-submit";
 import { FormSuccess } from "../form-success";
+import { useProfilePrefill } from "../use-profile-prefill";
+import { useSmartForm } from "../smart-form-context";
 import {
   Form,
   FormControl,
@@ -29,11 +32,14 @@ export function TicketFormTab() {
   const tc = useTranslations("SmartForm.common");
   const tt = useTranslations("SmartForm.ticket");
   const { submit, isSubmitting, isSuccess, reset } = useMockSubmit();
+  const { selectedPackage } = useSmartForm();
 
   const form = useForm<TicketFormValues>({
     resolver: zodResolver(ticketFormSchema),
     defaultValues: {
       fullName: "",
+      packageId: "",
+      billingAddress: "",
       phone: "",
       email: "",
       passportNumber: "",
@@ -53,6 +59,8 @@ export function TicketFormTab() {
       specialRequirements: "",
     },
   });
+  useProfilePrefill(form);
+  useEffect(() => { if (selectedPackage?.id) form.setValue("packageId", selectedPackage.id); }, [selectedPackage, form]);
 
   if (isSuccess) return <FormSuccess onReset={reset} />;
 
@@ -70,6 +78,9 @@ export function TicketFormTab() {
         )} />
         <FormField control={form.control} name="email" render={({ field }) => (
           <FormItem><FormLabel>{tc("email")}</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+        )} />
+        <FormField control={form.control} name="billingAddress" render={({ field }) => (
+          <FormItem className="sm:col-span-2"><FormLabel>Billing address</FormLabel><FormControl><Input placeholder="Bole, Addis Ababa" {...field} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="dob" render={({ field }) => (
           <FormItem><FormLabel>{tt("dob")}</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>

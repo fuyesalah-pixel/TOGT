@@ -3,6 +3,8 @@ import { z } from "zod";
 const contactBase = {
   fullName: z.string().min(2),
   phone: z.string().min(6),
+  address: z.string().optional(),
+  birthday: z.string().optional(),
   email: z.string().email(),
 };
 
@@ -44,6 +46,8 @@ export const NATIONALITIES = [...COUNTRIES];
 
 export const ticketFormSchema = z.object({
   ...contactBase,
+  packageId: z.string().optional(),
+  billingAddress: z.string().optional(),
   passportNumber: z.string().min(4),
   passportIssuedDate: z.string().min(1),
   passportExpiry: z.string().min(1),
@@ -66,6 +70,7 @@ export const umrahFormSchema = z
   .object({
     ...contactBase,
     packageId: z.string().optional(),
+    emergencyContactAddress: z.string().optional(),
     packageType: z.enum(["umrah_economy", "umrah_vip", "umrah_honeymoon", "umrah_custom"]),
     hotelTier: z.string().optional(),
     transportType: z.string().optional(),
@@ -104,6 +109,7 @@ export const touristFormSchema = z
   .object({
     ...contactBase,
     packageId: z.string().optional(),
+    permanentAddress: z.string().optional(),
     route: z.string().min(1),
     arrivalDate: z.string().min(1),
     departureDate: z.string().min(1),
@@ -134,6 +140,8 @@ export type TouristFormValues = z.infer<typeof touristFormSchema>;
 export const visaFormSchema = z
   .object({
     ...contactBase,
+    packageId: z.string().optional(),
+    permanentAddress: z.string().optional(),
     visaType: z.enum(["visit", "educational", "merchant", "medical", "family"]),
     nationality: z.string().min(2),
     destinationCountry: z.string().min(2),
@@ -162,6 +170,7 @@ export type VisaFormValues = z.infer<typeof visaFormSchema>;
 
 export const foreignTravelFormSchema = z.object({
   ...contactBase,
+  packageId: z.string().optional(),
   destinationCountry: z.string().min(2),
   departureDate: z.string().min(1),
   returnDate: z.string().min(1),
@@ -179,6 +188,7 @@ export type ForeignTravelFormValues = z.infer<typeof foreignTravelFormSchema>;
 
 export const contactFormSchema = z.object({
   ...contactBase,
+  packageId: z.string().optional(),
   subject: z.string().min(2),
   message: z.string().min(5),
 });

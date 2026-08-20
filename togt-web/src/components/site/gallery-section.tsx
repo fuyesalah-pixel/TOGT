@@ -5,7 +5,17 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MapPin, Calendar, ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { galleryItems, CATEGORY_COLORS, type GalleryItem } from "@/lib/data/gallery";
+import { useGallery } from "@/hooks/useContent";
+import type { GalleryItem } from "@/lib/api/types";
+
+/** Category badge colors (presentation config) */
+const CATEGORY_COLORS: Record<string, string> = {
+  UMRAH: "#FF9300",
+  DOMESTIC: "#276749",
+  TOURIST: "#553C9A",
+  EVENT: "#1F67B1",
+  VISA: "#C53030",
+};
 
 const EASE = [0.22, 1, 0.36, 1] as [number, number, number, number];
 const PREVIEW_COUNT = 4;
@@ -162,11 +172,13 @@ function GalleryModal({
 
 /* ── "All Gallery" modal — grid of all cards ────────────────────────── */
 function AllGalleryModal({
+  items,
   onClose,
   onSelect,
   browseAll,
   fullGallery,
 }: {
+  items: GalleryItem[];
   onClose: () => void;
   onSelect: (item: GalleryItem) => void;
   browseAll: string;
@@ -227,7 +239,7 @@ function AllGalleryModal({
         {/* Grid */}
         <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-            {galleryItems.map((item, i) => (
+            {items.map((item, i) => (
               <GalleryCard
                 key={item.id}
                 item={item}
@@ -314,6 +326,7 @@ export function GallerySection() {
   const t = useTranslations("Gallery");
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
   const [showAllModal, setShowAllModal] = useState(false);
+  const { data: galleryItems = [], isLoading } = useGallery();
   const preview = galleryItems.slice(0, PREVIEW_COUNT);
 
   return (
@@ -335,6 +348,9 @@ export function GallerySection() {
         </motion.div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+          {isLoading && Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-56 md:h-64 rounded-2xl bg-gray-100 animate-pulse" />
+          ))}
           {preview.map((item, i) => (
             <GalleryCard key={item.id} item={item} index={i}
               viewGalleryLabel={t("viewGallery")}
@@ -360,6 +376,7 @@ export function GallerySection() {
       <AnimatePresence>
         {showAllModal && (
           <AllGalleryModal
+            items={galleryItems}
             onClose={() => setShowAllModal(false)}
             onSelect={item => setSelectedItem(item)}
             browseAll={t("browseAll")}

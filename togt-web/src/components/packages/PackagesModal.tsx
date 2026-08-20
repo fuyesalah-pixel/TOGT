@@ -3,7 +3,7 @@
 import { useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
-import type { MockPackage } from "@/lib/data/packages";
+import type { MockPackage } from "@/lib/api/packages";
 import type { SmartFormTab } from "@/components/smart-form/smart-form-context";
 import { PackageCard } from "@/components/site/package-card";
 import { CustomPackageCard } from "@/components/site/custom-package-card";

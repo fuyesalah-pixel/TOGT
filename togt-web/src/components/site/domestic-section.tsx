@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ArrowRight } from "lucide-react";
-import { mockPackages } from "@/lib/data/packages";
+import { useDisplayPackages } from "@/hooks/usePackages";
+import { PackageGridSkeleton } from "./package-grid-skeleton";
 import { PackageCard } from "./package-card";
 import { CustomPackageCard } from "./custom-package-card";
 import { PackagesModal } from "@/components/packages/PackagesModal";
@@ -13,7 +14,11 @@ export function DomesticSection() {
   const t = useTranslations("Domestic");
   const [modalOpen, setModalOpen] = useState(false);
 
-  const packages = mockPackages.filter((p) => p.type === "domestic_prebuilt");
+  const { data: packages = [], isLoading } = useDisplayPackages({ type: "DOMESTIC" });
+  const homepagePackages = [...packages]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .filter((pkg) => !pkg.isCustom)
+    .slice(0, 3);
 
   return (
     <section id="domestic" className="py-20">
@@ -43,7 +48,8 @@ export function DomesticSection() {
         </motion.div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-5 justify-items-center">
-          {packages.map((pkg, index) => (
+          {isLoading && <PackageGridSkeleton />}
+          {homepagePackages.map((pkg, index) => (
             <PackageCard key={pkg.id} pkg={pkg} tab="domestic" ctaLabel={t("customCta")} index={index} />
           ))}
           <CustomPackageCard

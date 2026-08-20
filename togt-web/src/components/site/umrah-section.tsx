@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Gift, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { mockPackages } from "@/lib/data/packages";
+import { useDisplayPackages } from "@/hooks/usePackages";
+import { PackageGridSkeleton } from "./package-grid-skeleton";
 import { PackageCard } from "./package-card";
 import { CustomPackageCard } from "./custom-package-card";
 import { PackagesModal } from "@/components/packages/PackagesModal";
@@ -16,7 +17,11 @@ export function UmrahSection() {
   const { openTab } = useSmartForm();
   const [modalOpen, setModalOpen] = useState(false);
 
-  const packages = mockPackages.filter((p) => p.type.startsWith("umrah_"));
+  const { data: packages = [], isLoading } = useDisplayPackages({ type: "UMRAH" });
+  const homepagePackages = [...packages]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .filter((pkg) => !pkg.isCustom)
+    .slice(0, 3);
 
   return (
     <section id="umrah" className="bg-togt-navy/[0.03] py-20">
@@ -47,7 +52,8 @@ export function UmrahSection() {
 
         {/* 4-col grid: 2 on mobile, 4 on desktop */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-5 justify-items-center">
-          {packages.map((pkg, index) => (
+          {isLoading && <PackageGridSkeleton />}
+          {homepagePackages.map((pkg, index) => (
             <PackageCard key={pkg.id} pkg={pkg} tab="umrah" ctaLabel={t("cta")} index={index} />
           ))}
           <CustomPackageCard

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -15,9 +15,11 @@ import {
   Utensils,
   CreditCard,
 } from "lucide-react";
-import type { MockPackage } from "@/lib/data/packages";
+import type { MockPackage } from "@/lib/api/packages";
 import type { SmartFormTab } from "@/components/smart-form/smart-form-context";
 import { useSmartForm } from "@/components/smart-form/smart-form-context";
+import { useAuth } from "@/hooks/useAuth";
+import { BookingAccessDialog } from "@/components/site/booking-access-dialog";
 import { ImageGallery } from "./ImageGallery";
 import { ItineraryTimeline } from "./ItineraryTimeline";
 
@@ -50,6 +52,11 @@ function formatDetailKey(key: string): string {
     .trim();
 }
 
+function youtubeId(value?: string) {
+  if (!value) return null;
+  return value.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/)?.[1] ?? null;
+}
+
 /* ── Props ────────────────────────────────────────────────────────────── */
 interface PackageDetailsModalProps {
   pkg: MockPackage | null;
@@ -65,6 +72,8 @@ export function PackageDetailsModal({
   onClose,
 }: PackageDetailsModalProps) {
   const { openWithPackage } = useSmartForm();
+  const { user } = useAuth();
+  const [accessDenied, setAccessDenied] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   /* Lock body scroll */
@@ -90,9 +99,10 @@ export function PackageDetailsModal({
   /* Book CTA */
   const handleBook = useCallback(() => {
     if (!pkg) return;
+    if (user && user.role !== "CUSTOMER") { setAccessDenied(true); return; }
     onClose();
     setTimeout(() => openWithPackage(tab, pkg), 300);
-  }, [pkg, tab, onClose, openWithPackage]);
+  }, [pkg, tab, onClose, openWithPackage, user]);
 
   if (!pkg) return null;
 
@@ -177,9 +187,26 @@ export function PackageDetailsModal({
               <div className="px-4 sm:px-6 py-5 space-y-7">
 
                 {/* Full description */}
-                <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
+                <p className="whitespace-pre-line text-gray-600 leading-7 text-sm sm:text-base">
                   {pkg.fullDescription}
                 </p>
+
+                {youtubeId(pkg.videoUrl) && (
+                  <div>
+                    <h3 className="mb-3 border-b border-gray-100 pb-2 text-xs font-bold uppercase tracking-wider text-[#12394F]">
+                      Package video
+                    </h3>
+                    <div className="relative aspect-video overflow-hidden rounded-xl bg-black">
+                      <iframe
+                        src={`https://www.youtube.com/embed/${youtubeId(pkg.videoUrl)}`}
+                        title={`${pkg.title} video`}
+                        className="absolute inset-0 h-full w-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Highlights */}
                 {pkg.highlights.length > 0 && (
@@ -313,6 +340,7 @@ export function PackageDetailsModal({
           </motion.div>
         </motion.div>
       )}
+      {accessDenied && user && user.role !== "CUSTOMER" && <BookingAccessDialog role={user.role} onClose={() => setAccessDenied(false)} />}
     </AnimatePresence>
   );
 }
