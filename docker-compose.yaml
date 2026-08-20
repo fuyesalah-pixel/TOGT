@@ -1,26 +1,112 @@
 version: "3.9"
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: togt-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-togt}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-togt_db}
+    volumes:
+      - togt_postgres_data:/var/lib/postgresql/data
+    networks: [togt-network]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-togt} -d ${POSTGRES_DB:-togt_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  valkey:
+    image: valkey/valkey:7-alpine
+    container_name: togt-valkey-prod
+    restart: unless-stopped
+    volumes:
+      - togt_valkey_data:/data
+    networks: [togt-network]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  togt-api:
+    build: ./togt-api
+    container_name: togt-api-prod
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      valkey: { condition: service_healthy }
+    environment:
+      PORT: 3001
+      FRONTEND_URL: https://travel.togttrading.com
+      BACKEND_URL: https://travel.togttrading.com
+      DATABASE_URL: postgresql://${POSTGRES_USER:-togt}:${POSTGRES_PASSWORD:-change_me}@postgres:5432/${POSTGRES_DB:-togt_db}
+      VALKEY_URL: redis://valkey:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-900}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-604800}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALLBACK_URL: https://travel.togttrading.com/api/auth/google/callback
+      ADMIN_EMAILS: ${ADMIN_EMAILS}
+      CHAPA_SECRET_KEY: ${CHAPA_SECRET_KEY}
+      CHAPA_ENCRYPTION_KEY: ${CHAPA_ENCRYPTION_KEY}
+      CHAPA_WEBHOOK_SECRET: ${CHAPA_WEBHOOK_SECRET}
+      CHAPA_API_URL: https://api.chapa.co/v1
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}
+      R2_ENDPOINT: ${R2_ENDPOINT}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      R2_BUCKET: ${R2_BUCKET:-togt-storage}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME:-togt-storage}
+      R2_PUBLIC_URL: ${R2_PUBLIC_URL}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM:-TOGT <noreply@togttrading.com>}
+      SMS_ETHIOPIA_TOKEN: ${SMS_ETHIOPIA_TOKEN}
+      COOKIE_SECURE: "true"
+    networks: [togt-network]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.togt-api.rule=Host(`travel.togttrading.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.togt-api.entrypoints=websecure"
+      - "traefik.http.routers.togt-api.tls=true"
+      - "traefik.http.routers.togt-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.togt-api.priority=100"
+      - "traefik.http.services.togt-api.loadbalancer.server.port=3001"
+
   togt-web:
     build:
       context: ./togt-web
-      dockerfile: Dockerfile
-    container_name: togt-web
+      args:
+        NEXT_PUBLIC_API_URL: https://travel.togttrading.com
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+        NEXT_PUBLIC_CHAPA_PUBLIC_KEY: ${NEXT_PUBLIC_CHAPA_PUBLIC_KEY}
+        NEXT_PUBLIC_MAPBOX_TOKEN: ${MAPBOX_ACCESS_TOKEN}
+    container_name: togt-web-prod
     restart: unless-stopped
+    depends_on: [togt-api]
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - HOSTNAME=0.0.0.0
-      - NEXT_PUBLIC_APP_URL=https://travel.togttrading.com
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    networks: [togt-network]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.togt-web.rule=Host(`travel.togttrading.com`)"
       - "traefik.http.routers.togt-web.entrypoints=websecure"
       - "traefik.http.routers.togt-web.tls=true"
       - "traefik.http.routers.togt-web.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.togt-web.priority=10"
       - "traefik.http.services.togt-web.loadbalancer.server.port=3000"
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+
+networks:
+  togt-network:
+    driver: bridge
+
+volumes:
+  togt_postgres_data:
+  togt_valkey_data:
