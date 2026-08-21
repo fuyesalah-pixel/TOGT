@@ -71,6 +71,7 @@ services:
     networks: [togt-network]
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=togt-travel_togt-network"
       - "traefik.http.routers.togt-api.rule=Host(`travel.togttrading.com`) && PathPrefix(`/api`)"
       - "traefik.http.routers.togt-api.entrypoints=websecure"
       - "traefik.http.routers.togt-api.tls=true"
@@ -96,6 +97,7 @@ services:
     networks: [togt-network]
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=togt-travel_togt-network"
       - "traefik.http.routers.togt-web.rule=Host(`travel.togttrading.com`)"
       - "traefik.http.routers.togt-web.entrypoints=websecure"
       - "traefik.http.routers.togt-web.tls=true"
