@@ -69,6 +69,8 @@ services:
       SMS_ETHIOPIA_TOKEN: ${SMS_ETHIOPIA_TOKEN}
       COOKIE_SECURE: "true"
     networks: [togt-network]
+    ports:
+      - "127.0.0.1:3001:3001"
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=togt-travel_togt-network"
@@ -95,6 +97,8 @@ services:
       PORT: 3000
       HOSTNAME: 0.0.0.0
     networks: [togt-network]
+    ports:
+      - "127.0.0.1:3000:3000"
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=togt-travel_togt-network"
