@@ -98,7 +98,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=togt-travel_togt-network"
-      - "traefik.http.routers.togt-web.rule=Host(`travel.togttrading.com`)"
+      - "traefik.http.routers.togt-web.rule=Host(`travel.togttrading.com`) && PathPrefix(`/`)"
       - "traefik.http.routers.togt-web.entrypoints=websecure"
       - "traefik.http.routers.togt-web.tls=true"
       - "traefik.http.routers.togt-web.tls.certresolver=letsencrypt"
