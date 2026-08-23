@@ -2,6 +2,7 @@ import { Navbar } from "@/components/site/navbar";
 import { Hero } from "@/components/site/hero";
 import { About } from "@/components/site/about";
 import { FlightBookingSection } from "@/components/site/flight-booking-section";
+import { DownloadAppSection } from "@/components/site/download-app-section";
 import { UmrahSection } from "@/components/site/umrah-section";
 import { WhyTogt } from "@/components/site/why-togt";
 import { IATASection } from "@/components/site/iata-section";
@@ -26,6 +27,7 @@ export default function HomePage() {
         <Hero />
         <About />
         <FlightBookingSection />
+        <DownloadAppSection />
         <UmrahSection />
         <DomesticSection />
         <ForeignerSection />
