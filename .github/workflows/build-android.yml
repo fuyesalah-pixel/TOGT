@@ -1,0 +1,55 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "togt-web/android/**"
+      - "togt-web/capacitor.config.ts"
+      - "togt-web/src/**"
+      - "togt-web/package.json"
+      - "togt-web/package-lock.json"
+      - ".github/workflows/build-android.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-java@v4
+        with: { java-version: "21", distribution: temurin }
+      - uses: android-actions/setup-android@v3
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm, cache-dependency-path: togt-web/package-lock.json }
+      - name: Install dependencies
+        working-directory: togt-web
+        run: npm ci
+      - name: Sync Capacitor
+        working-directory: togt-web
+        run: npx cap sync android
+      - name: Build debug APK
+        working-directory: togt-web/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+      - name: Copy APK
+        run: |
+          mkdir -p togt-web/public/downloads
+          cp togt-web/android/app/build/outputs/apk/debug/app-debug.apk togt-web/public/downloads/TOGT-Android.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TOGT-Android-APK
+          path: togt-web/public/downloads/TOGT-Android.apk
+          retention-days: 30
+      - name: Publish APK
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add togt-web/public/downloads/TOGT-Android.apk
+          git diff --cached --quiet || git commit -m "build: update Android APK"
+          git push

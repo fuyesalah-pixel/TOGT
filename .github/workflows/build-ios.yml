@@ -1,0 +1,34 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm, cache-dependency-path: togt-web/package-lock.json }
+      - name: Install dependencies
+        working-directory: togt-web
+        run: npm ci
+      - name: Sync Capacitor iOS
+        working-directory: togt-web
+        run: npx cap sync ios
+      - name: Build unsigned iOS app
+        working-directory: togt-web/ios
+        run: |
+          xcodebuild -project App/App.xcodeproj -scheme App -configuration Debug -sdk iphoneos -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p togt-web/public/downloads/Payload
+          cp -R togt-web/ios/build/Build/Products/Debug-iphoneos/App.app togt-web/public/downloads/Payload/
+          cd togt-web/public/downloads
+          zip -r TOGT-iOS.ipa Payload
+          rm -rf Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TOGT-iOS-IPA
+          path: togt-web/public/downloads/TOGT-iOS.ipa
+          retention-days: 30
