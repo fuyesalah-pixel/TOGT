@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Inter } from "next/font/google";
 import { routing } from "@/i18n/routing";
 import { Providers } from "@/components/providers";
+import { NativeAppGate } from "@/components/native/native-app-gate";
 import "../globals.css";
 
 import { Playfair_Display } from "next/font/google";
@@ -49,7 +50,7 @@ export default async function LocaleLayout({
     <html lang={locale} dir={dir} className={`${inter.variable} ${playfair.variable}`}>
       <body className="font-sans antialiased bg-background text-foreground">
         <NextIntlClientProvider>
-          <Providers>{children}</Providers>
+          <Providers><NativeAppGate>{children}</NativeAppGate></Providers>
         </NextIntlClientProvider>
       </body>
     </html>
