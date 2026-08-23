@@ -20,6 +20,8 @@ import { ContentModule } from './modules/content/content.module';
 import { StatsModule } from './modules/stats/stats.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { ChatbotModule } from './modules/chatbot/chatbot.module';
+import { TelegramModule } from './modules/telegram/telegram.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
@@ -42,6 +44,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     StatsModule,
     TrackingModule,
     PaymentModule,
+    ChatbotModule,
+    TelegramModule,
     TicketsModule,
     ScheduleModule.forRoot(),
   ],

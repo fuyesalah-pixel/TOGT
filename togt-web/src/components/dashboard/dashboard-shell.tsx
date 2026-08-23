@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Bell, ExternalLink, LogOut, Menu, Plane, LayoutDashboard, Users, Package, Plus, LineChart, MessageCircle, Settings, Layers, ShieldCheck, Activity, Ticket } from "lucide-react";
+import { Bell, ExternalLink, LogOut, Menu, Plane, LayoutDashboard, Users, Package, Plus, LineChart, MessageCircle, Settings, Layers, ShieldCheck, Activity, Ticket, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -17,6 +17,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const { data: notifications } = useNotifications(!!user);
   const { data: unreadNotifications } = useUnreadNotificationCount();
   const { data: chatUnread } = useChatUnreadCount();
@@ -54,36 +55,37 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-slate-50">
       {/* Sidebar */}
-      <aside className={`${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-togt-navy text-white transition-transform`}>
-        <div className="flex items-center gap-2.5 border-b border-white/10 px-5 py-5">
+      <aside className={`${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} fixed inset-y-0 left-0 z-40 flex ${sidebarExpanded ? "w-60" : "w-16"} flex-col bg-togt-navy text-white transition-all duration-300`}>
+        <div className={`flex items-center border-b border-white/10 py-5 ${sidebarExpanded ? "gap-2.5 px-5" : "justify-center px-2"}`}>
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-togt-orange">
             <Plane className="h-5 w-5 text-white" />
           </span>
-          <div>
+          <div className={sidebarExpanded ? "" : "hidden"}>
             <p className="text-sm font-extrabold leading-tight">TOGT</p>
             <p className="text-[11px] text-white/60 leading-tight">Tour &amp; Travel</p>
           </div>
+          <button className="ml-auto hidden rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white lg:block" onClick={() => setSidebarExpanded((value) => !value)} aria-label={sidebarExpanded ? "Collapse sidebar" : "Expand sidebar"} title={sidebarExpanded ? "Collapse sidebar" : "Expand sidebar"}>{sidebarExpanded ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}</button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-5">
-          <div className="rounded-xl bg-white/5 p-3.5">
+          <div className={`rounded-xl bg-white/5 p-3.5 ${sidebarExpanded ? "" : "p-2"}`}>
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-togt-blue to-togt-orange text-sm font-bold">
                 {initials}
               </span>
-              <div className="min-w-0">
+              <div className={`min-w-0 ${sidebarExpanded ? "" : "hidden"}`}>
                 <p className="truncate text-sm font-semibold">{user.fullName}</p>
                 <p className="truncate text-[11px] text-white/60">{user.email}</p>
               </div>
             </div>
             <div className="mt-3">
-              <StatusBadge value={user.role} />
+              <div className={sidebarExpanded ? "" : "hidden"}><StatusBadge value={user.role} /></div>
             </div>
           </div>
           <nav className="mt-5 space-y-1" aria-label="Dashboard sections">
             {tabs.map(({ id, label, icon: Icon }) => (
-              <button key={id} onClick={() => { setMobileOpen(false); router.push(tabHref(id), { scroll: false }); }} className={`flex w-full items-center gap-3 rounded-lg border-l-2 px-3 py-2.5 text-left text-sm transition-colors ${activeTab === id ? "border-togt-orange bg-white/10 font-semibold text-white" : "border-transparent text-white/65 hover:bg-white/5 hover:text-white"}`}>
-                <Icon className="h-4 w-4" />{label}{id === "chat" && (chatUnread?.unreadCount ?? 0) > 0 && <span className="ml-auto rounded-full bg-togt-orange px-1.5 py-0.5 text-[10px] font-bold text-white">{chatUnread?.unreadCount}</span>}
+              <button key={id} title={sidebarExpanded ? undefined : label} onClick={() => { setMobileOpen(false); router.push(tabHref(id), { scroll: false }); }} className={`flex w-full items-center gap-3 rounded-lg border-l-2 px-3 py-2.5 text-left text-sm transition-colors ${sidebarExpanded ? "" : "justify-center px-2"} ${activeTab === id ? "border-togt-orange bg-white/10 font-semibold text-white" : "border-transparent text-white/65 hover:bg-white/5 hover:text-white"}`}>
+                 <Icon className="h-4 w-4 shrink-0" /><span className={sidebarExpanded ? "" : "hidden"}>{label}</span>{id === "chat" && (chatUnread?.unreadCount ?? 0) > 0 && <span className="ml-auto rounded-full bg-togt-orange px-1.5 py-0.5 text-[10px] font-bold text-white">{chatUnread?.unreadCount}</span>}
               </button>
             ))}
           </nav>
@@ -109,7 +111,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
       {/* Main */}
       {mobileOpen && <button aria-label="Close dashboard menu" onClick={() => setMobileOpen(false)} className="fixed inset-0 z-30 bg-black/30 lg:hidden" />}
-      <div className="flex min-h-screen flex-1 flex-col lg:ml-60">
+      <div className={`flex min-h-screen flex-1 flex-col transition-all duration-300 ${sidebarExpanded ? "lg:ml-60" : "lg:ml-16"}`}>
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-gray-200 bg-white/90 px-6 py-3 backdrop-blur">
           <div className="flex items-center gap-3"><button className="lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open dashboard menu"><Menu className="h-5 w-5 text-togt-navy" /></button><p className="text-sm font-semibold text-togt-navy">
             {user.role.charAt(0) + user.role.slice(1).toLowerCase()} Dashboard

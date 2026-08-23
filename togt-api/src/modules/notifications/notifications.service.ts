@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NotificationType } from '@prisma/client';
 import { Resend } from 'resend';
+import { createTransport, Transporter } from 'nodemailer';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BulkNotificationDto } from './dto/bulk-notification.dto';
 import { NotificationsGateway } from './notifications.gateway';
@@ -10,6 +11,7 @@ import { NotificationsGateway } from './notifications.gateway';
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
   private readonly resend: Resend | null;
+  private readonly hostinger: Transporter | null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -18,6 +20,9 @@ export class NotificationsService {
   ) {
     const apiKey = this.config.get<string>('resend.apiKey');
     this.resend = apiKey ? new Resend(apiKey) : null;
+    const smtpUser = this.config.get<string>('hostingerSmtp.user');
+    const smtpPassword = this.config.get<string>('hostingerSmtp.password');
+    this.hostinger = smtpUser && smtpPassword ? createTransport({ host: this.config.get<string>('hostingerSmtp.host'), port: this.config.get<number>('hostingerSmtp.port') ?? 465, secure: (this.config.get<number>('hostingerSmtp.port') ?? 465) === 465, auth: { user: smtpUser, pass: smtpPassword } }) : null;
   }
 
   findForUser(userId: string) {
@@ -105,8 +110,9 @@ export class NotificationsService {
       });
       for (const user of users) {
         if (channels.includes('EMAIL')) {
-          await this.sendEmail(user.email, dto.title, `<p>${dto.message}</p>`);
-        } else if (channels.includes('SMS') && user.phone) {
+          await this.sendAdminEmail(user.email, dto.title, `<p>${dto.message}</p>`);
+        }
+        if (channels.includes('SMS') && user.phone) {
           await this.sendSms(user.phone, `${dto.title}: ${dto.message}`);
         }
       }
@@ -154,6 +160,13 @@ export class NotificationsService {
     }
   }
 
+  /** Admin/manual delivery through the Hostinger mailbox, never Resend. */
+  async sendAdminEmail(to: string, subject: string, html: string) {
+    if (!this.hostinger) { this.logger.warn(`[smtp:skipped] Hostinger SMTP credentials are not configured; to=${to}`); return; }
+    try { await this.hostinger.sendMail({ from: this.config.get<string>('hostingerSmtp.from') || this.config.get<string>('hostingerSmtp.user'), to, subject, html }); }
+    catch (err) { this.logger.warn(`[smtp:failed] to=${to}: ${(err as Error).message}`); }
+  }
+
   /** SMSEthiopia SMS — no-op (logged) when SMS_ETHIOPIA_TOKEN is not configured. */
   async sendSms(phone: string, message: string) {
     const token = this.config.get<string>('sms.token');
@@ -162,10 +175,10 @@ export class NotificationsService {
       return;
     }
     try {
-      await fetch('https://api.smsethiopia.com/v1/sms/send', {
+      await fetch('https://api.smsethiopia.com/v1/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ to: phone, message }),
+        body: JSON.stringify({ to: phone, message, sender_id: this.config.get<string>('sms.senderId') ?? 'TOGT' }),
       });
     } catch (err) {
       this.logger.warn(`[sms:failed] to=${phone}: ${(err as Error).message}`);

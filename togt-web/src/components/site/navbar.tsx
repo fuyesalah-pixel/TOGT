@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
@@ -12,7 +12,15 @@ export function Navbar() {
   const t = useTranslations("Nav");
   const [open, setOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
+  const lastScrollY = useRef(0);
   const { user, isAuthenticated, logout } = useAuth();
+  useEffect(() => {
+    const handleScroll = () => { const current = window.scrollY; setScrolled(current > 50); setIsVisible(current < lastScrollY.current || current < 100); lastScrollY.current = current; };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const links = [
     { href: "#about", label: t("about") },
@@ -26,7 +34,7 @@ export function Navbar() {
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-togt-blue/10 bg-white/95 backdrop-blur">
+    <header className={`sticky top-0 z-40 w-full border-b border-togt-blue/10 backdrop-blur transition-all duration-300 ${isVisible ? "translate-y-0" : "-translate-y-full"} ${scrolled ? "bg-white/95 shadow-sm" : "bg-white/80"}`}>
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2 font-bold text-togt-navy transition-transform duration-300 hover:scale-105">
           <Image
@@ -44,9 +52,9 @@ export function Navbar() {
             <a
               key={l.href}
               href={l.href}
-              className="text-sm font-medium text-togt-navy/80 transition-colors hover:text-togt-blue"
+              className="group relative text-sm font-medium text-togt-navy/80 transition-colors hover:text-togt-blue"
             >
-              {l.label}
+              {l.label}<span className="absolute -bottom-2 left-0 h-0.5 w-0 bg-togt-orange transition-all duration-300 group-hover:w-full" />
             </a>
           ))}
         </nav>

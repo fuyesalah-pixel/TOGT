@@ -34,7 +34,15 @@ export default () => ({
     from: process.env.EMAIL_FROM ?? 'TOGT <noreply@togt.com>',
   },
   sms: {
-    token: process.env.SMS_ETHIOPIA_TOKEN ?? '',
+    token: process.env.SMS_ETHIOPIA_API_KEY ?? process.env.SMS_ETHIOPIA_TOKEN ?? '',
+    senderId: process.env.SMS_ETHIOPIA_SENDER_ID ?? 'TOGT',
+  },
+  hostingerSmtp: {
+    host: process.env.HOSTINGER_SMTP_HOST ?? 'smtp.hostinger.com',
+    port: parseInt(process.env.HOSTINGER_SMTP_PORT ?? '465', 10),
+    user: process.env.HOSTINGER_SMTP_USER ?? '',
+    password: process.env.HOSTINGER_SMTP_PASSWORD ?? '',
+    from: process.env.HOSTINGER_SMTP_FROM ?? '',
   },
   cookieSecure: process.env.COOKIE_SECURE === 'true',
 });

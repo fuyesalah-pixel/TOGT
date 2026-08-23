@@ -1,47 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { Bot, MessageCircle, Send, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { MessageCircle, Bot, X } from "lucide-react";
+import { streamChatbot } from "@/lib/api/chatbot";
+import { CONTACT } from "@/lib/contact";
+
+type PackageCard = { id: string; title: string; description: string; image?: string | null; price?: number | null; currency?: string | null; duration?: string | null; includes?: string[] };
+type Message = { from: "user" | "bot"; text: string; packages?: PackageCard[] };
 
 export function FloatingButtons() {
   const t = useTranslations("Floating");
-  const [aiOpen, setAiOpen] = useState(false);
-
-  return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
-      {aiOpen && (
-        <div className="mb-2 w-72 rounded-xl border border-togt-blue/10 bg-white p-4 shadow-xl">
-          <div className="mb-2 flex items-center justify-between">
-            <p className="font-semibold text-togt-navy">TOGT AI Assistant</p>
-            <button onClick={() => setAiOpen(false)} aria-label="Close">
-              <X className="h-4 w-4 text-muted-foreground" />
-            </button>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Hi! I&apos;m here to help with Umrah packages, tours, tickets, and visa
-            questions. (AI chat coming soon \u2014 full RAG assistant is a later phase.)
-          </p>
-        </div>
-      )}
-
-      <button
-        onClick={() => setAiOpen((v) => !v)}
-        aria-label={t("ai")}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-togt-blue text-white shadow-lg transition-transform hover:scale-105"
-      >
-        <Bot className="h-6 w-6" />
-      </button>
-
-      <a
-        href="https://wa.me/251900000000"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={t("whatsapp")}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500 text-white shadow-lg transition-transform hover:scale-105"
-      >
-        <MessageCircle className="h-6 w-6" />
-      </a>
-    </div>
-  );
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [typing, setTyping] = useState(false);
+  const [conversationId] = useState(() => `web-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const [messages, setMessages] = useState<Message[]>([{ from: "bot", text: "Hi! I can help with packages, Umrah, tickets, visas, tours, booking, and payment." }]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, typing]);
+  useEffect(() => { if (!typing) return; const timer = window.setInterval(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 500); return () => window.clearInterval(timer); }, [typing]);
+  const send = async (event?: FormEvent, preset?: string) => { event?.preventDefault(); const text = (preset ?? draft).trim(); if (!text || typing) return; setDraft(""); setMessages((current) => [...current, { from: "user", text }, { from: "bot", text: "" }]); setTyping(true); try { await streamChatbot(text, conversationId, (chunk, packages) => setMessages((current) => { const next = [...current]; const last = next.length - 1; next[last] = { ...next[last], text: next[last].text + chunk, ...(packages ? { packages } : {}) }; return next; })); } catch { setMessages((current) => { const next = [...current]; next[next.length - 1] = { from: "bot", text: `I could not reach the assistant. Please call ${CONTACT.phones[0].display} or email ${CONTACT.email}.` }; return next; }); } finally { setTyping(false); } };
+  const book = (pkg: PackageCard) => { window.dispatchEvent(new CustomEvent("selectService", { detail: "umrah" })); document.getElementById("smart-form")?.scrollIntoView({ behavior: "smooth" }); setOpen(false); void pkg; };
+  return <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3"><button onClick={() => setOpen((value) => !value)} aria-label={t("ai")} className="flex h-14 w-14 animate-pulse items-center justify-center rounded-full bg-togt-blue text-white shadow-lg transition-transform hover:scale-105">{open ? <X className="h-6 w-6" /> : <Bot className="h-6 w-6" />}</button>{open && <div className="order-first flex h-[31rem] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-togt-blue/10 bg-white shadow-2xl"><div className="flex items-center justify-between bg-gradient-to-r from-togt-navy to-togt-blue p-4 text-white"><div><p className="font-bold">TOGT Assistant</p><p className="text-xs text-white/70">Online · replies instantly</p></div><Bot className="h-5 w-5" /></div><div ref={messagesContainerRef} className="flex-1 space-y-3 overflow-y-auto scroll-smooth p-3">{messages.map((message, index) => <div key={`${message.from}-${index}`} className={`${message.from === "user" ? "ml-auto bg-togt-blue text-white" : "bg-slate-100 text-togt-navy"} max-w-[95%] rounded-xl p-3 text-sm`}>{message.text}{message.packages?.length ? <div className="mt-3 grid gap-3">{message.packages.slice(0, 5).map((pkg) => <article key={pkg.id} className="overflow-hidden rounded-xl border border-gray-200 bg-white text-togt-navy shadow-sm"><img src={pkg.image || "/images/packages/umrah-economy.jpg"} alt={pkg.title} className="h-24 w-full object-cover" /><div className="p-3"><h4 className="font-bold">{pkg.title}</h4><p className="mt-1 text-xs font-semibold text-togt-orange">{pkg.duration || "Flexible duration"} · {pkg.price ? `${pkg.price.toLocaleString()} ${pkg.currency || "ETB"}` : "Custom pricing"}</p><p className="mt-1 line-clamp-2 text-xs text-gray-500">{pkg.description}</p><div className="mt-2 flex gap-2"><button onClick={() => book(pkg)} className="flex-1 rounded-lg bg-togt-orange py-1.5 text-xs font-bold text-white">Book Now</button><button onClick={() => void send(undefined, `Tell me more about ${pkg.title}`)} className="flex-1 rounded-lg border border-togt-blue py-1.5 text-xs font-bold text-togt-blue">Details</button></div></div></article>)}</div> : null}</div>)}{typing && <div className="rounded-xl bg-slate-100 p-3 text-sm text-gray-500">TOGT Assistant is typing...</div>}<div ref={messagesEndRef} /></div><div className="flex flex-wrap gap-1 border-t p-2">{["View packages", "Umrah information", "Book a ticket", "Contact support"].map((suggestion) => <button key={suggestion} onClick={() => void send(undefined, suggestion)} className="rounded-full border border-togt-blue/20 px-2 py-1 text-[11px] text-togt-blue hover:bg-blue-50">{suggestion}</button>)}</div><form onSubmit={send} className="flex gap-2 border-t p-3"><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Type your question..." className="min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm outline-none focus:border-togt-blue" /><button aria-label="Send" className="rounded-lg bg-togt-orange p-2 text-white"><Send className="h-4 w-4" /></button></form></div>}<a href="https://wa.me/251997979741" target="_blank" rel="noopener noreferrer" aria-label={t("whatsapp")} className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500 text-white shadow-lg transition-transform hover:scale-105"><MessageCircle className="h-6 w-6" /></a></div>;
 }

@@ -37,6 +37,16 @@ export class ValkeyService implements OnModuleDestroy {
     await this.client.del(key);
   }
 
+  async push(key: string, value: string, ttlSeconds = 3600): Promise<void> {
+    await this.client.lpush(key, value);
+    await this.client.ltrim(key, 0, 19);
+    await this.client.expire(key, ttlSeconds);
+  }
+
+  async list(key: string): Promise<string[]> {
+    return this.client.lrange(key, 0, 19);
+  }
+
   /** Delete all keys matching a glob pattern, e.g. "refresh:123:*" */
   async delPattern(pattern: string): Promise<number> {
     const keys = await this.client.keys(pattern);
