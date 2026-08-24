@@ -218,7 +218,7 @@ export function PackageDetailsModal({
                     <ul className="space-y-2">
                       {pkg.highlights.map((h, i) => (
                         <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                          <span className="mt-0.5 flex-shrink-0">⭐</span>
+                          <Star className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#FF9300]" />
                           {h}
                         </li>
                       ))}
@@ -235,8 +235,9 @@ export function PackageDetailsModal({
                       border: "1px solid rgba(22,163,74,0.18)",
                     }}
                   >
-                    <h3 className="font-bold text-green-700 mb-3 text-xs uppercase tracking-wider">
-                      ✓ What&apos;s Included
+                    <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-green-700">
+                      <Check className="h-4 w-4" />
+                      What&apos;s Included
                     </h3>
                     <ul className="space-y-2">
                       {pkg.includes.map((item, i) => (
@@ -255,8 +256,9 @@ export function PackageDetailsModal({
                       border: "1px solid rgba(220,38,38,0.14)",
                     }}
                   >
-                    <h3 className="font-bold text-red-600 mb-3 text-xs uppercase tracking-wider">
-                      ✗ Not Included
+                    <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-red-600">
+                      <XCircle className="h-4 w-4" />
+                      Not Included
                     </h3>
                     <ul className="space-y-2">
                       {pkg.excluded.map((item, i) => (

@@ -352,7 +352,7 @@ function StepsBar({ current, labels }: { current: number; labels: string[] }) {
                     : "bg-white/10 text-white/50 border border-white/20"
                 }`}
               >
-                {done ? "✓" : idx}
+                {done ? <Check className="h-3.5 w-3.5" /> : idx}
               </div>
             </div>
           );

@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from "react";
 
-import { FileText, Paperclip, Search, Send } from "lucide-react";
+import { Check, CheckCheck, FileText, Paperclip, Search, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   useChatSocket,
@@ -136,7 +136,7 @@ export function ChatTab({ initialUserId, initialMessage }: { initialUserId?: str
                     </span>
                   </div>
                   <p className="truncate text-xs text-gray-500">
-                    {c.lastMessage?.message || (c.lastMessage ? "📎 File" : "No messages yet")}
+                    {c.lastMessage?.message || (c.lastMessage ? "Attachment" : "No messages yet")}
                   </p>
                 </div>
                 {c.unreadCount > 0 && (
@@ -179,7 +179,11 @@ export function ChatTab({ initialUserId, initialMessage }: { initialUserId?: str
                           <p className={cn("mt-1 flex items-center justify-end gap-1 text-[10px]", own ? "text-white/70" : "text-gray-400")}>
                             {user?.role !== "CUSTOMER" && m.sender?.role === "WORKER" && <span className="mr-auto font-medium">{own ? "You" : m.sender.fullName}</span>}
                             {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                            {own && <span className={m.isRead ? "font-bold text-sky-200" : ""}>{m.isRead ? "✓✓" : "✓"}</span>}
+                            {own && (
+                              <span className={cn("inline-flex items-center justify-center", m.isRead ? "text-sky-200" : "text-white/70")} aria-label={m.isRead ? "Read" : "Sent"}>
+                                {m.isRead ? <CheckCheck className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>
