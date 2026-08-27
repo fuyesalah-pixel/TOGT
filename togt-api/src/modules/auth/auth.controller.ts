@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
@@ -38,7 +38,7 @@ export class AuthController {
   @Public()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   googleMobile(@Body('idToken') idToken: string) {
-    if (!idToken) throw new Error('idToken is required');
+    if (!idToken) throw new BadRequestException('idToken is required');
     return this.auth.loginWithMobileGoogle(idToken);
   }
 
