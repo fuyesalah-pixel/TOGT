@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { Role, User } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -11,6 +12,7 @@ import { TicketsService } from './tickets.service';
 export class TicketsController {
   constructor(private readonly tickets: TicketsService) {}
   @Get() findAll(@Query() query: QueryTicketsDto, @CurrentUser() actor: User) { return this.tickets.findAll(query, actor); }
+  @Get(':id/pdf') async pdf(@Param('id') id: string, @CurrentUser() actor: User, @Res() response: Response) { const file = await this.tickets.pdf(id, actor); response.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="ticket-${id}.pdf"` }); return response.send(file); }
   @Get('analytics') analytics(@CurrentUser() actor: User) { return this.tickets.analytics(actor); }
   @Post() create(@Body() dto: CreateTicketDto, @CurrentUser() actor: User) { return this.tickets.create(dto, actor); }
   @Patch(':id') @Roles(Role.WORKER, Role.ADMIN, Role.TECH) update(@Param('id') id: string, @Body() dto: UpdateTicketDto, @CurrentUser() actor: User) { return this.tickets.update(id, dto, actor); }

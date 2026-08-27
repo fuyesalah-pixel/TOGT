@@ -44,6 +44,7 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
+    "pdfkit": "^0.20.1",
     "reflect-metadata": "^0.2.2",
     "resend": "^4.0.1",
     "rxjs": "^7.8.1"
@@ -59,6 +60,7 @@
     "@types/nodemailer": "^8.0.1",
     "@types/passport-google-oauth20": "^2.0.16",
     "@types/passport-jwt": "^4.0.1",
+    "@types/pdfkit": "^0.17.6",
     "prisma": "^5.22.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"

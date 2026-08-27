@@ -6,6 +6,7 @@ import { ChatGateway } from '../chat/chat.gateway';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { QueryTicketsDto } from './dto/query-tickets.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
+import PDFDocument from 'pdfkit';
 
 const staff = [Role.WORKER, Role.ADMIN, Role.TECH];
 
@@ -74,5 +75,27 @@ export class TicketsService {
     if (!ticket) throw new NotFoundException('Ticket not found');
     if (ticket.userId !== actor.id || actor.role !== Role.CUSTOMER) throw new ForbiddenException('Not allowed');
     return this.update(id, { status: TicketStatus.REFUND_REQUESTED, note: reason || 'Customer requested a refund' }, { ...actor, role: Role.WORKER });
+  }
+
+  async pdf(id: string, actor: User): Promise<Buffer> {
+    const ticket = await this.prisma.ticket.findUnique({ where: { id }, include: { user: true } });
+    if (!ticket || (actor.role === Role.CUSTOMER && ticket.userId !== actor.id)) throw new ForbiddenException('Ticket not found');
+    return new Promise((resolve) => {
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const chunks: Buffer[] = [];
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.fontSize(24).fillColor('#1F67B1').text('TOGT Tour & Travel');
+      doc.moveDown().fontSize(18).fillColor('#111827').text('Electronic Ticket');
+      doc.moveDown().fontSize(12).text(`Ticket: ${ticket.ticketNumber}`);
+      doc.text(`Passenger: ${ticket.passengerName}`);
+      doc.text(`Airline: ${ticket.airline} ${ticket.flightNumber}`);
+      doc.text(`Route: ${ticket.origin} -> ${ticket.destination}`);
+      doc.text(`Departure: ${ticket.departureAt.toISOString()}`);
+      if (ticket.arrivalAt) doc.text(`Arrival: ${ticket.arrivalAt.toISOString()}`);
+      doc.text(`Cabin: ${ticket.cabinClass}`);
+      doc.text(`Status: ${ticket.status}`);
+      doc.end();
+    });
   }
 }
