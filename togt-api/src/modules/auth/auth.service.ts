@@ -9,6 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ValkeyService } from '../../valkey/valkey.service';
 import { GoogleProfile } from './strategies/google.strategy';
 import { NotificationsService } from '../notifications/notifications.service';
+import { OAuth2Client } from 'google-auth-library';
 
 export interface AuthTokens {
   accessToken: string;
@@ -63,6 +64,24 @@ export class AuthService {
       },
     });
     return { user, isNew: true };
+  }
+
+  async loginWithMobileGoogle(idToken: string) {
+    const clientId = this.config.get<string>('google.clientId');
+    if (!clientId) throw new UnauthorizedException('Google OAuth is not configured');
+    const ticket = await new OAuth2Client(clientId).verifyIdToken({ idToken, audience: clientId });
+    const payload = ticket.getPayload();
+    if (!payload?.sub || !payload.email || payload.email_verified === false) {
+      throw new UnauthorizedException('Invalid Google ID token');
+    }
+    const { user, isNew } = await this.upsertGoogleUser({
+      googleId: payload.sub,
+      email: payload.email.toLowerCase(),
+      fullName: payload.name || payload.email.split('@')[0],
+    });
+    if (isNew) await this.sendWelcome(user);
+    const tokens = await this.issueTokens(user);
+    return { token: tokens.accessToken, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, user };
   }
 
   async recordLogin(user: User, request: Request) {

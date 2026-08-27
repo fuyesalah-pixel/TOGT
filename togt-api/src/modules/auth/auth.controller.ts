@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
@@ -32,6 +32,14 @@ export class AuthController {
   @UseGuards(AuthGuard('google'))
   googleLoginPost() {
     // Guard redirects to Google — nothing to do here
+  }
+
+  @Post('google-mobile')
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  googleMobile(@Body('idToken') idToken: string) {
+    if (!idToken) throw new Error('idToken is required');
+    return this.auth.loginWithMobileGoogle(idToken);
   }
 
   /** Google OAuth callback — issues JWT cookies and redirects to the frontend. */
