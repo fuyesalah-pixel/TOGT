@@ -80,6 +80,11 @@ services:
       - "traefik.http.routers.togt-api.tls=true"
       - "traefik.http.routers.togt-api.tls.certresolver=letsencrypt"
       - "traefik.http.routers.togt-api.priority=100"
+      - "traefik.http.routers.togt-socket.rule=Host(`travel.togttrading.com`) && PathPrefix(`/socket.io`)"
+      - "traefik.http.routers.togt-socket.entrypoints=websecure"
+      - "traefik.http.routers.togt-socket.tls=true"
+      - "traefik.http.routers.togt-socket.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.togt-socket.priority=100"
       - "traefik.http.services.togt-api.loadbalancer.server.port=3001"
 
   togt-web:
