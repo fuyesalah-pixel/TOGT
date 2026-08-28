@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiConfig {
   static const productionBase = 'https://travel.togttrading.com/api';
@@ -118,6 +119,7 @@ class ApiService {
       ..body = jsonEncode(body ?? {});
     final response = await http.Response.fromStream(await request.send().timeout(timeout));
     saveCookie(response);
+    debugPrint('$method $path -> ${response.statusCode} (${_accessToken == null ? 'no auth' : 'auth'})');
     if (response.statusCode == 401 && retry && _refreshToken != null && path != '/auth/refresh') {
       final refreshed = await _refresh();
       if (refreshed) return _send(method, path, query: query, body: body, retry: false);
@@ -129,6 +131,7 @@ class ApiService {
     try {
       final headers = {'Content-Type': 'application/json', if (_cookieHeader != null) 'Cookie': _cookieHeader!, if (_accessToken != null) 'Authorization': 'Bearer $_accessToken'};
       final response = await http.post(_uri('/auth/refresh'), headers: headers, body: jsonEncode({'refreshToken': _refreshToken})).timeout(timeout);
+      debugPrint('POST /auth/refresh -> ${response.statusCode}');
       saveCookie(response);
       if (response.statusCode < 200 || response.statusCode >= 300) return false;
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -148,6 +151,7 @@ class ApiService {
     request.headers.addAll(_headers..remove('Content-Type'));
     request.files.add(await http.MultipartFile.fromPath(field, filePath));
     final response = await http.Response.fromStream(await request.send().timeout(timeout));
+    debugPrint('POST $path (multipart) -> ${response.statusCode} (${_accessToken == null ? 'no auth' : 'auth'})');
     return _handle(response);
   }
 
