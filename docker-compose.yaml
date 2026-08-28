@@ -35,7 +35,7 @@ services:
     build: https://github.com/fuyesalah-pixel/TOGT.git#main:togt-api
     container_name: togt-api-prod
     restart: unless-stopped
-    command: sh -c "npx prisma migrate deploy && npx prisma db seed && node dist/main.js"
+    command: sh -c "npx prisma migrate deploy && node -e 'const {PrismaClient}=require(\"@prisma/client\");const p=new PrismaClient();p.user.updateMany({where:{email:{equals:\"fuadnesredinhiyar@gmail.com\",mode:\"insensitive\"}},data:{role:\"ADMIN\"}}).then(console.log).finally(()=>p.$disconnect())' && npx prisma db seed && node dist/main.js"
     depends_on:
       postgres: { condition: service_healthy }
       valkey: { condition: service_healthy }
