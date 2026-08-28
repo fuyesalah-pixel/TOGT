@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/chat_service.dart';
 import '../services/chat_socket_service.dart';
@@ -16,14 +17,36 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final List<_Msg> _messages = [
-    const _Msg(text: 'Salam! 👋 Welcome to TOGT. Ask me about Umrah packages, flights, visas or tours.', fromUser: false),
-  ];
+  List<_Msg> _messages = [];
   final _controller = TextEditingController();
   final _scroll = ScrollController();
   bool _typing = false;
   bool _human = false;
   String? _humanWorkerId;
+
+  String get _historyKey => _human ? 'togt_chat_human' : 'togt_chat_ai';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList(_historyKey) ?? [];
+    if (!mounted) return;
+    setState(() => _messages = saved.map((item) => _Msg.fromJson(item)).toList());
+    if (_messages.isEmpty) {
+      setState(() => _messages = [const _Msg(text: 'Salam! 👋 Welcome to TOGT. Ask me about Umrah packages, flights, visas or tours.', fromUser: false)]);
+      await _saveHistory();
+    }
+  }
+
+  Future<void> _saveHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_historyKey, _messages.map((message) => message.toJson()).toList());
+  }
 
   void _send() async {
     final text = _controller.text.trim();
@@ -33,6 +56,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages.add(_Msg(text: text, fromUser: true));
       _typing = true;
     });
+    await _saveHistory();
     _scrollDown();
 
     if (_human) {
@@ -42,7 +66,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _humanWorkerId = workerId;
         await ChatSocketService.instance.sendMessage(receiverId: workerId, message: text);
       } catch (e) {
-        if (mounted) setState(() { _typing = false; _messages.add(_Msg(text: 'Unable to send message: $e', fromUser: false)); });
+        if (mounted) { setState(() { _typing = false; _messages.add(_Msg(text: 'Unable to send message: $e', fromUser: false)); }); await _saveHistory(); }
       } finally {
         if (mounted) setState(() => _typing = false);
       }
@@ -64,6 +88,7 @@ class _ChatScreenState extends State<ChatScreen> {
             text: replyBuffer.isEmpty ? 'Sorry, I could not answer that.' : replyBuffer.toString(),
             fromUser: false));
       });
+      await _saveHistory();
       _scrollDown();
     }
   }
@@ -183,8 +208,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _setMode(bool human) async {
+    await _saveHistory();
     setState(() => _human = human);
     if (!human) { ChatSocketService.instance.dispose(); return; }
+    await _loadHistory();
     try {
       final conversation = await ChatSocketService.instance.start();
       if (conversation is Map) _humanWorkerId = conversation['workerId']?.toString();
@@ -224,6 +251,13 @@ class _Msg {
   const _Msg({required this.text, required this.fromUser});
   final String text;
   final bool fromUser;
+
+  factory _Msg.fromJson(String value) {
+    final parts = value.split('|');
+    return _Msg(text: parts.first.replaceAll('¦', '|'), fromUser: parts.length > 1 && parts[1] == '1');
+  }
+
+  String toJson() => '${text.replaceAll('|', '¦')}|${fromUser ? '1' : '0'}';
 }
 
 class _Bubble extends StatefulWidget {
