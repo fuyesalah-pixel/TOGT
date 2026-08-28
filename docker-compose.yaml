@@ -32,7 +32,7 @@ services:
       retries: 10
 
   togt-api:
-    build: ./togt-api
+    build: https://github.com/fuyesalah-pixel/TOGT.git#main:togt-api
     container_name: togt-api-prod
     restart: unless-stopped
     command: sh -c "npx prisma migrate deploy && npx prisma db seed && node dist/main.js"
@@ -84,7 +84,7 @@ services:
 
   togt-web:
     build:
-      context: ./togt-web
+      context: https://github.com/fuyesalah-pixel/TOGT.git#main:togt-web
       args:
         NEXT_PUBLIC_API_URL: https://travel.togttrading.com
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
