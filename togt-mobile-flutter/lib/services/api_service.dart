@@ -31,6 +31,7 @@ class ApiService {
   static const timeout = Duration(seconds: 20);
   String? _accessToken;
   String? _refreshToken;
+  String? _cookieHeader;
 
   bool get hasToken => _accessToken != null;
   String? get accessToken => _accessToken;
@@ -49,11 +50,18 @@ class ApiService {
     _accessToken = accessToken;
     _refreshToken = refreshToken ?? _refreshToken;
   }
-  void clearTokens() { _accessToken = null; _refreshToken = null; }
+  void saveCookie(http.Response response) {
+    final setCookie = response.headers['set-cookie'];
+    if (setCookie == null || setCookie.isEmpty) return;
+    final values = setCookie.split(',').map((item) => item.split(';').first.trim()).toList();
+    _cookieHeader = values.where((item) => item.isNotEmpty).join('; ');
+  }
+  void clearTokens() { _accessToken = null; _refreshToken = null; _cookieHeader = null; }
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
         if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
+        if (_cookieHeader != null) 'Cookie': _cookieHeader!,
       };
 
   Uri _uri(String path, [Map<String, dynamic>? query]) {
@@ -107,6 +115,7 @@ class ApiService {
       ..headers.addAll(_headers)
       ..body = jsonEncode(body ?? {});
     final response = await http.Response.fromStream(await request.send().timeout(timeout));
+    saveCookie(response);
     if (response.statusCode == 401 && retry && _refreshToken != null && path != '/auth/refresh') {
       final refreshed = await _refresh();
       if (refreshed) return _send(method, path, query: query, body: body, retry: false);
@@ -116,7 +125,9 @@ class ApiService {
 
   Future<bool> _refresh() async {
     try {
-      final response = await http.post(_uri('/auth/refresh'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'refreshToken': _refreshToken})).timeout(timeout);
+      final headers = {'Content-Type': 'application/json', if (_cookieHeader != null) 'Cookie': _cookieHeader!, if (_accessToken != null) 'Authorization': 'Bearer $_accessToken'};
+      final response = await http.post(_uri('/auth/refresh'), headers: headers, body: jsonEncode({'refreshToken': _refreshToken})).timeout(timeout);
+      saveCookie(response);
       if (response.statusCode < 200 || response.statusCode >= 300) return false;
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       setTokens(accessToken: data['accessToken']?.toString(), refreshToken: data['refreshToken']?.toString());
