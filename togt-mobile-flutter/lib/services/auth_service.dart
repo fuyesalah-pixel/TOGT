@@ -94,6 +94,11 @@ class AuthService {
     await _persist(user.withRole(next), ApiService.instance.accessToken);
   }
 
+  Future<void> persistRemoteUser(Map<String, dynamic> json) async {
+    final token = ApiService.instance.accessToken;
+    await _persist(TUser.fromJson(json), token);
+  }
+
   Future<TUser?> signInWithGoogle() async {
     final account = await _google.signIn();
     if (account == null) return null;

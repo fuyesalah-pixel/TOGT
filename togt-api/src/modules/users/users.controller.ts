@@ -52,10 +52,16 @@ export class UsersController {
     return this.users.create(dto, actor);
   }
 
+  @Patch('me')
+  updateMe(@Body() dto: UpdateUserDto, @CurrentUser() actor: User) {
+    return this.users.update(actor.id, dto, actor);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateUserDto, @CurrentUser() actor: User) {
     return this.users.update(id, dto, actor);
   }
+
 
   @Delete(':id')
   @Roles(Role.ADMIN)

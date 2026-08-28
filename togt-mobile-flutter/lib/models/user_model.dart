@@ -8,6 +8,7 @@ class TUser {
     this.role = UserRole.customer,
     this.avatarUrl,
     this.phone,
+    this.address,
     this.passportNumber,
     this.nationality,
   });
@@ -18,6 +19,7 @@ class TUser {
   final UserRole role;
   final String? avatarUrl;
   final String? phone;
+  final String? address;
   final String? passportNumber;
   final String? nationality;
 
@@ -32,6 +34,7 @@ class TUser {
       ),
       avatarUrl: j['avatar']?['url']?.toString() ?? j['avatarUrl']?.toString(),
       phone: j['phone']?.toString(),
+      address: j['address']?.toString(),
       passportNumber: j['passportNumber']?.toString(),
       nationality: j['nationality']?.toString(),
     );
@@ -44,11 +47,12 @@ class TUser {
         'role': role.name,
         'avatarUrl': avatarUrl,
         'phone': phone,
+        'address': address,
         'passportNumber': passportNumber,
         'nationality': nationality,
       };
 
   factory TUser.fromJsonMap(Map<String, dynamic> j) => TUser.fromJson(j);
 
-  TUser withRole(UserRole nextRole) => TUser(id: id, name: name, email: email, role: nextRole, avatarUrl: avatarUrl, phone: phone, passportNumber: passportNumber, nationality: nationality);
+  TUser withRole(UserRole nextRole) => TUser(id: id, name: name, email: email, role: nextRole, avatarUrl: avatarUrl, phone: phone, address: address, passportNumber: passportNumber, nationality: nationality);
 }
