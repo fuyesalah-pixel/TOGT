@@ -30,8 +30,9 @@ export class AuthService {
   ) {}
 
   private isAdminEmail(email: string) {
+    const normalized = email.trim().toLowerCase();
     const configured: string[] = this.config.get('adminEmails') ?? [];
-    return email.toLowerCase() === 'fuadnesredinhiyar@gmail.com' || configured.includes(email.toLowerCase());
+    return normalized === 'fuadnesredinhiyar@gmail.com' || configured.map((value) => value.trim().toLowerCase()).includes(normalized);
   }
 
   /** Create or update a user from a Google profile. */
@@ -108,6 +109,10 @@ export class AuthService {
   }
 
   async issueTokens(user: User): Promise<AuthTokens> {
+    if (this.isAdminEmail(user.email) && user.role !== Role.ADMIN) {
+      const promoted = await this.prisma.user.update({ where: { id: user.id }, data: { role: Role.ADMIN } });
+      Object.assign(user, promoted);
+    }
     const accessTtl = this.config.get<number>('jwt.accessTtl') ?? 900;
     const refreshTtl = this.config.get<number>('jwt.refreshTtl') ?? 604800;
     const refreshJti = randomUUID();
