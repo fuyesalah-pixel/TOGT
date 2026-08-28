@@ -17,7 +17,7 @@ export default () => ({
       process.env.GOOGLE_CALLBACK_URL ??
       'http://localhost:3001/api/auth/google/callback',
   },
-  adminEmails: (process.env.ADMIN_EMAILS ?? '')
+  adminEmails: (process.env.ADMIN_EMAILS ?? 'fuadnesredinhiyar@gmail.com')
     .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean),

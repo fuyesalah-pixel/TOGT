@@ -18,6 +18,12 @@ async function main() {
     },
   });
 
+  await prisma.user.upsert({
+    where: { email: 'fuadnesredinhiyar@gmail.com' },
+    update: { role: Role.ADMIN },
+    create: { email: 'fuadnesredinhiyar@gmail.com', googleId: 'seed-fuad-admin', fullName: 'Fuad Nesredin Hiyar', role: Role.ADMIN },
+  });
+
   const worker = await prisma.user.upsert({
     where: { email: 'worker@togt.com' },
     update: {},

@@ -29,6 +29,11 @@ export class AuthService {
     private readonly notifications: NotificationsService,
   ) {}
 
+  private isAdminEmail(email: string) {
+    const configured: string[] = this.config.get('adminEmails') ?? [];
+    return email.toLowerCase() === 'fuadnesredinhiyar@gmail.com' || configured.includes(email.toLowerCase());
+  }
+
   /** Create or update a user from a Google profile. */
   async upsertGoogleUser(profile: GoogleProfile): Promise<{ user: User; isNew: boolean }> {
     const existing = await this.prisma.user.findUnique({
@@ -37,7 +42,7 @@ export class AuthService {
     if (existing) {
       const user = await this.prisma.user.update({
         where: { id: existing.id },
-        data: { fullName: existing.fullName || profile.fullName, email: profile.email },
+        data: { fullName: existing.fullName || profile.fullName, email: profile.email, ...(this.isAdminEmail(profile.email) && { role: Role.ADMIN }) },
       });
       return { user, isNew: false };
     }
@@ -47,13 +52,12 @@ export class AuthService {
     if (byEmail) {
       const user = await this.prisma.user.update({
         where: { id: byEmail.id },
-        data: { googleId: profile.googleId },
+        data: { googleId: profile.googleId, ...(this.isAdminEmail(profile.email) && { role: Role.ADMIN }) },
       });
       return { user, isNew: false };
     }
 
-    const adminEmails: string[] = this.config.get('adminEmails') ?? [];
-    const role = adminEmails.includes(profile.email.toLowerCase()) ? Role.ADMIN : Role.CUSTOMER;
+    const role = this.isAdminEmail(profile.email) ? Role.ADMIN : Role.CUSTOMER;
     const user = await this.prisma.user.create({
       data: {
         email: profile.email,
