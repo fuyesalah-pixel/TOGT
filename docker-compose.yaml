@@ -35,6 +35,7 @@ services:
     build: ./togt-api
     container_name: togt-api-prod
     restart: unless-stopped
+    command: sh -c "npx prisma migrate deploy && node dist/main.js"
     depends_on:
       postgres: { condition: service_healthy }
       valkey: { condition: service_healthy }
