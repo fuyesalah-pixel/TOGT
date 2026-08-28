@@ -27,8 +27,8 @@ class AuthService {
   Future<void> loadSession() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_userKey);
-    final token = await _secureStorage.read(key: _tokenKey) ?? prefs.getString(_tokenKey);
-    final refreshToken = await _secureStorage.read(key: 'togt_refresh') ?? prefs.getString('togt_refresh');
+    final token = prefs.getString(_tokenKey) ?? await _secureStorage.read(key: _tokenKey);
+    final refreshToken = prefs.getString('togt_refresh') ?? await _secureStorage.read(key: 'togt_refresh');
     if (raw != null) {
       try {
         _currentUser = TUser.fromJsonMap(jsonDecode(raw));
@@ -38,7 +38,7 @@ class AuthService {
     if (token != null) {
       try {
         final remote = await ApiService.instance.get('/auth/me');
-        if (remote is Map<String, dynamic>) await _persist(TUser.fromJson(remote), token);
+        if (remote is Map<String, dynamic>) await _persist(TUser.fromJson(remote), token, refreshToken);
       } catch (_) {}
     }
   }
