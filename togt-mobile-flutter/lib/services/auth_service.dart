@@ -28,12 +28,13 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_userKey);
     final token = await _secureStorage.read(key: _tokenKey) ?? prefs.getString(_tokenKey);
+    final refreshToken = await _secureStorage.read(key: 'togt_refresh') ?? prefs.getString('togt_refresh');
     if (raw != null) {
       try {
         _currentUser = TUser.fromJsonMap(jsonDecode(raw));
       } catch (_) {}
     }
-    ApiService.instance.setToken(token);
+    ApiService.instance.setTokens(accessToken: token, refreshToken: refreshToken);
     if (token != null) {
       try {
         final remote = await ApiService.instance.get('/auth/me');
@@ -45,7 +46,7 @@ class AuthService {
   Future<TUser> loginWithGoogle({required String idToken}) async {
     final data = await ApiService.instance.post('/auth/google-mobile', body: {'idToken': idToken});
     final user = TUser.fromJsonMap((data['user'] ?? data) as Map<String, dynamic>);
-    await _persist(user, data['accessToken']?.toString());
+    await _persist(user, data['accessToken']?.toString(), data['refreshToken']?.toString());
     return user;
   }
 
@@ -54,14 +55,18 @@ class AuthService {
     return demoUser;
   }
 
-  Future<void> _persist(TUser user, String? token) async {
+  Future<void> _persist(TUser user, String? token, [String? refreshToken]) async {
     _currentUser = user;
-    ApiService.instance.setToken(token);
+    ApiService.instance.setTokens(accessToken: token, refreshToken: refreshToken);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_userKey, jsonEncode(user.toJson()));
     if (token != null) {
       await _secureStorage.write(key: _tokenKey, value: token);
       await prefs.setString(_tokenKey, token);
+    }
+    if (refreshToken != null) {
+      await _secureStorage.write(key: 'togt_refresh', value: refreshToken);
+      await prefs.setString('togt_refresh', refreshToken);
     }
   }
 
@@ -72,11 +77,13 @@ class AuthService {
       }
     } catch (_) {}
     _currentUser = null;
-    ApiService.instance.setToken(null);
+    ApiService.instance.clearTokens();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userKey);
     await prefs.remove(_tokenKey);
+    await prefs.remove('togt_refresh');
     await _secureStorage.delete(key: _tokenKey);
+    await _secureStorage.delete(key: 'togt_refresh');
     await _google.signOut();
   }
 

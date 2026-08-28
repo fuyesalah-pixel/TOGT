@@ -148,7 +148,7 @@ export class AuthService {
   }
 
   /** Rotate the token pair from a valid refresh cookie. */
-  async refresh(refreshToken: string | undefined, res: Response) {
+  async refresh(refreshToken: string | undefined, res: Response, returnTokens = false) {
     if (!refreshToken) throw new UnauthorizedException('No refresh token');
 
     let payload: { sub: string; jti: string };
@@ -173,7 +173,7 @@ export class AuthService {
     await this.valkey.del(key);
     const tokens = await this.issueTokens(user);
     this.setAuthCookies(res, tokens);
-    return { ok: true };
+    return returnTokens ? { ok: true, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken } : { ok: true };
   }
 
   /** Blacklist the current access token and drop the refresh token. */

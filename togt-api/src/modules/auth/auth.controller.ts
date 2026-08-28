@@ -66,8 +66,8 @@ export class AuthController {
   @Post('refresh')
   @Public()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    return this.auth.refresh(req.cookies?.togt_refresh, res);
+  refresh(@Body('refreshToken') refreshToken: string | undefined, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    return this.auth.refresh(refreshToken ?? req.cookies?.togt_refresh, res, Boolean(refreshToken));
   }
 
   @Post('logout')
