@@ -61,7 +61,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
     if (_human) {
       try {
-        final workerId = _humanWorkerId ?? ((await ChatSocketService.instance.start()) as Map)['workerId']?.toString();
+        final response = _humanWorkerId == null ? await ChatSocketService.instance.start() : null;
+        final workerId = _humanWorkerId ?? (response is Map ? response['workerId']?.toString() : null);
         if (workerId == null) throw Exception('No support worker is available');
         _humanWorkerId = workerId;
         await ChatSocketService.instance.sendMessage(receiverId: workerId, message: text);
@@ -207,6 +208,19 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Future<void> _loadRemoteHistory() async {
+    final workerId = _humanWorkerId;
+    if (!_human || workerId == null) return;
+    final data = await ChatSocketService.instance.messages(workerId);
+    final items = (data is List ? data : (data is Map ? data['items'] : null) as List? ?? []) as List<dynamic>;
+    if (!mounted) return;
+    setState(() => _messages = items.map((item) {
+          final map = item as Map<String, dynamic>;
+          return _Msg(text: map['content']?.toString() ?? map['message']?.toString() ?? '', fromUser: AuthService.instance.currentUser?.id != null && map['senderId'] == AuthService.instance.currentUser!.id);
+        }).toList());
+    await _saveHistory();
+  }
+
   Future<void> _setMode(bool human) async {
     await _saveHistory();
     setState(() => _human = human);
@@ -215,6 +229,7 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final conversation = await ChatSocketService.instance.start();
       if (conversation is Map) _humanWorkerId = conversation['workerId']?.toString();
+      if (_humanWorkerId != null) await _loadRemoteHistory();
       ChatSocketService.instance.connect(onMessage: (data) {
         final message = data['message']?.toString();
         if (message != null && mounted) setState(() => _messages.add(_Msg(text: message, fromUser: false)));
