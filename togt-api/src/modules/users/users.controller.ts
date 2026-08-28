@@ -28,6 +28,12 @@ export class UsersController {
     return this.users.findAll(query);
   }
 
+  @Post('device-token')
+  registerDeviceToken(@Body('token') token: string, @Body('platform') platform: string | undefined, @CurrentUser() actor: User) {
+    if (!token?.trim()) throw new ForbiddenException('Device token is required');
+    return this.users.registerDeviceToken(actor.id, token.trim(), platform);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() actor: User) {
     const privileged = actor.role === Role.WORKER || actor.role === Role.ADMIN || actor.role === Role.TECH;

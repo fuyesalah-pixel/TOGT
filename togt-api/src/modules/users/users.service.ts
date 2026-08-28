@@ -77,6 +77,10 @@ export class UsersService {
     return { data, total, page, limit };
   }
 
+  async registerDeviceToken(userId: string, token: string, platform?: string) {
+    return this.prisma.deviceToken.upsert({ where: { token }, update: { userId, platform }, create: { userId, token, platform } });
+  }
+
   async findOne(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },

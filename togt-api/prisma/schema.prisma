@@ -117,6 +117,7 @@ model User {
   galleryItems     GalleryItem[]
   faqItems         FAQItem[]
   knownDevices     KnownDevice[]
+  deviceTokens     DeviceToken[]
   confirmedPlanSteps TourPlanStep[] @relation("ConfirmedPlanSteps")
   locationUpdates  LocationTracking[]
   geofenceAlerts    GeofenceAlert[]
@@ -348,6 +349,17 @@ model KnownDevice {
   lastSeenAt  DateTime @default(now())
   createdAt   DateTime @default(now())
   @@unique([userId, fingerprint])
+}
+
+model DeviceToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([userId])
 }
 
 model ProgressHistory {
