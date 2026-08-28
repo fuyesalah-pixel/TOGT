@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiConfig {
   static const productionBase = 'https://travel.togttrading.com/api';
@@ -131,6 +133,10 @@ class ApiService {
       if (response.statusCode < 200 || response.statusCode >= 300) return false;
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       setTokens(accessToken: data['accessToken']?.toString(), refreshToken: data['refreshToken']?.toString());
+      final prefs = await SharedPreferences.getInstance();
+      const secure = FlutterSecureStorage();
+      if (_accessToken != null) { await prefs.setString('togt_token', _accessToken!); await secure.write(key: 'togt_token', value: _accessToken); }
+      if (_refreshToken != null) { await prefs.setString('togt_refresh', _refreshToken!); await secure.write(key: 'togt_refresh', value: _refreshToken); }
       return _accessToken != null;
     } catch (_) {
       return false;
@@ -142,6 +148,17 @@ class ApiService {
     request.headers.addAll(_headers..remove('Content-Type'));
     request.files.add(await http.MultipartFile.fromPath(field, filePath));
     final response = await http.Response.fromStream(await request.send().timeout(timeout));
+    return _handle(response);
+  }
+
+  Future<dynamic> postForm(String path, Map<String, String> fields, {bool retry = true}) async {
+    final request = http.MultipartRequest('POST', _uri(path));
+    request.headers.addAll(_headers..remove('Content-Type'));
+    request.fields.addAll(fields);
+    final response = await http.Response.fromStream(await request.send().timeout(timeout));
+    if (response.statusCode == 401 && retry && _refreshToken != null) {
+      if (await _refresh()) return postForm(path, fields, retry: false);
+    }
     return _handle(response);
   }
 

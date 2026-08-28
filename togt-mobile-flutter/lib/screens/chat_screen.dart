@@ -10,7 +10,8 @@ import '../theme/colors.dart';
 import '../theme/typography.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  const ChatScreen({super.key, required this.human});
+  final bool human;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -21,7 +22,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _controller = TextEditingController();
   final _scroll = ScrollController();
   bool _typing = false;
-  bool _human = false;
+  late bool _human = widget.human;
   String? _humanWorkerId;
 
   String get _historyKey => _human ? 'togt_chat_human' : 'togt_chat_ai';
@@ -118,11 +119,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   gradient: TOGTColors.orangeGradient,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(Icons.smart_toy_rounded, color: TOGTColors.white, size: 22),
+                 child: Icon(_human ? Icons.support_agent_rounded : Icons.smart_toy_rounded, color: TOGTColors.white, size: 22),
               ),
               const SizedBox(width: 12),
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('TOGT Assistant', style: TOGTTypography.h3),
+                 Text(_human ? 'Human Support' : 'AI Assistant', style: TOGTTypography.h3),
                 Row(children: [
                   Container(
                     width: 8,
@@ -131,22 +132,12 @@ class _ChatScreenState extends State<ChatScreen> {
                         const BoxDecoration(color: TOGTColors.green, shape: BoxShape.circle),
                   ),
                   const SizedBox(width: 5),
-                  Text('Online · AI powered', style: TOGTTypography.small),
+                   Text(_human ? 'TOGT specialist on duty' : 'Online · AI powered', style: TOGTTypography.small),
                 ]),
               ]),
              ]),
            ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            child: SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: false, icon: Icon(Icons.smart_toy_outlined), label: Text('AI Assistant')),
-                ButtonSegment(value: true, icon: Icon(Icons.support_agent_outlined), label: Text('Human Support')),
-              ],
-              selected: {_human},
-              onSelectionChanged: (v) => _setMode(v.first),
-            ),
-          ),
+
           Expanded(
             child: ListView.builder(
               controller: _scroll,
