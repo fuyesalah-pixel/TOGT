@@ -1,6 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bell, X } from "lucide-react";
@@ -25,6 +26,7 @@ function NotificationToasts({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const locale = useLocale();
   const markRead = useMarkNotificationRead();
+  const queryClient = useQueryClient();
   const showToast = (notification: ToastNotification) => setToasts((current) => [...current, notification]);
 
   useEffect(() => {
@@ -35,8 +37,14 @@ function NotificationToasts({ children }: { children: ReactNode }) {
       window.setTimeout(() => setToasts((current) => current.filter((item) => item !== notification)), 8000);
     };
     socket.on("newNotification", onNotification);
-    return () => { socket.off("newNotification", onNotification); socket.disconnect(); };
-  }, [user]);
+    const onRoleChanged = (change: { newRole: string }) => {
+      showToast({ title: "Role Updated", message: `Your role has been updated to ${change.newRole}. Redirecting...` });
+      queryClient.removeQueries({ queryKey: ["auth", "me"] });
+      window.setTimeout(() => { window.location.href = `/${locale}/dashboard/${change.newRole.toLowerCase()}`; }, 2000);
+    };
+    socket.on("roleChanged", onRoleChanged);
+    return () => { socket.off("newNotification", onNotification); socket.off("roleChanged", onRoleChanged); socket.disconnect(); };
+  }, [user, locale, queryClient]);
 
   const dismiss = (toast: ToastNotification) => {
     setToasts((current) => current.filter((item) => item !== toast));
