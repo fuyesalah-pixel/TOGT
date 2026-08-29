@@ -38,6 +38,7 @@ class ApiService {
 
   bool get hasToken => _accessToken != null;
   String? get accessToken => _accessToken;
+  String? get refreshToken => _refreshToken;
 
   Future<bool> testApiConnection() async {
     try {

@@ -102,7 +102,7 @@ class AuthService {
 
   Future<void> persistRemoteUser(Map<String, dynamic> json) async {
     final token = ApiService.instance.accessToken;
-    await _persist(TUser.fromJson(json), token);
+    await _persist(TUser.fromJson(json), token, ApiService.instance.refreshToken);
   }
 
   Future<TUser?> signInWithGoogle() async {
