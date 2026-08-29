@@ -1,0 +1,2 @@
+import 'package:flutter/material.dart';
+class TicketDetailScreen extends StatelessWidget { const TicketDetailScreen({super.key, required this.ticket}); final Map<String, dynamic> ticket; @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Ticket Details')), body: ListView(padding: const EdgeInsets.all(20), children: ticket.entries.map((entry) => ListTile(title: Text(entry.key), subtitle: Text('${entry.value}'))).toList())); }
