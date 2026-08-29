@@ -106,6 +106,7 @@ class AuthService {
   }
 
   Future<TUser?> signInWithGoogle() async {
+    await _google.signOut();
     final account = await _google.signIn();
     if (account == null) return null;
     final auth = await account.authentication;
