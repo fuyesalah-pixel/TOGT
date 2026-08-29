@@ -52,6 +52,9 @@ class ApiService {
   void setTokens({String? accessToken, String? refreshToken}) {
     _accessToken = accessToken;
     _refreshToken = refreshToken;
+    if (accessToken != null) {
+      _cookieHeader = 'togt_access=$accessToken${refreshToken == null ? '' : '; togt_refresh=$refreshToken'}';
+    }
   }
   void saveCookie(http.Response response) {
     final setCookie = response.headers['set-cookie'];
