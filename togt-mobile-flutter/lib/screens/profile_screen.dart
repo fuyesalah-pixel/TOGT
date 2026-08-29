@@ -15,6 +15,7 @@ import 'profile/parent_tracking_screen.dart';
 import 'profile/payment_screen.dart';
 import 'profile/settings_screen.dart';
 import 'profile/notifications_screen.dart';
+import '../services/api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -94,8 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
              _MenuItem(icon: Icons.notifications_none_rounded, label: 'Notifications', onTap: () => _push(context, const NotificationsScreen())),
               _MenuItem(icon: Icons.payments_outlined, label: 'Payments', onTap: () => _push(context, const PaymentScreen())),
              _MenuItem(icon: Icons.settings_outlined, label: 'Settings', onTap: () => _push(context, const SettingsScreen())),
-            _MenuItem(icon: Icons.language_rounded, label: 'Language', trailing: 'English', onTap: () => _language(context)),
-            _MenuItem(icon: Icons.dark_mode_outlined, label: 'Appearance', trailing: 'Light', onTap: () {}),
+             _MenuItem(icon: Icons.language_rounded, label: 'Language', trailing: 'English / Arabic', onTap: () => _language(context)),
             _MenuItem(icon: Icons.support_agent_rounded, label: 'Help & Support', onTap: () {}),
           ]),
           const SizedBox(height: 26),
@@ -119,7 +119,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _open(BuildContext context, String title, String endpoint) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DashboardListScreen(title: title, endpoint: endpoint)));
   void _push(BuildContext context, Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   void _settings(BuildContext context) => showDialog(context: context, builder: (_) => AlertDialog(title: const Text('Settings'), content: const Text('Your profile and notification preferences are managed securely with your TOGT account.'), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))]));
-  void _language(BuildContext context) => showModalBottomSheet(context: context, builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: ['English', 'Arabic', 'Amharic'].map((language) => ListTile(title: Text(language), onTap: () => Navigator.pop(context))).toList())));
+  void _language(BuildContext context) => showModalBottomSheet(
+    context: context,
+    builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      ListTile(title: const Text('English'), onTap: () => _saveLanguage(context, 'english')),
+      ListTile(title: const Text('Arabic'), onTap: () => _saveLanguage(context, 'arabic')),
+    ])),
+  );
+
+  Future<void> _saveLanguage(BuildContext context, String language) async {
+    final id = user?.id;
+    if (id != null) await ApiService.instance.patch('/users/$id', body: {'languagePref': language});
+    if (context.mounted) Navigator.pop(context);
+  }
 }
 
 class _WebOnlyProfile extends StatelessWidget {

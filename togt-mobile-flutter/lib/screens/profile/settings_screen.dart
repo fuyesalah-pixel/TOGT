@@ -21,7 +21,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> save() async {
     setState(() { busy = true; message = null; });
     try {
-      final data = await ApiService.instance.patch('/users/me', body: {'fullName': name.text.trim(), 'phone': phone.text.trim(), 'address': address.text.trim(), 'nationality': nationality.text.trim(), 'passportNumber': passport.text.trim()});
+      final userId = AuthService.instance.currentUser?.id;
+      if (userId == null) throw Exception('Please sign in again.');
+      final data = await ApiService.instance.patch('/users/$userId', body: {'fullName': name.text.trim(), 'phone': phone.text.trim(), 'address': address.text.trim(), 'nationality': nationality.text.trim(), 'passportNumber': passport.text.trim()});
       if (data is Map<String, dynamic>) await AuthService.instance.persistRemoteUser(data);
       if (mounted) setState(() => message = 'Profile saved successfully.');
     } catch (e) { if (mounted) setState(() => message = 'Could not save profile: $e'); }

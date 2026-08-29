@@ -138,8 +138,10 @@ class _ChatScreenState extends State<ChatScreen> {
              ]),
            ),
 
-          Expanded(
-            child: ListView.builder(
+           Expanded(
+             child: Container(
+               color: const Color(0xFFF6F8FB),
+               child: ListView.builder(
               controller: _scroll,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
               itemCount: _messages.length + (_typing ? 1 : 0),
@@ -147,7 +149,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (i == _messages.length && _typing) return _buildTyping();
                 return _Bubble(msg: _messages[i], index: i);
               },
-            ),
+               ),
+             ),
           ),
           Container(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
