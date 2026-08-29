@@ -27,6 +27,11 @@ export class ServiceRequestsController {
     return this.serviceRequests.findOne(id, user);
   }
 
+  @Patch(':id/amount')
+  setAmount(@Param('id') id: string, @Body('amount') amount: number, @CurrentUser() user: User) {
+    return this.serviceRequests.setAmount(id, amount, user);
+  }
+
   @Patch(':id/status')
   @Roles(Role.WORKER, Role.ADMIN)
   updateStatus(@Param('id') id: string, @Body() dto: UpdateStatusDto, @CurrentUser() user: User) {

@@ -14,6 +14,11 @@ export class PaymentService {
     const request = await this.prisma.serviceRequest.findUnique({ where: { id: dto.requestId }, include: { user: true } });
     if (!request || request.userId !== actor.id) throw new ForbiddenException('Request not found');
     if (request.paymentStatus === PaymentStatus.PAID) throw new BadRequestException('Request is already paid');
+    if (!Number.isFinite(dto.amount) || dto.amount <= 0) throw new BadRequestException('Payment amount must be greater than zero');
+    if (request.packageId) {
+      const pkg = await this.prisma.package.findUnique({ where: { id: request.packageId }, select: { price: true } });
+      if (pkg?.price != null && Math.abs(pkg.price - dto.amount) > 0.01) throw new BadRequestException('Payment amount does not match the package price');
+    }
     const secret = this.config.get<string>('CHAPA_SECRET_KEY');
     if (!secret) throw new ServiceUnavailableException('Chapa is not configured. Add CHAPA_SECRET_KEY on the backend.');
     const txRef = `TOGT-${Date.now()}-${randomUUID().slice(0, 8)}`;

@@ -20,8 +20,10 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   String? error;
   bool uploading = false;
   double? packageAmount;
+  final amountController = TextEditingController();
 
   @override void initState() { super.initState(); _load(); }
+  @override void dispose() { amountController.dispose(); super.dispose(); }
   Future<void> _load() async {
     try {
       final results = await Future.wait([ApiService.instance.get('/service-requests'), ApiService.instance.get('/service-requests/${widget.id}/history'), ApiService.instance.get('/packages')]);
@@ -36,6 +38,12 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       if (packageId != null && packageData is List) {
         for (final item in packageData.whereType<Map>()) {
           if (item['id']?.toString() == packageId && item['price'] is num) matchedAmount = (item['price'] as num).toDouble();
+        }
+      }
+      if (matchedAmount == null && packageData is List) {
+        final detailsText = found['formData'] is Map ? (found['formData']['details'] ?? '').toString().toLowerCase() : '';
+        for (final item in packageData.whereType<Map>()) {
+          if (item['price'] is num && item['title'] != null && detailsText.contains(item['title'].toString().toLowerCase())) matchedAmount = (item['price'] as num).toDouble();
         }
       }
       if (mounted) setState(() { request = found; packageAmount = matchedAmount; history = results[1] is List ? results[1] as List : []; });
@@ -85,6 +93,12 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     Text('Amount: ${amount?.toStringAsFixed(0) ?? 'Not set'} ${r['currency'] ?? 'ETB'}'),
     const SizedBox(height: 6),
     _badge(payment),
+    if (payment == 'UNPAID' && amount == null) ...[
+      const SizedBox(height: 10),
+      TextField(controller: amountController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Enter amount (ETB)')),
+      const SizedBox(height: 8),
+      OutlinedButton(onPressed: () async { final entered = double.tryParse(amountController.text.trim()); if (entered == null || entered <= 0) return; await ApiService.instance.patch('/service-requests/${widget.id}/amount', body: {'amount': entered}); await _load(); }, child: const Text('Save amount')),
+    ],
     if (payment == 'PAID' && r['paymentId'] != null) Text('Transaction: ${r['paymentId']}\n${r['paidAt'] ?? ''}'),
     if (payment == 'UNPAID' && amount != null && amount > 0) Padding(padding: const EdgeInsets.only(top: 12), child: SizedBox(width: double.infinity, child: FilledButton.icon(
       style: FilledButton.styleFrom(backgroundColor: TOGTColors.orange, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 15)),

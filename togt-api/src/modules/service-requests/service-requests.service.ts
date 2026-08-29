@@ -170,6 +170,18 @@ export class ServiceRequestsService {
     return request;
   }
 
+  async setAmount(id: string, amount: number, actor: User) {
+    if (!Number.isFinite(amount) || amount <= 0) throw new ForbiddenException('Amount must be greater than zero');
+    const request = await this.prisma.serviceRequest.findUnique({ where: { id } });
+    if (!request || (actor.role === Role.CUSTOMER && request.userId !== actor.id)) throw new ForbiddenException('Request not found');
+    if (request.paymentStatus !== 'UNPAID') throw new ForbiddenException('Only unpaid requests can be updated');
+    if (request.packageId) {
+      const pkg = await this.prisma.package.findUnique({ where: { id: request.packageId }, select: { price: true } });
+      if (pkg?.price != null && Math.abs(pkg.price - amount) > 0.01) throw new ForbiddenException('This package has a fixed price');
+    }
+    return this.prisma.serviceRequest.update({ where: { id }, data: { amount } });
+  }
+
   async getHistory(id: string, actor: User) {
     const request = await this.prisma.serviceRequest.findUnique({ where: { id } });
     if (!request) throw new NotFoundException('Service request not found');
