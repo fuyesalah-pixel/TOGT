@@ -112,6 +112,7 @@ services:
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
         NEXT_PUBLIC_CHAPA_PUBLIC_KEY: ${NEXT_PUBLIC_CHAPA_PUBLIC_KEY}
         NEXT_PUBLIC_MAPBOX_TOKEN: ${MAPBOX_ACCESS_TOKEN}
+        CACHE_BUST: "20260829111500"
     container_name: togt-web-prod
     restart: unless-stopped
     depends_on: [togt-api]
