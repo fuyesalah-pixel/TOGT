@@ -22,6 +22,11 @@ export class ServiceRequestsController {
     return this.serviceRequests.create(dto, user);
   }
 
+  @Get(':id')
+  findOne(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.serviceRequests.findOne(id, user);
+  }
+
   @Patch(':id/status')
   @Roles(Role.WORKER, Role.ADMIN)
   updateStatus(@Param('id') id: string, @Body() dto: UpdateStatusDto, @CurrentUser() user: User) {

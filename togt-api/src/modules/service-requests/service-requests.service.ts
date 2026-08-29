@@ -160,6 +160,16 @@ export class ServiceRequestsService {
     return updated;
   }
 
+  async findOne(id: string, actor: User) {
+    const request = await this.prisma.serviceRequest.findUnique({
+      where: { id },
+      include: { user: { select: safeUserSelect }, assignedTo: { select: safeUserSelect } },
+    });
+    if (!request) throw new NotFoundException('Service request not found');
+    if (actor.role === Role.CUSTOMER && request.userId !== actor.id) throw new ForbiddenException('Not allowed');
+    return request;
+  }
+
   async getHistory(id: string, actor: User) {
     const request = await this.prisma.serviceRequest.findUnique({ where: { id } });
     if (!request) throw new NotFoundException('Service request not found');
