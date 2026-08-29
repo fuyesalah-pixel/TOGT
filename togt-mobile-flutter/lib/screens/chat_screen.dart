@@ -106,9 +106,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
-      color: const Color(0xFFF9FAFB),
-      child: SafeArea(
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      backgroundColor: const Color(0xFFF9FAFB),
+      body: SafeArea(
       bottom: false,
       child: Column(
         children: [
@@ -164,7 +165,8 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             child: SafeArea(
               top: false,
-              child: Row(children: [
+               child: Row(children: [
+                if (_human) IconButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Attachments can be added from the support chat.'))), icon: const Icon(Icons.attach_file_rounded, color: TOGTColors.blue)),
                 Expanded(
                   child: TextField(
                     controller: _controller,

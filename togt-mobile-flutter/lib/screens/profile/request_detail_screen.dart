@@ -43,13 +43,14 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   @override Widget build(BuildContext context) {
     if (error != null && request == null) return Scaffold(appBar: AppBar(title: const Text('Request Details')), body: Center(child: Text('Unable to load request\n$error', textAlign: TextAlign.center)));
     if (request == null) return Scaffold(appBar: AppBar(title: const Text('Request Details')), body: const Center(child: CircularProgressIndicator()));
-    final r = request!; final type = (r['serviceType'] ?? 'Request').toString(); final status = (r['status'] ?? 'PENDING').toString(); final payment = (r['paymentStatus'] ?? 'UNPAID').toString(); final details = (r['formData'] is Map ? Map<String, dynamic>.from(r['formData']) : <String, dynamic>{});
+    final r = request!; final type = (r['serviceType'] ?? 'Request').toString(); final status = (r['status'] ?? 'PENDING').toString(); final payment = (r['paymentStatus'] ?? 'UNPAID').toString().toUpperCase(); final details = (r['formData'] is Map ? Map<String, dynamic>.from(r['formData']) : <String, dynamic>{});
+    final amount = double.tryParse((r['amount'] ?? details['amount'] ?? details['price'] ?? '').toString());
     return Scaffold(appBar: AppBar(title: const Text('Request Details')), body: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(18), children: [
       _card(Row(children: [CircleAvatar(backgroundColor: TOGTColors.blue, child: Icon(_icon(type), color: Colors.white)), const SizedBox(width: 12), Expanded(child: Text(type, style: Theme.of(context).textTheme.headlineSmall)), _badge(status)])),
       const SizedBox(height: 12),
       _card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Package & request', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), const SizedBox(height: 10), ...details.entries.where((e) => e.key != 'packageId').take(8).map((e) => Padding(padding: const EdgeInsets.only(bottom: 5), child: Text('${e.key}: ${e.value}')))])),
       const SizedBox(height: 12),
-      _paymentCard(r, payment, details),
+      _paymentCard(r, payment, details, amount),
       const SizedBox(height: 12),
       _card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Progress timeline', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), const SizedBox(height: 10), if (history.isEmpty) const Text('No progress updates yet.') else ...history.map((item) { final h = item as Map; return ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.check_circle, color: TOGTColors.green), title: Text('${h['statusFrom'] ?? 'Created'} → ${h['statusTo'] ?? 'Updated'}'), subtitle: Text('${h['changedBy']?['fullName'] ?? h['changedByName'] ?? ''}\n${h['notes'] ?? h['note'] ?? ''}\n${h['createdAt'] ?? ''}')); })])),
       const SizedBox(height: 12),
@@ -69,17 +70,17 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     ])));
   }
   Widget _card(Widget child) => Card(color: TOGTColors.white, elevation: 2, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)), child: Padding(padding: const EdgeInsets.all(16), child: child));
-  Widget _paymentCard(Map<String, dynamic> r, String payment, Map<String, dynamic> details) => _card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+  Widget _paymentCard(Map<String, dynamic> r, String payment, Map<String, dynamic> details, double? amount) => _card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     const Text('Payment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
     const SizedBox(height: 10),
-    Text('Amount: ${r['amount'] ?? details['amount'] ?? 'Not set'} ${r['currency'] ?? 'ETB'}'),
+    Text('Amount: ${amount?.toStringAsFixed(0) ?? 'Not set'} ${r['currency'] ?? 'ETB'}'),
     const SizedBox(height: 6),
     _badge(payment),
     if (payment == 'PAID' && r['paymentId'] != null) Text('Transaction: ${r['paymentId']}\n${r['paidAt'] ?? ''}'),
-    if (payment == 'UNPAID' && r['amount'] is num) Padding(padding: const EdgeInsets.only(top: 12), child: SizedBox(width: double.infinity, child: FilledButton.icon(
+    if (payment == 'UNPAID' && amount != null && amount > 0) Padding(padding: const EdgeInsets.only(top: 12), child: SizedBox(width: double.infinity, child: FilledButton.icon(
       style: FilledButton.styleFrom(backgroundColor: TOGTColors.orange, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 15)),
-      onPressed: () async { final opened = await PaymentService.instance.payNow(requestId: widget.id, amount: (r['amount'] as num).toDouble()); if (!opened && mounted) setState(() => error = 'Could not open Chapa checkout.'); },
-      icon: const Icon(Icons.payment), label: Text('Pay Now - ${(r['amount'] as num).toStringAsFixed(0)} ${r['currency'] ?? 'ETB'}'),
+      onPressed: () async { final opened = await PaymentService.instance.payNow(requestId: widget.id, amount: amount); if (!opened && mounted) setState(() => error = 'Could not open Chapa checkout.'); },
+      icon: const Icon(Icons.payment), label: Text('Pay Now - ${amount.toStringAsFixed(0)} ${r['currency'] ?? 'ETB'}'),
     ))),
   ]));
   Widget _badge(String value) => Chip(label: Text(value), backgroundColor: value == 'PAID' || value == 'COMPLETED' ? Colors.green.withOpacity(.15) : TOGTColors.orange.withOpacity(.15));
