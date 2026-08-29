@@ -106,7 +106,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
+    return ColoredBox(
+      color: const Color(0xFFF9FAFB),
+      child: SafeArea(
       bottom: false,
       child: Column(
         children: [
@@ -198,6 +200,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

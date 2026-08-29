@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/typography.dart';
+import '../theme/colors.dart';
 import 'chat_screen.dart';
 
 class ChatHomeScreen extends StatelessWidget {
@@ -8,11 +9,13 @@ class ChatHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
+    return ColoredBox(
+      color: const Color(0xFFF9FAFB),
+      child: SafeArea(
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Text('TOGT Support', style: TOGTTypography.h1),
+          Text('TOGT Support', style: TOGTTypography.h1.copyWith(color: const Color(0xFF12394F))),
           const SizedBox(height: 8),
           Text('Choose how you want to talk', style: TOGTTypography.body),
           const SizedBox(height: 22),
@@ -20,7 +23,7 @@ class ChatHomeScreen extends StatelessWidget {
           _ChoiceCard(title: 'Human Support', subtitle: 'Chat with the TOGT team.', icon: Icons.support_agent_outlined, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatScreen(human: true)))),
         ],
       ),
-    );
+    ));
   }
 }
 
@@ -34,13 +37,16 @@ class _ChoiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      color: Colors.white,
+      elevation: 3,
+      shadowColor: const Color(0x2212394F),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: Color(0xFFE5E7EB))),
       margin: const EdgeInsets.only(bottom: 14),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        leading: CircleAvatar(radius: 26, child: Icon(icon)),
-        title: Text(title, style: TOGTTypography.h3),
-        subtitle: Text(subtitle),
+        leading: DecoratedBox(decoration: const BoxDecoration(shape: BoxShape.circle, gradient: TOGTColors.blueGradient), child: CircleAvatar(radius: 26, backgroundColor: Colors.transparent, child: Icon(icon, color: Colors.white))),
+        title: Text(title, style: TOGTTypography.h3.copyWith(color: const Color(0xFF12394F))),
+        subtitle: Text(subtitle, style: const TextStyle(color: Color(0xFF7A8699))),
         trailing: const Icon(Icons.chevron_right_rounded),
         onTap: onTap,
       ),
