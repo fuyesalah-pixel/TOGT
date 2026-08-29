@@ -45,8 +45,14 @@ class AuthService {
 
   Future<TUser> loginWithGoogle({required String idToken}) async {
     final data = await ApiService.instance.post('/auth/google-mobile', body: {'idToken': idToken});
-    final user = TUser.fromJsonMap((data['user'] ?? data) as Map<String, dynamic>);
-    await _persist(user, data['accessToken']?.toString(), data['refreshToken']?.toString());
+    final accessToken = data['accessToken']?.toString() ?? data['token']?.toString();
+    final refreshToken = data['refreshToken']?.toString();
+    if (accessToken == null || refreshToken == null) throw ApiException('Login did not return a complete session');
+    ApiService.instance.setTokens(accessToken: accessToken, refreshToken: refreshToken);
+    final remote = await ApiService.instance.get('/auth/me');
+    if (remote is! Map<String, dynamic>) throw ApiException('Login session could not be verified');
+    final user = TUser.fromJson(remote);
+    await _persist(user, accessToken, refreshToken);
     return user;
   }
 

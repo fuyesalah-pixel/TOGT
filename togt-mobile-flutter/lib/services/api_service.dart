@@ -51,7 +51,7 @@ class ApiService {
   void setToken(String? token) => _accessToken = token;
   void setTokens({String? accessToken, String? refreshToken}) {
     _accessToken = accessToken;
-    _refreshToken = refreshToken ?? _refreshToken;
+    _refreshToken = refreshToken;
   }
   void saveCookie(http.Response response) {
     final setCookie = response.headers['set-cookie'];

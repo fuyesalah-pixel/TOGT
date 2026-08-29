@@ -17,6 +17,6 @@ class ChatSocketService {
   Future<dynamic> conversations() => ApiService.instance.get('/chat/conversations');
   Future<dynamic> messages(String userId) => ApiService.instance.get('/chat/$userId/messages');
   Future<dynamic> start() => ApiService.instance.post('/chat/start', body: {'channel': 'support'});
-  Future<dynamic> sendMessage({required String receiverId, required String message}) => ApiService.instance.post('/chat/send', body: {'receiverId': receiverId, 'message': message});
+  Future<dynamic> sendMessage({required String receiverId, required String message}) => ApiService.instance.postForm('/chat/send', {'receiverId': receiverId, 'message': message});
   void dispose() => _socket?.dispose();
 }
