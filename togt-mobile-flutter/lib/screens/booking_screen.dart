@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../models/package_model.dart';
 import '../services/request_service.dart';
+import '../services/auth_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../widgets/animated_button.dart';
@@ -35,6 +36,22 @@ class _BookingScreenState extends State<BookingScreen> {
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    final user = AuthService.instance.currentUser;
+    if (user != null) {
+      _field('fullName').text = user.name;
+      _field('email').text = user.email;
+      if (user.phone != null) _field('phone').text = user.phone!;
+      if (user.passportNumber != null) _field('passportNumber').text = user.passportNumber!;
+      if (user.nationality != null) _field('nationality').text = user.nationality!;
+      WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Form pre-filled from your profile'))); });
+    }
+    if (widget.package.destination != null && (_isDomestic || _isForeign)) _field('destination').text = widget.package.destination!;
+    if (_isUmrah) _field('packageType').text = widget.package.type.label.replaceFirst('Umrah ', '');
+  }
+
   Future<void> _pickDate(String key) async {
     final date = await showDatePicker(context: context, firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 3650)), initialDate: DateTime.now());
     if (date != null) _field(key).text = date.toIso8601String().split('T').first;
@@ -55,7 +72,9 @@ class _BookingScreenState extends State<BookingScreen> {
       await RequestService.instance.createRequest(
         type: _isUmrah ? 'UMRAH' : _isDomestic ? 'DOMESTIC' : _isForeign ? 'FOREIGN_TRAVEL' : 'TOURIST',
         payload: {
-          'details': 'Booking: ${widget.package.title}\n${_fields.entries.map((e) => '${e.key}: ${e.value.text.trim()}').join('\n')}\nTravelers: $_travelers',
+          'packageId': widget.package.id,
+          'amount': widget.package.price,
+          'details': 'Package: ${widget.package.title}\nDestination: ${widget.package.destination ?? ''}\nDuration: ${widget.package.duration ?? ''}\nBooking: ${_fields.entries.map((e) => '${e.key}: ${e.value.text.trim()}').join('\n')}\nTravelers: $_travelers',
         },
       );
       setState(() => _result = 'Request sent! Our team will contact you shortly.');

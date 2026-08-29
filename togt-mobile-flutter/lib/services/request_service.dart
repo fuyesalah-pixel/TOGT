@@ -16,8 +16,11 @@ class RequestService {
     required Map<String, dynamic> payload,
   }) async {
     final apiType = type == 'FLIGHT' ? 'TICKET' : type == 'FOREIGN' ? 'FOREIGN_TRAVEL' : type;
-    final data = await ApiService.instance
-        .post('/service-requests', body: {'serviceType': apiType, 'formData': payload});
+    final data = await ApiService.instance.post('/service-requests', body: {
+      'serviceType': apiType,
+      'formData': payload,
+      if (payload['packageId'] != null) 'packageId': payload['packageId'],
+    });
     return TRequest.fromJson((data ?? {}) as Map<String, dynamic>);
   }
 }
