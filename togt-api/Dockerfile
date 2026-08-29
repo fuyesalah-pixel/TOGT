@@ -6,6 +6,8 @@ RUN npm ci --no-audit --no-fund
 
 FROM node:20-slim AS builder
 WORKDIR /app
+ARG CACHE_BUST=unknown
+RUN echo "build $CACHE_BUST"
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

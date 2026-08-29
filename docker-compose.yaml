@@ -45,7 +45,11 @@ services:
     networks: [togt-network]
 
   togt-api:
-    build: https://github.com/fuyesalah-pixel/TOGT.git#main:togt-api
+    # Force Hostinger to rebuild the API instead of reusing the stale auth image.
+    build:
+      context: https://github.com/fuyesalah-pixel/TOGT.git#main:togt-api
+      args:
+        CACHE_BUST: "20260829093000"
     container_name: togt-api-prod
     restart: unless-stopped
     command: sh -c "npx prisma migrate deploy && node dist/main.js"
