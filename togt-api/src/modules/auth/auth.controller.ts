@@ -37,9 +37,11 @@ export class AuthController {
   @Post('google-mobile')
   @Public()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  googleMobile(@Body('idToken') idToken: string) {
+  async googleMobile(@Body('idToken') idToken: string, @Res({ passthrough: true }) res: Response) {
     if (!idToken) throw new BadRequestException('idToken is required');
-    return this.auth.loginWithMobileGoogle(idToken);
+    const result = await this.auth.loginWithMobileGoogle(idToken);
+    this.auth.setAuthCookies(res, { accessToken: result.accessToken, refreshToken: result.refreshToken });
+    return result;
   }
 
   /** Google OAuth callback — issues JWT cookies and redirects to the frontend. */
