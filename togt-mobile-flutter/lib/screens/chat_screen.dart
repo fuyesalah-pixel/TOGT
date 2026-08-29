@@ -31,6 +31,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     _loadHistory();
+    if (_human) WidgetsBinding.instance.addPostFrameCallback((_) => _setMode(true));
   }
 
   Future<void> _loadHistory() async {

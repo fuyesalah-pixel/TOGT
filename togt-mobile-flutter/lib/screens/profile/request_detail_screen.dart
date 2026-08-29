@@ -19,17 +19,26 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   List<String> uploads = [];
   String? error;
   bool uploading = false;
+  double? packageAmount;
 
   @override void initState() { super.initState(); _load(); }
   Future<void> _load() async {
     try {
-      final results = await Future.wait([ApiService.instance.get('/service-requests'), ApiService.instance.get('/service-requests/${widget.id}/history')]);
+      final results = await Future.wait([ApiService.instance.get('/service-requests'), ApiService.instance.get('/service-requests/${widget.id}/history'), ApiService.instance.get('/packages')]);
       final raw = results[0] is Map ? (results[0]['data'] ?? []) : results[0];
       final items = raw is List ? raw : <dynamic>[];
       Map<String, dynamic>? found;
       for (final item in items.whereType<Map>()) { if (item['id']?.toString() == widget.id) { found = Map<String, dynamic>.from(item); break; } }
       if (found == null) throw Exception('Request not found');
-      if (mounted) setState(() { request = found; history = results[1] is List ? results[1] as List : []; });
+      final packageId = found['packageId']?.toString();
+      final packageData = results[2] is Map ? results[2]['data'] ?? results[2]['items'] ?? [] : results[2];
+      double? matchedAmount;
+      if (packageId != null && packageData is List) {
+        for (final item in packageData.whereType<Map>()) {
+          if (item['id']?.toString() == packageId && item['price'] is num) matchedAmount = (item['price'] as num).toDouble();
+        }
+      }
+      if (mounted) setState(() { request = found; packageAmount = matchedAmount; history = results[1] is List ? results[1] as List : []; });
     } catch (e) { if (mounted) setState(() => error = e.toString()); }
   }
   Future<void> _upload() async {
@@ -44,7 +53,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     if (error != null && request == null) return Scaffold(appBar: AppBar(title: const Text('Request Details')), body: Center(child: Text('Unable to load request\n$error', textAlign: TextAlign.center)));
     if (request == null) return Scaffold(appBar: AppBar(title: const Text('Request Details')), body: const Center(child: CircularProgressIndicator()));
     final r = request!; final type = (r['serviceType'] ?? 'Request').toString(); final status = (r['status'] ?? 'PENDING').toString(); final payment = (r['paymentStatus'] ?? 'UNPAID').toString().toUpperCase(); final details = (r['formData'] is Map ? Map<String, dynamic>.from(r['formData']) : <String, dynamic>{});
-    final amount = double.tryParse((r['amount'] ?? details['amount'] ?? details['price'] ?? '').toString());
+    final amount = double.tryParse((r['amount'] ?? details['amount'] ?? details['price'] ?? packageAmount ?? '').toString());
     return Scaffold(appBar: AppBar(title: const Text('Request Details')), body: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(18), children: [
       _card(Row(children: [CircleAvatar(backgroundColor: TOGTColors.blue, child: Icon(_icon(type), color: Colors.white)), const SizedBox(width: 12), Expanded(child: Text(type, style: Theme.of(context).textTheme.headlineSmall)), _badge(status)])),
       const SizedBox(height: 12),
