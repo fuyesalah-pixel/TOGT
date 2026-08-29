@@ -169,6 +169,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: TextField(
                     controller: _controller,
                     textInputAction: TextInputAction.send,
+                    autocorrect: false,
+                    enableSuggestions: false,
                     onSubmitted: (_) => _send(),
                     decoration: InputDecoration(
                       hintText: 'Ask anything…',
@@ -321,7 +323,7 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
             ),
             child: Text(widget.msg.text,
                 style: TOGTTypography.body.copyWith(
-                    color: user ? TOGTColors.white : TOGTColors.navy, fontSize: 13.8)),
+                    color: user ? TOGTColors.white : const Color(0xFF12394F), fontSize: 13.8, decoration: TextDecoration.none)),
           ),
         ),
       ),

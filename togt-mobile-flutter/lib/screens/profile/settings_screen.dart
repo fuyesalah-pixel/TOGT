@@ -21,6 +21,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> save() async {
     setState(() { busy = true; message = null; });
     try {
+      final remote = await ApiService.instance.get('/auth/me');
+      if (remote is Map<String, dynamic>) await AuthService.instance.persistRemoteUser(remote);
       final userId = AuthService.instance.currentUser?.id;
       if (userId == null) throw Exception('Please sign in again.');
       final data = await ApiService.instance.patch('/users/$userId', body: {'fullName': name.text.trim(), 'phone': phone.text.trim(), 'address': address.text.trim(), 'nationality': nationality.text.trim(), 'passportNumber': passport.text.trim()});
