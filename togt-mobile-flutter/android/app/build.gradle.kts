@@ -6,10 +6,27 @@ plugins {
 }
 
 import java.util.Properties
+import java.io.FileInputStream
 
 val signingProperties = Properties()
-val signingFile = file("C:/keys/togt-keystore.properties")
-if (signingFile.exists()) signingFile.inputStream().use { signingProperties.load(it) }
+// Resolve signing config from (in priority order):
+//  1. ANDROID_KEYSTORE_PROPERTIES env var (CI injects an absolute path)
+//  2. C:/keys/togt-keystore.properties (legacy Windows dev machine)
+//  3. key.properties in the android/ dir (Flutter convention, gitignored)
+val envProps = System.getenv("ANDROID_KEYSTORE_PROPERTIES")
+val legacyProps = file("C:/keys/togt-keystore.properties")
+val repoProps = file("../key.properties") // <app>/.. => android/key.properties
+val signingFile = when {
+    envProps != null && File(envProps).exists() -> File(envProps)
+    legacyProps.exists() -> legacyProps
+    repoProps.exists() -> repoProps
+    else -> null
+}
+if (signingFile != null) FileInputStream(signingFile).use { signingProperties.load(it) }
+
+// Root of the Flutter `android/` directory (parent of this `app/` module),
+// used to resolve the keystore and the repo-local key.properties.
+val androidDir = projectDir.parentFile
 
 android {
     namespace = "com.togt.travel"
@@ -39,8 +56,10 @@ android {
 
     signingConfigs {
         create("release") {
-            if (signingFile.exists()) {
-                storeFile = file(signingProperties["storeFile"] as String)
+            if (signingFile != null && signingProperties.isNotEmpty) {
+                val rawStore = signingProperties["storeFile"] as String
+                val candidate = File(rawStore)
+                storeFile = if (candidate.isAbsolute) candidate else androidDir.resolve(rawStore)
                 storePassword = signingProperties["storePassword"] as String
                 keyAlias = signingProperties["keyAlias"] as String
                 keyPassword = signingProperties["keyPassword"] as String
