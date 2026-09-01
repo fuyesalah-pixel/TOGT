@@ -56,7 +56,7 @@ android {
 
     signingConfigs {
         create("release") {
-            if (signingFile != null && signingProperties.isNotEmpty) {
+            if (signingFile != null && signingProperties.isNotEmpty()) {
                 val rawStore = signingProperties["storeFile"] as String
                 val candidate = File(rawStore)
                 storeFile = if (candidate.isAbsolute) candidate else androidDir.resolve(rawStore)
