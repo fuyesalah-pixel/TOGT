@@ -1,0 +1,66 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'togt-mobile-flutter/**'
+      - '.github/workflows/build-flutter-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        working-directory: togt-mobile-flutter
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: togt-mobile-flutter
+        run: flutter analyze
+
+      - name: Test
+        working-directory: togt-mobile-flutter
+        run: flutter test
+
+      - name: Build release APK
+        working-directory: togt-mobile-flutter
+        run: flutter build apk --release --dart-define=TOGT_LOCAL_API=false
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TOGT-Android-APK
+          path: togt-mobile-flutter/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish APK to website downloads
+        run: |
+          mkdir -p togt-web/public/downloads
+          cp togt-mobile-flutter/build/app/outputs/flutter-apk/app-release.apk togt-web/public/downloads/TOGT-Android.apk
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add togt-web/public/downloads/TOGT-Android.apk
+          git diff --cached --quiet || git commit -m "build: update Android APK"
+          git push
