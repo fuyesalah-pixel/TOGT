@@ -53,11 +53,12 @@ jobs:
           ANDROID_KEYSTORE_PROPERTIES: ${{ secrets.ANDROID_KEYSTORE_PROPERTIES }}
         # Writes credential files into the (gitignored) android/ tree that the
         # Google Services Gradle plugin and the release signingConfig expect.
+        # All three secrets are stored base64-encoded to survive echo/quoting.
         working-directory: togt-mobile-flutter/android
         run: |
-          echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
+          echo "$GOOGLE_SERVICES_JSON" | base64 -d > app/google-services.json
           echo "$ANDROID_KEYSTORE_B64" | base64 -d > app/togt-release.jks
-          echo "$ANDROID_KEYSTORE_PROPERTIES" > key.properties
+          echo "$ANDROID_KEYSTORE_PROPERTIES" | base64 -d > key.properties
           ls -la app/google-services.json app/togt-release.jks key.properties
 
       - name: Build release APK
