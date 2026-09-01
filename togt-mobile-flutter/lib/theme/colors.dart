@@ -24,4 +24,16 @@ class TOGTColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+
+  static const greenGradient = LinearGradient(
+    colors: [Color(0xFF43C079), Color(0xFF2BB673)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const iataGradient = LinearGradient(
+    colors: [Color(0xFF0a2233), Color(0xFF12394F), Color(0xFF1a3d5c)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 }

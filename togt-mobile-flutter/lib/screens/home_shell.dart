@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../navigation/app_navigator.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'chat_home_screen.dart';
 import 'home_screen.dart';
@@ -15,15 +16,31 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
-  int _index = 0;
+  int get _index => AppNavigator.homeTab.value;
 
   late final List<Widget> _tabs = [
     const HomeScreen(),
-    PackagesScreen(onOpenUmrah: () => setState(() => _index = 1)),
+    PackagesScreen(onOpenUmrah: () => AppNavigator.homeTab.value = 1),
     const PersonalScreen(),
     const ChatHomeScreen(),
     const ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    AppNavigator.homeTab.addListener(_onTabChanged);
+  }
+
+  void _onTabChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    AppNavigator.homeTab.removeListener(_onTabChanged);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +56,7 @@ class _HomeShellState extends State<HomeShell> {
       ),
       bottomNavigationBar: TogtNavBar(
         currentIndex: _index,
-        onTap: (i) => setState(() => _index = i),
+        onTap: (i) => AppNavigator.homeTab.value = i,
       ),
     );
   }

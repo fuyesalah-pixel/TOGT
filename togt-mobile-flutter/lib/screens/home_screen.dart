@@ -6,6 +6,9 @@ import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../widgets/animated_button.dart';
 import '../widgets/hero_carousel.dart';
+import '../widgets/iata_section.dart';
+import '../widgets/gallery_section.dart';
+import '../widgets/testimonials_section.dart';
 import '../widgets/package_card.dart';
 import '../widgets/shimmer_loading.dart';
 import 'packages_screen.dart';
@@ -186,6 +189,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
+            const SizedBox(height: 30),
+            const IataSection(),
+            const SizedBox(height: 30),
+            const GallerySection(),
+            const SizedBox(height: 30),
+            const TestimonialsSection(),
           ],
         ),
       ),

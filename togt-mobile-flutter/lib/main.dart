@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'navigation/app_navigator.dart';
 import 'screens/splash_screen.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
@@ -24,6 +25,7 @@ class TogtApp extends StatelessWidget {
     return MaterialApp(
       title: 'TOGT Travel',
       debugShowCheckedModeBanner: false,
+      navigatorKey: AppNavigator.navigatorKey,
       theme: TOGTTheme.light,
       home: const SplashScreen(),
     );

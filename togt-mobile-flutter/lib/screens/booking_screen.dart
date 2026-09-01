@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../widgets/animated_button.dart';
+import '../widgets/success_dialog.dart';
 
 class BookingScreen extends StatefulWidget {
   const BookingScreen({super.key, required this.package});
@@ -21,7 +22,6 @@ class _BookingScreenState extends State<BookingScreen> {
   final Map<String, TextEditingController> _fields = {};
   int _travelers = 1;
   bool _submitting = false;
-  String? _result;
   String? _error;
 
   bool get _isUmrah => widget.package.type.isUmrah;
@@ -77,7 +77,14 @@ class _BookingScreenState extends State<BookingScreen> {
           'details': 'Package: ${widget.package.title}\nDestination: ${widget.package.destination ?? ''}\nDuration: ${widget.package.duration ?? ''}\nBooking: ${_fields.entries.map((e) => '${e.key}: ${e.value.text.trim()}').join('\n')}\nTravelers: $_travelers',
         },
       );
-      setState(() => _result = 'Request sent! Our team will contact you shortly.');
+      for (final controller in _fields.values) controller.clear();
+      if (!mounted) return;
+      await SuccessDialog.show(
+        context: context,
+        onGoHome: () {
+          for (final controller in _fields.values) controller.clear();
+        },
+      );
     } catch (e) {
       setState(() => _error = 'Submission failed: ${e.toString()}');
     } finally {
@@ -170,24 +177,8 @@ class _BookingScreenState extends State<BookingScreen> {
             const SizedBox(height: 26),
             AnimatedButton(
               label: 'Confirm Booking',
-              onPressed: _result == null ? _submit : null,
+              onPressed: _submitting ? null : _submit,
             ),
-            if (_result != null) ...[
-              const SizedBox(height: 18),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: TOGTColors.green.withOpacity(.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: TOGTColors.green.withOpacity(.4)),
-                ),
-                child: Row(children: [
-                  const Icon(Icons.celebration_rounded, color: TOGTColors.green),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(_result!, style: TOGTTypography.body)),
-                ]),
-              ),
-            ],
           ],
         ),
       ),

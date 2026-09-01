@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/user_model.dart';
+import '../navigation/app_navigator.dart';
 import '../services/auth_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
@@ -33,7 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (u != null && (u.role == UserRole.worker || u.role == UserRole.admin || u.role == UserRole.tech)) {
       return _WebOnlyProfile(role: u.role, onLogout: () async {
         await AuthService.instance.logout();
-        if (mounted) setState(() {});
+        if (mounted) AppNavigator.goToLogin();
       });
     }
     return SafeArea(
@@ -105,8 +106,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
             gradient: u == null ? TOGTColors.orangeGradient : LinearGradient(colors: [TOGTColors.red, TOGTColors.red.withOpacity(.8)]),
             onPressed: () async {
               if (u == null) return;
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Sign Out'),
+                  content: const Text('Are you sure you want to sign out?'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancel')),
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Sign Out')),
+                  ],
+                ),
+              );
+              if (confirmed != true || !mounted) return;
               await AuthService.instance.logout();
-              if (mounted) setState(() {});
+              if (!mounted) return;
+              AppNavigator.goToLogin();
             },
           ),
           const SizedBox(height: 12),

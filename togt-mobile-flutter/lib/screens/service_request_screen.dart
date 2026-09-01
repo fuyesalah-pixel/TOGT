@@ -5,7 +5,7 @@ import '../services/request_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../widgets/animated_button.dart';
-import 'profile/my_requests_screen.dart';
+import '../widgets/success_dialog.dart';
 
 class ServiceRequestScreen extends StatefulWidget {
   const ServiceRequestScreen({super.key, required this.serviceType, required this.title});
@@ -69,8 +69,12 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
       });
        for (final field in _fields.values) field.clear();
        if (!mounted) return;
-       await showDialog<void>(context: context, builder: (_) => AlertDialog(title: const Text('Request Submitted Successfully!'), content: const Text('Your request has been created.'), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('View My Requests'))]));
-       if (mounted) Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MyRequestsScreen()));
+       await SuccessDialog.show(
+         context: context,
+         onGoHome: () {
+           for (final field in _fields.values) field.clear();
+         },
+       );
     } catch (e) {
       setState(() => _message = 'Submission failed: $e');
     } finally {
