@@ -337,7 +337,7 @@ export class DuffelService {
     const validServices = requestedServices.filter((service) => availableIds.has(service.id));
     if (validServices.length) {
       try {
-        await this.client().orders.addServices(order.id, { services: validServices } as never);
+        await this.client().orders.addServices(order.id, { add_services: validServices } as never);
       } catch (error) {
         const message = this.providerErrorMessage(error);
         this.logger.warn(`Duffel extras failed for order ${order.id}, continuing without them: ${message}`);
@@ -737,13 +737,19 @@ export class DuffelService {
     if (!error || typeof error !== 'object') return 'provider rejected the order';
     const value = error as {
       message?: unknown;
-      errors?: Array<{ code?: string; title?: string; detail?: string; source?: { pointer?: string; parameter?: string } }>;
+      errors?: Array<{ code?: string; title?: string; detail?: string; message?: string; source?: { pointer?: string; parameter?: string; field?: string } }>;
       error?: { response?: unknown; message?: unknown } | null;
     };
 
-    const summarize = (item: { code?: string; title?: string; detail?: string; source?: { pointer?: string; parameter?: string } }): string => {
-      const pointer = item.source?.pointer?.replace(/^\/data\//, '') ?? item.source?.parameter;
-      const parts = [item.code && `[${item.code}]`, item.title, item.detail].filter(Boolean);
+    const summarize = (item: {
+      code?: string;
+      title?: string;
+      detail?: string;
+      message?: string;
+      source?: { pointer?: string; parameter?: string; field?: string };
+    }): string => {
+      const pointer = item.source?.pointer?.replace(/^\/data\//, '') ?? item.source?.parameter ?? item.source?.field;
+      const parts = [item.code && `[${item.code}]`, item.title, item.detail ?? item.message].filter(Boolean);
       const message = parts.join(' ');
       return pointer && parts.length ? `${message} (${pointer})` : message || 'unknown Duffel error';
     };
