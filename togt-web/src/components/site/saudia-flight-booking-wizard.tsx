@@ -126,12 +126,37 @@ export function SaudiaFlightBookingWizard() {
     return true;
   }
 
+  async function refreshSelections() {
+    if (!selected) throw new Error('Please select a flight again.');
+    const [seatMap, serviceResult] = await Promise.all([getSeatMap(selected.id), getOfferServices(selected.id)]);
+    const latestSeats = seatsFromMaps(seatMap);
+    const latestServices = serviceResult.services;
+    const validSeats = selectedSeats.filter((seat) => latestSeats.some((latest) => latest.designator === seat.designator && latest.available && (!seat.serviceId || latest.serviceId === seat.serviceId)));
+    const validServiceIds = selectedServices.filter((id) => latestServices.some((service) => service.id === id));
+    const seatsChanged = validSeats.length !== selectedSeats.length;
+    const servicesChanged = validServiceIds.length !== selectedServices.length;
+    setSeats(latestSeats);
+    setServices(latestServices);
+    setSelectedSeats(validSeats);
+    setSelectedServices(validServiceIds);
+    return { seats: validSeats, serviceIds: validServiceIds, services: latestServices, changed: seatsChanged || servicesChanged, seatsChanged, servicesChanged };
+  }
+
   async function payNow() {
     if (!selected) { setError("Please select a flight first."); return; }
     if (!user) { setError("Please sign in before paying for a flight."); return; }
     setBusy(true); setError("");
     try {
-      const order = await withTimeout(createFlightOrder({ offerId: selected.id, offerRequestId, customerCurrency: displayCurrency, passengers: passengers.map((p, i) => ({ passengerId: passengerIds[i], ...p, email, phone })), seatSelection: selectedSeats, services: selectedServices.map((id) => ({ id, quantity: 1 })), seatAmount: seatFee, ancillaryAmount: extrasFee }));
+      const current = await withTimeout(refreshSelections());
+      if (current.changed) {
+        setBusy(false);
+        next(current.seatsChanged ? 5 : 6);
+        setError("Some selections changed or expired. Please review them and continue again.");
+        return;
+      }
+      const currentSeatFee = current.seats.reduce((sum, seat) => sum + seat.price, 0);
+      const currentExtrasFee = current.services.filter((service) => current.serviceIds.includes(service.id)).reduce((sum, service) => sum + service.price, 0);
+      const order = await withTimeout(createFlightOrder({ offerId: selected.id, offerRequestId, customerCurrency: displayCurrency, passengers: passengers.map((p, i) => ({ passengerId: passengerIds[i], ...p, email, phone })), seatSelection: current.seats, services: current.serviceIds.map((id) => ({ id, quantity: 1 })), seatAmount: currentSeatFee, ancillaryAmount: currentExtrasFee }));
       const checkout = await withTimeout(payFlightOrder(order.id));
       window.location.href = checkout.checkoutUrl;
     } catch (cause) { console.error("Flight Pay Now failed", cause); setError(cause instanceof Error ? cause.message : "Payment could not be initialized."); setBusy(false); }
@@ -142,7 +167,16 @@ export function SaudiaFlightBookingWizard() {
     if (!user) { setError("Please sign in before saving a flight booking."); return; }
     setBusy(true); setError("");
     try {
-      const order = await withTimeout(createFlightOrder({ offerId: selected.id, offerRequestId, customerCurrency: displayCurrency, passengers: passengers.map((p, i) => ({ passengerId: passengerIds[i], ...p, email, phone })), seatSelection: selectedSeats, services: selectedServices.map((id) => ({ id, quantity: 1 })), seatAmount: seatFee, ancillaryAmount: extrasFee }));
+      const current = await withTimeout(refreshSelections());
+      if (current.changed) {
+        setBusy(false);
+        next(current.seatsChanged ? 5 : 6);
+        setError("Some selections changed or expired. Please review them and continue again.");
+        return;
+      }
+      const currentSeatFee = current.seats.reduce((sum, seat) => sum + seat.price, 0);
+      const currentExtrasFee = current.services.filter((service) => current.serviceIds.includes(service.id)).reduce((sum, service) => sum + service.price, 0);
+      const order = await withTimeout(createFlightOrder({ offerId: selected.id, offerRequestId, customerCurrency: displayCurrency, passengers: passengers.map((p, i) => ({ passengerId: passengerIds[i], ...p, email, phone })), seatSelection: current.seats, services: current.serviceIds.map((id) => ({ id, quantity: 1 })), seatAmount: currentSeatFee, ancillaryAmount: currentExtrasFee }));
       setBookingReference(order.duffelBookingRef ?? order.id); next(8);
     } catch (cause) { console.error("Flight Pay Later failed", cause); setError(cause instanceof Error ? cause.message : "Could not hold this flight."); } finally { setBusy(false); }
   }

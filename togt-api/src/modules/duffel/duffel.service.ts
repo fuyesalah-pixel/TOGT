@@ -281,7 +281,9 @@ export class DuffelService {
     ];
     const availableIds = new Set((offer.available_services ?? []).map((service) => service.id));
     for (const service of requestedServices) {
-      if (!availableIds.has(service.id)) throw new BadRequestException(`Selected Duffel service is not available: ${service.id}`);
+      if (!availableIds.has(service.id)) {
+        throw new BadRequestException('One of your selected services is no longer available. Please review your seat and baggage selection.');
+      }
     }
 
     const passengers = dto.passengers.map((p, i) => {
@@ -318,6 +320,9 @@ export class DuffelService {
     } catch (error) {
       const message = this.providerErrorMessage(error);
       this.logger.error(`Duffel order creation failed for ${dto.offerId}: ${message}`);
+      if (message.toLowerCase().includes('service') && message.toLowerCase().includes('available')) {
+        throw new BadRequestException('One of your selected services is no longer available. Please review your seat and baggage selection.');
+      }
       throw new BadRequestException(`Duffel could not create this order: ${message}`);
     }
     const order = orderResponse.data as unknown as DuffelOrder;
