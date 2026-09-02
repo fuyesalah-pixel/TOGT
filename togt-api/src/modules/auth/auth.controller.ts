@@ -1,9 +1,9 @@
-import { BadRequestException, Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
-import { User } from '@prisma/client';
+import { Role, User } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { GoogleProfile } from './strategies/google.strategy';
 import { Public } from '../../common/decorators/public.decorator';
@@ -70,6 +70,21 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   refresh(@Body('refreshToken') refreshToken: string | undefined, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     return this.auth.refresh(refreshToken ?? req.cookies?.togt_refresh, res, Boolean(refreshToken));
+  }
+
+  /** Local development login — no Google required. Enabled only when DEV_LOGIN_ENABLED=true. */
+  @Post('dev-login')
+  @Public()
+  async devLogin(
+    @Body() body: { email?: string; role?: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    if (!this.config.get<boolean>('DEV_LOGIN_ENABLED')) {
+      throw new UnauthorizedException('Dev login is disabled');
+    }
+    const result = await this.auth.devLogin(body.email ?? '', body.role as Role | undefined);
+    this.auth.setAuthCookies(res, result.tokens);
+    return { user: result.user };
   }
 
   @Post('logout')

@@ -164,6 +164,11 @@
     "dateOfBirth": "Date of Birth",
     "nationality": "Nationality",
     "selectNationality": "Select nationality",
+    "gender": "Gender",
+    "selectGender": "Select gender",
+    "contactDetails": "Contact Details",
+    "contactEmail": "Contact Email",
+    "contactPhone": "Contact Phone",
     "seatSelection": "Select Your Seat",
     "frontOfAircraft": "Front of aircraft",
     "legendAvailable": "Available",
@@ -201,7 +206,8 @@
     "downloadTicket": "Download E-Ticket",
     "finish": "Finish",
     "newSearch": "New Search",
-    "errPassengers": "Please complete all passenger details before continuing."
+    "errPassengers": "Please complete all passenger details before continuing.",
+    "errContact": "Please provide a contact email and phone number."
   },
   "Visa": {
     "title": "Visa Processing",

@@ -51,6 +51,54 @@ enum RequestStatus {
   CANCELLED
 }
 
+enum FlightOrderStatus {
+  HELD
+  AWAITING_TICKET
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+}
+
+model FlightOrder {
+  id                   String           @id @default(uuid())
+  userId               String
+  user                 User             @relation(fields: [userId], references: [id])
+  duffelOfferRequestId String?
+  duffelOfferId        String
+  duffelOrderId        String?          @unique
+  duffelBookingRef     String?
+  ticketId             String?          @unique
+  origin               String
+  destination          String
+  departureDate        String
+  returnDate           String?
+  cabinClass           String           @default("economy")
+  tripSummary          Json
+  passengers           Json
+  duffelAmount         Float
+  duffelCurrency       String
+  sellAmount           Float
+  sellCurrency         String           @default("ETB")
+  customerCurrency     String           @default("ETB")
+  exchangeRate         Float?
+  baseFare             Float?
+  taxes                Float?
+  seatAmount           Float             @default(0)
+  ancillaryAmount      Float             @default(0)
+  selectedSeats        Json?
+  selectedServices     Json?
+  eticketNumber        String?
+  paymentRequiredBy    DateTime?
+  status               FlightOrderStatus @default(HELD)
+  paymentId            String?
+  paidAt               DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([paymentId])
+}
+
 enum GroupStatus {
   UPCOMING
   IN_PROGRESS
@@ -126,6 +174,7 @@ model User {
   profileChanges        ProfileChangeLog[]
   tickets               Ticket[]
   ticketHistory         TicketHistory[]
+  flightOrders          FlightOrder[]
   processedRefunds      Ticket[] @relation("ProcessedRefunds")
 }
 

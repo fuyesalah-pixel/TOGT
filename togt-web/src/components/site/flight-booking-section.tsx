@@ -12,10 +12,24 @@ import { COUNTRIES } from "@/lib/schemas/smart-form";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "next-intl";
 import { BookingAccessDialog } from "./booking-access-dialog";
-import { useTicketMutations } from "@/hooks/useTickets";
 import { generateTicketPDF } from "@/lib/ticket-pdf";
+import {
+  searchFlights,
+  createFlightOrder,
+  payFlightOrder,
+  getCurrencyRates,
+  getSeatMap,
+  getOfferServices,
+} from "@/lib/api/duffel";
 
 const EASE = [0.22, 1, 0.36, 1] as [number, number, number, number];
+
+function formatTime(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+}
 
 /* ── Airport data (replace with real API / IATA feed when wired up) ─── */
 type Airport = { code: string; city: string; airport: string; country: string };
@@ -288,22 +302,64 @@ function CounterRow({ label, value, min, onInc, onDec }: { label: string; value:
   );
 }
 
-/* ── Mock flight results (replace with real API when wired up) ─── */
+/* ── Flight search results (from Duffel API backend) ──────────────── */
 type FlightResult = {
+  id: string;
   airline: string;
+  airlineCode: string;
   flight: string;
   departure: string;
   arrival: string;
   duration: string;
   price: number;
+  currency: string;
   stops: string;
   stopsKey: "direct" | "onestop";
+  offerId: string;
+  duffelPrice: number;
+  duffelCurrency: string;
+  usdPrice?: number;
+  tripSummary: TripSummary;
 };
 
+type TripSummary = {
+  origin: string;
+  destination: string;
+  departureDate: string;
+  returnDate?: string | null;
+  outbound?: { departureAt: string; arrivalAt: string; segments: Segment[] } | null;
+  return?: { departureAt: string; arrivalAt: string; segments: Segment[] } | null;
+};
+
+type Segment = {
+  origin: string;
+  destination: string;
+  departAt: string;
+  arriveAt: string;
+  flightNumber: string;
+  airline: string;
+  airlineCode: string;
+};
+
+type DuffelSeat = { designator: string; name?: string; serviceId?: string; price?: number; currency?: string; available: boolean };
+
+function flattenDuffelSeats(maps: unknown[]): DuffelSeat[] {
+  const seats: DuffelSeat[] = [];
+  for (const map of maps as Array<{ cabins?: Array<{ rows?: Array<{ sections?: Array<{ elements?: Array<Record<string, unknown>> }> }> }> }>) {
+    for (const cabin of map.cabins ?? []) for (const row of cabin.rows ?? []) for (const section of row.sections ?? []) for (const element of section.elements ?? []) {
+      if (element.type !== "seat" && element.type !== "restricted_seat_general") continue;
+      const services = (element.available_services as Array<{ id: string; total_amount?: string; total_currency?: string }> | undefined) ?? [];
+      const service = services[0];
+      seats.push({ designator: String(element.designator), name: String(element.name ?? "Standard"), serviceId: service?.id, price: Number(service?.total_amount ?? 0), currency: service?.total_currency, available: services.length > 0 });
+    }
+  }
+  return seats;
+}
+
 const MOCK_RESULTS: FlightResult[] = [
-  { airline: "Ethiopian Airlines", flight: "ET 612",  departure: "08:30", arrival: "11:45", duration: "4h 15m", price: 45000, stops: "Direct",      stopsKey: "direct"   },
-  { airline: "Emirates",          flight: "EK 724",  departure: "14:20", arrival: "18:35", duration: "4h 15m", price: 68000, stops: "1 Stop (DXB)", stopsKey: "onestop"  },
-  { airline: "Qatar Airways",     flight: "QR 1406", departure: "22:10", arrival: "02:25", duration: "4h 15m", price: 72000, stops: "1 Stop (DOH)", stopsKey: "onestop"  },
+  { id: "mock-1", airline: "Ethiopian Airlines", airlineCode: "ET", flight: "ET 612",  departure: "08:30", arrival: "11:45", duration: "4h 15m", price: 45000, currency: "ETB", stops: "Direct",      stopsKey: "direct",   offerId: "", duffelPrice: 0, duffelCurrency: "USD", tripSummary: null as unknown as TripSummary },
+  { id: "mock-2", airline: "Emirates",          airlineCode: "EK", flight: "EK 724",  departure: "14:20", arrival: "18:35", duration: "4h 15m", price: 68000, currency: "ETB", stops: "1 Stop (DXB)", stopsKey: "onestop", offerId: "", duffelPrice: 0, duffelCurrency: "USD", tripSummary: null as unknown as TripSummary },
+  { id: "mock-3", airline: "Qatar Airways",     airlineCode: "QR", flight: "QR 1406", departure: "22:10", arrival: "02:25", duration: "4h 15m", price: 72000, currency: "ETB", stops: "1 Stop (DOH)", stopsKey: "onestop", offerId: "", duffelPrice: 0, duffelCurrency: "USD", tripSummary: null as unknown as TripSummary },
 ];
 
 const POPULAR_ROUTES: { from: string; to: string; label: string }[] = [
@@ -490,6 +546,7 @@ type PassengerForm = {
   passportExpiry: string;
   dob: string;
   nationality: string;
+  gender: string;
 };
 
 /* ── Main section ─────────────────────────────────────────────────── */
@@ -497,7 +554,6 @@ export function FlightBookingSection() {
   const t = useTranslations("FlightBooking");
   const locale = useLocale();
   const { user, isLoading: authLoading } = useAuth();
-  const { create: createTicket } = useTicketMutations();
 
   // ── Search state ──────────────────────────────────────────────────
   const [tripType, setTripType] = useState<"round" | "oneway" | "multi">("round");
@@ -526,6 +582,30 @@ export function FlightBookingSection() {
   const [flowError, setFlowError] = useState<string | null>(null);
   const [roleDenied, setRoleDenied] = useState(false);
   const [passengerForms, setPassengerForms] = useState<PassengerForm[]>([]);
+  const [results, setResults] = useState<FlightResult[]>([]);
+  const [offerRequestId, setOfferRequestId] = useState("");
+  const [passengerIds, setPassengerIds] = useState<string[]>([]);
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [displayCurrency, setDisplayCurrency] = useState<"ETB" | "USD">("ETB");
+  const [usdToEtb, setUsdToEtb] = useState(55.5);
+  const [currencyFallback, setCurrencyFallback] = useState(false);
+  const [duffelSeats, setDuffelSeats] = useState<DuffelSeat[]>([]);
+  const [selectedDuffelSeats, setSelectedDuffelSeats] = useState<Array<{ designator: string; passengerId: string; serviceId?: string; price: number }>>([]);
+  const [serviceOptions, setServiceOptions] = useState<Array<{ id: string; name?: string; type?: string; price: number; currency: string; maximumQuantity: number }>>([]);
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    getCurrencyRates().then((rates) => {
+      setUsdToEtb(rates.USD_TO_ETB);
+      setCurrencyFallback(rates.isFallback);
+    }).catch(() => setCurrencyFallback(true));
+  }, []);
+
+  const displayPrice = (etb: number, usd?: number) => {
+    const value = displayCurrency === "USD" ? (usd ?? etb / usdToEtb) : etb;
+    return `${value.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${displayCurrency}`;
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -538,7 +618,7 @@ export function FlightBookingSection() {
       if (!savedFlight || !search.from || !search.to) return;
       setFrom(search.from); setTo(search.to); setDepartureDate(search.departureDate); setReturnDate(search.returnDate); setAdults(search.adults); setChildren(search.children); setInfants(search.infants);
       const flight = MOCK_RESULTS.find((result) => result.flight === savedFlight.flight) ?? savedFlight;
-      setSelectedFlight(flight); setPassengerForms(Array.from({ length: search.adults + search.children + search.infants }, () => ({ firstName: "", lastName: "", passportNumber: "", passportExpiry: "", dob: "", nationality: "" }))); setCurrentStep(3); window.localStorage.removeItem("pendingBooking"); window.localStorage.removeItem("pendingFlightBooking");
+      setSelectedFlight(flight); setPassengerForms(Array.from({ length: search.adults + search.children + search.infants }, () => ({ firstName: "", lastName: "", passportNumber: "", passportExpiry: "", dob: "", nationality: "", gender: "" }))); setCurrentStep(3); window.localStorage.removeItem("pendingBooking"); window.localStorage.removeItem("pendingFlightBooking");
     } catch { window.localStorage.removeItem("pendingBooking"); window.localStorage.removeItem("pendingFlightBooking"); }
   }, [authLoading, user]);
 
@@ -569,7 +649,9 @@ export function FlightBookingSection() {
     (sum, seat) => sum + (LEGROOM_ROWS.has(parseInt(seat, 10)) ? LEGROOM_SEAT_PRICE : 0),
     0
   );
-  const extrasCost = (baggage ? BAGGAGE_PRICE : 0) + (insurance ? INSURANCE_PRICE : 0);
+  const duffelSeatCost = selectedDuffelSeats.reduce((sum, seat) => sum + (seat.price ?? 0), 0);
+  const ancillaryCost = serviceOptions.filter((service) => selectedServiceIds.includes(service.id)).reduce((sum, service) => sum + service.price, 0);
+  const extrasCost = (baggage ? BAGGAGE_PRICE : 0) + (insurance ? INSURANCE_PRICE : 0) + ancillaryCost;
   const grandTotal = baseFare + taxes + seatsCost + extrasCost;
 
   // ── Navigation ────────────────────────────────────────────────────
@@ -585,7 +667,7 @@ export function FlightBookingSection() {
     setTo(from);
   };
 
-  const handleSearch = (e?: React.FormEvent) => {
+  const handleSearch = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setError(null);
     if (!from) { setError("from"); return; }
@@ -600,13 +682,55 @@ export function FlightBookingSection() {
     setMeal(false);
     setInsurance(false);
     setLoading(true);
-    window.setTimeout(() => {
+    setFlowError(null);
+    try {
+      const res = await searchFlights({
+        origin: from.code,
+        destination: to.code,
+        departureDate,
+        returnDate: tripType === "round" && returnDate ? returnDate : undefined,
+        adults,
+        children,
+        infants,
+        cabinClass: "economy",
+        directOnly,
+      });
+      const mapped: FlightResult[] = res.offers.map((o) => ({
+        id: o.id,
+        airline: o.airline,
+        airlineCode: o.airlineCode,
+        flight: o.flightNumber,
+        departure: formatTime(o.departureAt),
+        arrival: formatTime(o.arrivalAt),
+        duration: o.duration || "",
+        price: o.price,
+        currency: o.currency,
+        stops: o.stops === 0 ? "" : `${o.stops} Stop(s)`,
+        stopsKey: o.direct ? "direct" : "onestop",
+        offerId: o.id,
+        duffelPrice: o.duffelPrice,
+        duffelCurrency: o.duffelCurrency,
+        usdPrice: o.usdPrice,
+        tripSummary: o.tripSummary,
+      }));
+      setResults(mapped);
+      setOfferRequestId(res.offerRequestId);
+      setPassengerIds(res.passengerIds);
+      if (mapped.length === 0) {
+        setFlowError("noFlights");
+      } else {
+        setFlowError(null);
+        setCurrentStep(2);
+        window.setTimeout(() => {
+          document.getElementById("flight-booking-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 80);
+      }
+    } catch (err) {
+      setResults([]);
+      setFlowError(err instanceof Error ? err.message : "Search failed");
+    } finally {
       setLoading(false);
-      setCurrentStep(2);
-      window.setTimeout(() => {
-        document.getElementById("flight-booking-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 80);
-    }, 1200);
+    }
   };
 
   const applyPopular = (r: { from: string; to: string }) => {
@@ -614,9 +738,9 @@ export function FlightBookingSection() {
     setTo(findAirport(r.to));
   };
 
-  const filteredResults = directOnly
-    ? MOCK_RESULTS.filter((r) => r.stopsKey === "direct")
-    : MOCK_RESULTS;
+  const filteredResults = directOnly && results.length > 0
+    ? results.filter((r) => r.stopsKey === "direct")
+    : results;
 
   const handleSelectFlight = (r: FlightResult) => {
     if (authLoading) return;
@@ -633,9 +757,22 @@ export function FlightBookingSection() {
     setBaggage(false);
     setMeal(false);
     setInsurance(false);
+    setDuffelSeats([]);
+    setSelectedDuffelSeats([]);
+    setServiceOptions([]);
+    setSelectedServiceIds([]);
+    Promise.all([getSeatMap(r.offerId), getOfferServices(r.offerId)]).then(([maps, services]) => {
+      setDuffelSeats(flattenDuffelSeats(maps));
+      setServiceOptions(services.services);
+    }).catch(() => {
+      setDuffelSeats([]);
+      setServiceOptions([]);
+    });
     setFlowError(null);
+    setContactEmail(user.email ?? "");
+    setContactPhone(user.phone ?? "");
     setPassengerForms(
-      passengerList.map(() => ({ firstName: "", lastName: "", passportNumber: "", passportExpiry: "", dob: "", nationality: "" }))
+      passengerList.map(() => ({ firstName: "", lastName: "", passportNumber: "", passportExpiry: "", dob: "", nationality: "", gender: "" }))
     );
     goToStep(3);
   };
@@ -650,10 +787,20 @@ export function FlightBookingSection() {
     );
   };
 
+  const toggleDuffelSeat = (seat: DuffelSeat) => {
+    if (!seat.available) return;
+    setSelectedDuffelSeats((current) => {
+      const existing = current.find((item) => item.designator === seat.designator);
+      if (existing) return current.filter((item) => item.designator !== seat.designator);
+      if (current.length >= totalPax) return current;
+      return [...current, { designator: seat.designator, passengerId: passengerIds[current.length] ?? passengerIds[0] ?? "", serviceId: seat.serviceId, price: seat.price ?? 0 }];
+    });
+  };
+
   const goToPayment = () => {
     setFlowError(null);
     const valid = passengerForms.length > 0 && passengerForms.every(
-      (f) => f.firstName.trim() && f.lastName.trim() && f.passportNumber.trim() && f.passportExpiry && f.dob && f.nationality.trim()
+      (f) => f.firstName.trim() && f.lastName.trim() && f.passportNumber.trim() && f.passportExpiry && f.dob && f.nationality.trim() && f.gender
     );
     if (!valid) {
       setFlowError("passengers");
@@ -665,27 +812,37 @@ export function FlightBookingSection() {
 
   const handlePay = async () => {
     if (!user || user.role !== "CUSTOMER" || !selectedFlight || !from || !to) return;
+    if (!selectedFlight.offerId) { setFlowError("noFlights"); return; }
+    if (!contactEmail.trim() || !contactPhone.trim()) { setFlowError("contact"); return; }
     setPaying(true);
+    setFlowError(null);
     try {
-      await new Promise((resolve) => window.setTimeout(resolve, 1600));
-      const ticket = await createTicket.mutateAsync({
-        airline: selectedFlight.airline,
-        flightNumber: selectedFlight.flight,
-        origin: from.code,
-        destination: to.code,
-        departureAt: new Date(`${departureDate}T${selectedFlight.departure}:00`).toISOString(),
-        passengerName: passengerForms.map((p) => `${p.firstName} ${p.lastName}`).join(", "),
-        passengerDetails: passengerForms,
-        seat: selectedSeats.join(", "),
-        cabinClass: "Economy",
-        paymentMethod,
-        totalAmount: grandTotal,
+      const order = await createFlightOrder({
+        offerId: selectedFlight.offerId,
+        offerRequestId,
+        passengers: passengerForms.map((p, i) => ({
+          passengerId: passengerIds[i],
+          firstName: p.firstName,
+          lastName: p.lastName,
+          dob: p.dob,
+          gender: p.gender,
+          email: contactEmail,
+          phone: contactPhone,
+          passportNumber: p.passportNumber,
+          passportExpiry: p.passportExpiry,
+          nationality: p.nationality,
+        })),
+        seatSelection: selectedDuffelSeats,
+        services: serviceOptions.filter((service) => selectedServiceIds.includes(service.id)).map((service) => ({ id: service.id, quantity: 1 })),
+        seatAmount: duffelSeatCost,
+        ancillaryAmount: ancillaryCost,
+        customerCurrency: displayCurrency,
       });
+      const checkout = await payFlightOrder(order.id);
       setPaying(false);
-      setBookingRef(ticket.ticketNumber);
-      setCurrentStep(5);
-      document.getElementById("flight-booking-flow")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.location.href = checkout.checkoutUrl;
     } catch (err) {
+      console.error("Flight payment initialization failed", err);
       setPaying(false);
       setFlowError(err instanceof Error ? err.message : "Could not complete the booking");
     }
@@ -757,6 +914,17 @@ export function FlightBookingSection() {
 
         {/* Progress indicator — always visible */}
         <StepsBar current={currentStep} labels={stepsLabels} />
+
+        <div className="flex justify-end mb-4">
+          <div className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/10 p-1 text-xs">
+            {(["ETB", "USD"] as const).map((code) => (
+              <button key={code} type="button" onClick={() => setDisplayCurrency(code)} className={`rounded-full px-3 py-1 font-semibold ${displayCurrency === code ? "bg-[#FF9300] text-white" : "text-white/70"}`}>
+                {code}
+              </button>
+            ))}
+          </div>
+        </div>
+        {currencyFallback && <p className="mb-3 text-right text-[11px] text-white/60">Using fallback exchange rate</p>}
 
         <div id="flight-booking-flow">
           {/* ── STEP 1: SEARCH (only visible) ─────────────────────────── */}
@@ -895,6 +1063,13 @@ export function FlightBookingSection() {
                 </p>
               )}
 
+              {/* No flights result */}
+              {flowError === "noFlights" && (
+                <p className="mt-3 text-sm text-white/80 bg-white/5 border border-white/10 rounded-lg p-3 text-center">
+                  {t("noResults")}
+                </p>
+              )}
+
               {/* Search button */}
               <button
                 type="submit"
@@ -987,7 +1162,7 @@ export function FlightBookingSection() {
                       <div className="flex items-center justify-between sm:justify-end gap-4 sm:min-w-[180px]">
                         <div className="text-right">
                           <p className="text-xs text-gray-400">from</p>
-                          <p className="font-extrabold text-[#FF9300] text-lg leading-none">{r.price.toLocaleString()} <span className="text-xs font-medium text-gray-500">ETB</span></p>
+                           <p className="font-extrabold text-[#FF9300] text-lg leading-none">{displayPrice(r.price, r.usdPrice)}</p>
                         </div>
                         <button
                           type="button"
@@ -1122,6 +1297,18 @@ export function FlightBookingSection() {
                                 ))}
                               </select>
                             </Field>
+                            <Field label={t("gender")}>
+                              <select
+                                value={p.gender}
+                                onChange={(e) => updatePassenger(i, "gender", e.target.value)}
+                                data-testid={`gender-${i}`}
+                                className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#FF9300]/30 focus:border-[#FF9300]"
+                              >
+                                <option value="">{t("selectGender")}</option>
+                                <option value="m">Male</option>
+                                <option value="f">Female</option>
+                              </select>
+                            </Field>
                           </div>
                         </div>
                       );
@@ -1132,6 +1319,40 @@ export function FlightBookingSection() {
                         <span>!</span>{t("errPassengers")}
                       </p>
                     )}
+
+                    {flowError === "contact" && (
+                      <p className="mt-3 text-sm text-red-500 font-medium flex items-center gap-1.5">
+                        <span>!</span>{t("errContact")}
+                      </p>
+                    )}
+
+                    {/* Contact details (used for the Duffel e-ticket + payment receipt) */}
+                    <div className="border-t border-gray-100 mt-5 pt-5">
+                      <p className="font-semibold text-[#1F67B1] mb-3 flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        {t("contactDetails")}
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <Field label={t("contactEmail")}>
+                          <input
+                            type="email"
+                            value={contactEmail}
+                            onChange={(e) => setContactEmail(e.target.value)}
+                            data-testid="contact-email"
+                            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF9300]/30 focus:border-[#FF9300]"
+                          />
+                        </Field>
+                        <Field label={t("contactPhone")}>
+                          <input
+                            type="tel"
+                            value={contactPhone}
+                            onChange={(e) => setContactPhone(e.target.value)}
+                            data-testid="contact-phone"
+                            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF9300]/30 focus:border-[#FF9300]"
+                          />
+                        </Field>
+                      </div>
+                    </div>
                   </div>
 
                   {/* 3B. Seat selection */}
@@ -1150,6 +1371,18 @@ export function FlightBookingSection() {
                       occupied={occupiedSeats}
                       t={t}
                     />
+                    {duffelSeats.length > 0 && (
+                      <div className="mt-6 border-t border-gray-100 pt-5">
+                        <p className="mb-3 text-sm font-semibold text-[#12394F]">Airline seat map</p>
+                        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+                          {duffelSeats.map((seat) => {
+                            const selected = selectedDuffelSeats.some((item) => item.designator === seat.designator);
+                            return <button key={seat.designator} type="button" disabled={!seat.available || (!selected && selectedDuffelSeats.length >= totalPax)} onClick={() => toggleDuffelSeat(seat)} title={seat.name} className={`rounded-md border px-2 py-2 text-xs font-semibold ${selected ? "border-[#FF9300] bg-[#FF9300] text-white" : seat.available ? "border-gray-200 bg-gray-50 text-[#12394F]" : "cursor-not-allowed border-gray-200 bg-gray-200 text-gray-400"}`}>{seat.designator}</button>;
+                          })}
+                        </div>
+                        <p className="mt-2 text-xs text-gray-400">{selectedDuffelSeats.length}/{totalPax} airline seats selected{duffelSeatCost ? ` · ${duffelSeatCost} ${selectedFlight.duffelCurrency}` : ""}</p>
+                      </div>
+                    )}
                     <p className="text-[11px] text-gray-400 mt-3 text-center">
                       {t("seatPrice", { price: LEGROOM_SEAT_PRICE.toLocaleString() })}
                     </p>
@@ -1170,6 +1403,9 @@ export function FlightBookingSection() {
                         testId="extra-baggage"
                         onToggle={() => setBaggage((v) => !v)}
                       />
+                      {serviceOptions.filter((service) => service.type !== "seat").map((service) => (
+                        <ExtraRow key={service.id} icon={Luggage} title={service.name || service.type || "Airline service"} price={`${service.price} ${service.currency}`} selected={selectedServiceIds.includes(service.id)} testId={`duffel-service-${service.id}`} onToggle={() => setSelectedServiceIds((ids) => ids.includes(service.id) ? ids.filter((id) => id !== service.id) : [...ids, service.id])} />
+                      ))}
                       <ExtraRow
                         icon={UtensilsCrossed}
                         title={t("specialMeal")}
@@ -1198,27 +1434,27 @@ export function FlightBookingSection() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-500">{t("flight")} ({totalPax} {t(totalPax === 1 ? "paxSingular" : "paxPlural")})</span>
-                        <span className="font-semibold text-[#12394F]">{baseFare.toLocaleString()} ETB</span>
+                        <span className="font-semibold text-[#12394F]">{displayPrice(baseFare)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">{t("taxesFees")}</span>
-                        <span className="font-semibold text-[#12394F]">{taxes.toLocaleString()} ETB</span>
+                        <span className="font-semibold text-[#12394F]">{displayPrice(taxes)}</span>
                       </div>
                       <div className="flex justify-between text-[#FF9300]">
                         <span className="text-gray-500">{t("seatLabel")}</span>
-                        <span className="font-semibold">{selectedSeats.length ? `${seatsCost.toLocaleString()} ETB` : "—"}</span>
+                        <span className="font-semibold">{selectedSeats.length ? displayPrice(seatsCost) : "—"}</span>
                       </div>
                       <div className="flex justify-between text-[#FF9300]">
                         <span className="text-gray-500">{t("baggageLabel")}</span>
-                        <span className="font-semibold">{baggage ? `${BAGGAGE_PRICE.toLocaleString()} ETB` : "—"}</span>
+                        <span className="font-semibold">{baggage ? displayPrice(BAGGAGE_PRICE) : "—"}</span>
                       </div>
                       <div className="flex justify-between text-[#FF9300]">
                         <span className="text-gray-500">{t("insuranceLabel")}</span>
-                        <span className="font-semibold">{insurance ? `${INSURANCE_PRICE.toLocaleString()} ETB` : "—"}</span>
+                        <span className="font-semibold">{insurance ? displayPrice(INSURANCE_PRICE) : "—"}</span>
                       </div>
                       <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-lg text-[#12394F]">
                         <span>{t("total")}</span>
-                        <span>{grandTotal.toLocaleString()} ETB</span>
+                        <span>{displayPrice(grandTotal)}</span>
                       </div>
                     </div>
 
@@ -1301,27 +1537,27 @@ export function FlightBookingSection() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-500">{t("flight")} ({totalPax} {t(totalPax === 1 ? "paxSingular" : "paxPlural")})</span>
-                        <span className="font-semibold text-[#12394F]">{baseFare.toLocaleString()} ETB</span>
+                        <span className="font-semibold text-[#12394F]">{displayPrice(baseFare)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">{t("taxesFees")}</span>
-                        <span className="font-semibold text-[#12394F]">{taxes.toLocaleString()} ETB</span>
+                        <span className="font-semibold text-[#12394F]">{displayPrice(taxes)}</span>
                       </div>
                       <div className="flex justify-between text-[#FF9300]">
                         <span className="text-gray-500">{t("seatLabel")}</span>
-                        <span className="font-semibold">{selectedSeats.length ? `${seatsCost.toLocaleString()} ETB` : "—"}</span>
+                        <span className="font-semibold">{selectedSeats.length ? displayPrice(seatsCost) : "—"}</span>
                       </div>
                       <div className="flex justify-between text-[#FF9300]">
                         <span className="text-gray-500">{t("baggageLabel")}</span>
-                        <span className="font-semibold">{baggage ? `${BAGGAGE_PRICE.toLocaleString()} ETB` : "—"}</span>
+                        <span className="font-semibold">{baggage ? displayPrice(BAGGAGE_PRICE) : "—"}</span>
                       </div>
                       <div className="flex justify-between text-[#FF9300]">
                         <span className="text-gray-500">{t("insuranceLabel")}</span>
-                        <span className="font-semibold">{insurance ? `${INSURANCE_PRICE.toLocaleString()} ETB` : "—"}</span>
+                        <span className="font-semibold">{insurance ? displayPrice(INSURANCE_PRICE) : "—"}</span>
                       </div>
                       <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-lg text-[#12394F]">
                         <span>{t("total")}</span>
-                        <span>{grandTotal.toLocaleString()} ETB</span>
+                        <span>{displayPrice(grandTotal)}</span>
                       </div>
                     </div>
 
@@ -1344,6 +1580,10 @@ export function FlightBookingSection() {
                         t("payNow")
                       )}
                     </button>
+
+                    {flowError && flowError !== "passengers" && flowError !== "contact" && currentStep === 4 && (
+                      <p className="mt-3 text-sm text-red-500 font-medium text-center">{flowError}</p>
+                    )}
 
                     <button
                       type="button"

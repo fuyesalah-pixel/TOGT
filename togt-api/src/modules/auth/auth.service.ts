@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Request, Response } from 'express';
@@ -87,6 +87,40 @@ export class AuthService {
     if (isNew) await this.sendWelcome(user);
     const tokens = await this.issueTokens(user);
     return { token: tokens.accessToken, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, user };
+  }
+
+  /** Local development login — issues JWT cookies for an email without Google. Dev-only. */
+  async devLogin(email: string, roleOverride?: Role): Promise<{ user: User; tokens: AuthTokens }> {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) throw new BadRequestException('email is required');
+
+    let user = await this.prisma.user.findUnique({ where: { email: normalized } });
+    if (!user) {
+      const role =
+        roleOverride && Object.values(Role).includes(roleOverride)
+          ? roleOverride
+          : this.isAdminEmail(normalized)
+            ? Role.ADMIN
+            : Role.CUSTOMER;
+      user = await this.prisma.user.create({
+        data: {
+          email: normalized,
+          fullName: normalized.split('@')[0],
+          nationality: 'Ethiopia',
+          googleId: `dev-${randomUUID()}`,
+          role,
+        },
+      });
+    } else if (
+      roleOverride &&
+      Object.values(Role).includes(roleOverride) &&
+      user.role !== roleOverride
+    ) {
+      user = await this.prisma.user.update({ where: { id: user.id }, data: { role: roleOverride } });
+    }
+
+    const tokens = await this.issueTokens(user);
+    return { user, tokens };
   }
 
   async recordLogin(user: User, request: Request) {

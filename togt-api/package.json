@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.682.0",
+    "@duffel/api": "^4.28.0",
     "@google/generative-ai": "^0.24.1",
     "@nestjs/common": "^10.4.15",
     "@nestjs/config": "^3.3.0",

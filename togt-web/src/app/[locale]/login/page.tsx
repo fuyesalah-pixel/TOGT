@@ -1,24 +1,56 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocale } from "next-intl";
 import { Plane } from "lucide-react";
 import { API_URL } from "@/lib/api/client";
 import { useAuth } from "@/hooks/useAuth";
 
+const DEV_LOGIN = process.env.NEXT_PUBLIC_DEV_LOGIN === "true";
+
 export default function LoginPage() {
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const { user, isLoading } = useAuth();
   const authError = searchParams.get("error");
+
+  const [devEmail, setDevEmail] = useState("");
+  const [devRole, setDevRole] = useState("ADMIN");
+  const [devError, setDevError] = useState<string | null>(null);
+  const [devLoading, setDevLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
       router.replace(`/${locale}/dashboard/${user.role.toLowerCase()}`);
     }
   }, [user, locale, router]);
+
+  const handleDevLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDevError(null);
+    setDevLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/dev-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: devEmail, role: devRole }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.message ?? "Dev login failed");
+      }
+      await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+    } catch (err) {
+      setDevError(err instanceof Error ? err.message : "Dev login failed");
+    } finally {
+      setDevLoading(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen">
@@ -92,6 +124,42 @@ export default function LoginPage() {
           </a>
 
           {isLoading && <p className="mt-4 text-center text-xs text-gray-400">Checking session...</p>}
+
+          {DEV_LOGIN && (
+            <form onSubmit={handleDevLogin} className="mt-6 rounded-xl border border-dashed border-togt-orange/50 bg-orange-50/40 p-4">
+              <p className="mb-2 text-xs font-semibold text-togt-navy">Local dev login (no Google)</p>
+              <input
+                type="email"
+                required
+                value={devEmail}
+                onChange={(e) => setDevEmail(e.target.value)}
+                placeholder="you@email.com"
+                className="mb-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-togt-blue"
+              />
+              <div className="flex gap-2">
+                <select
+                  value={devRole}
+                  onChange={(e) => setDevRole(e.target.value)}
+                  className="h-9 flex-1 rounded-lg border border-gray-200 bg-white px-2 text-sm"
+                >
+                  <option value="ADMIN">ADMIN</option>
+                  <option value="WORKER">WORKER</option>
+                  <option value="GUIDE">GUIDE</option>
+                  <option value="TECH">TECH</option>
+                  <option value="CUSTOMER">CUSTOMER</option>
+                </select>
+                <button
+                  type="submit"
+                  disabled={devLoading}
+                  className="rounded-lg bg-togt-blue px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  {devLoading ? "..." : "Sign in"}
+                </button>
+              </div>
+              {devError && <p className="mt-2 text-xs text-red-600">{devError}</p>}
+              <p className="mt-2 text-[11px] text-gray-400">Creates the account if it doesn&apos;t exist.</p>
+            </form>
+          )}
 
           <p className="mt-6 text-center text-xs text-gray-400">
             By signing in you agree to TOGT&apos;s terms of service.

@@ -20,6 +20,8 @@ import { ContentModule } from './modules/content/content.module';
 import { StatsModule } from './modules/stats/stats.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { DuffelModule } from './modules/duffel/duffel.module';
+import { CurrencyModule } from './modules/currency/currency.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
 import { TelegramModule } from './modules/telegram/telegram.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
@@ -44,6 +46,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     StatsModule,
     TrackingModule,
     PaymentModule,
+    DuffelModule,
+    CurrencyModule,
     ChatbotModule,
     TelegramModule,
     TicketsModule,

@@ -45,4 +45,18 @@ export default () => ({
     from: process.env.HOSTINGER_SMTP_FROM ?? '',
   },
   cookieSecure: process.env.COOKIE_SECURE === 'true',
+  duffel: {
+    accessToken: process.env.DUFFEL_ACCESS_TOKEN ?? '',
+    apiUrl: process.env.DUFFEL_API_URL ?? 'https://api.duffel.com',
+    markupPercent: parseFloat(process.env.DUFFEL_MARKUP_PERCENT ?? '8'),
+    baseCurrency: process.env.DUFFEL_BASE_CURRENCY ?? 'USD',
+    currencyRates: Object.fromEntries(
+      (process.env.DUFFEL_CURRENCY_RATES ?? 'USD=125')
+        .split(',')
+        .map((s) => s.trim().split('='))
+        .filter(([c, r]) => c && r && !Number.isNaN(parseFloat(r)))
+        .map(([c, r]) => [c.toUpperCase(), parseFloat(r)]),
+    ),
+  },
+  DUFFEL_FALLBACK_ETB_RATE: process.env.DUFFEL_FALLBACK_ETB_RATE ?? '55.5',
 });
