@@ -42,20 +42,23 @@ class _AnimatedButtonState extends State<AnimatedButton>
   Future<void> _tap() async {
     if (widget.onPressed == null || _loading || _success) return;
     await _c.reverse();
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
       widget.onPressed!();
       await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _success = true;
       });
       await Future.delayed(const Duration(milliseconds: 900));
-      if (mounted) setState(() => _success = false);
+      if (!mounted) return;
+      setState(() => _success = false);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
-    await _c.forward();
+    if (mounted) await _c.forward();
   }
 
   @override
