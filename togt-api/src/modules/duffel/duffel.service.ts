@@ -258,7 +258,14 @@ export class DuffelService {
   }
 
   async createOrder(dto: CreateFlightOrderDto, actor: User) {
-    const offerResponse = await this.client().offers.get(dto.offerId, { return_available_services: true });
+    let offerResponse;
+    try {
+      offerResponse = await this.client().offers.get(dto.offerId, { return_available_services: true });
+    } catch (error) {
+      const message = this.providerErrorMessage(error);
+      this.logger.error(`Duffel offer refresh failed for ${dto.offerId}: ${message}`);
+      throw new BadRequestException(`Duffel offer is no longer available: ${message}`);
+    }
     const offer = offerResponse.data as unknown as DuffelOffer;
     if (!offer) throw new NotFoundException('Offer not found');
     if (offer.payment_requirements?.requires_instant_payment) {
