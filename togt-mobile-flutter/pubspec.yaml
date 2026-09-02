@@ -1,7 +1,7 @@
-name: togt_mobile_app
-description: "TOGT Tour & Travel — native mobile app."
+﻿name: togt_mobile_app
+description: "TOGT Tour & Travel â€” native mobile app."
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
   sdk: ^3.13.1
@@ -24,6 +24,7 @@ dependencies:
   image_picker: ^1.2.3
   path_provider: ^2.1.6
   open_filex: ^4.7.0
+  package_info_plus: ^8.3.0
   socket_io_client: ^3.1.6
   firebase_core: ^4.14.0
   firebase_messaging: ^16.6.0

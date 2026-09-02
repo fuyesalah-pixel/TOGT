@@ -7,6 +7,11 @@ on:
       - 'togt-mobile-flutter/**'
       - '.github/workflows/build-flutter-apk.yml'
   workflow_dispatch:
+    inputs:
+      update_base:
+        description: 'Test-only override for the in-app update base URL (e.g. http://127.0.0.1:8080). Empty = production.'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -63,7 +68,12 @@ jobs:
 
       - name: Build release APK
         working-directory: togt-mobile-flutter
-        run: flutter build apk --release --dart-define=TOGT_LOCAL_API=false
+        env:
+          UPDATE_BASE: ${{ inputs.update_base }}
+        run: |
+          ARGS=""
+          if [ -n "$UPDATE_BASE" ]; then ARGS="--dart-define=TOGT_UPDATE_BASE=$UPDATE_BASE"; fi
+          flutter build apk --release --dart-define=TOGT_LOCAL_API=false $ARGS
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -74,11 +84,23 @@ jobs:
           if-no-files-found: error
 
       - name: Publish APK to website downloads
+        if: github.event_name == 'push' || inputs.update_base == ''
         run: |
+          PUBSPEC_VERSION=$(grep '^version:' togt-mobile-flutter/pubspec.yaml | sed 's/version: //' | tr -d '[:space:]')
+          VERSION_NAME=${PUBSPEC_VERSION%%+*}
+          VERSION_CODE=${PUBSPEC_VERSION##*+}
           mkdir -p togt-web/public/downloads
           cp togt-mobile-flutter/build/app/outputs/flutter-apk/app-release.apk togt-web/public/downloads/TOGT-Android.apk
+          cat > togt-web/public/downloads/version.json <<EOF
+          {
+            "versionCode": ${VERSION_CODE},
+            "versionName": "${VERSION_NAME}",
+            "apkUrl": "https://travel.togttrading.com/downloads/TOGT-Android.apk",
+            "forceUpdate": false
+          }
+          EOF
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git add togt-web/public/downloads/TOGT-Android.apk
-          git diff --cached --quiet || git commit -m "build: update Android APK"
+          git add togt-web/public/downloads/TOGT-Android.apk togt-web/public/downloads/version.json
+          git diff --cached --quiet || git commit -m "build: update Android APK and version manifest"
           git push

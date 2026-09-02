@@ -90,6 +90,7 @@ class _HeroCarouselState extends State<HeroCarousel>
                           Image.network(
                             ApiService.instance.resolveImageUrl(slide.imageUrl),
                             fit: BoxFit.cover,
+                            cacheWidth: 1080,
                             errorBuilder: (_, __, ___) => Container(
                               decoration:
                                   const BoxDecoration(gradient: TOGTColors.blueGradient),

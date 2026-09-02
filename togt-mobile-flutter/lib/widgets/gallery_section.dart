@@ -267,6 +267,7 @@ class _ImageHeaderState extends State<_ImageHeader> {
               ApiService.instance.resolveImageUrl(images[i]),
               fit: BoxFit.cover,
               width: double.infinity,
+              cacheWidth: 900,
               errorBuilder: (_, __, ___) => Container(
                 color: TOGTColors.lightGrey,
                 child: const Icon(Icons.broken_image_outlined,
@@ -362,6 +363,7 @@ class _GalleryDetailState extends State<_GalleryDetail> {
                           width: 100,
                           height: 100,
                           fit: BoxFit.cover,
+                          cacheWidth: 240,
                           errorBuilder: (_, __, ___) => Container(
                             width: 100,
                             height: 100,

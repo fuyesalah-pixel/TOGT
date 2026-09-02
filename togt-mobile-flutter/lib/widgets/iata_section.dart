@@ -1,22 +1,19 @@
-import 'dart:async';
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show Ticker;
 
+import '../services/api_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 
-const _airlines = <String>[
-  'Emirates',
-  'Qatar Airways',
-  'Turkish Airlines',
-  'Saudia',
-  'EgyptAir',
-  'Air Canada',
-  'Air France',
-  'American Airlines',
-  'British Airways',
-  'Delta',
+const _airlines = <({String name, String logo})>[
+  (name: 'Emirates', logo: '/images/airlines/emirates.jpg'),
+  (name: 'Qatar Airways', logo: '/images/airlines/qatar-airways.jpg'),
+  (name: 'Turkish Airlines', logo: '/images/airlines/turkish-airlines.jpg'),
+  (name: 'EgyptAir', logo: '/images/airlines/egyptair.jpg'),
+  (name: 'Air Canada', logo: '/images/airlines/air-canada.jpg'),
+  (name: 'Air France', logo: '/images/airlines/air-france.jpg'),
+  (name: 'American Airlines', logo: '/images/airlines/american-airlines.jpg'),
+  (name: 'British Airways', logo: '/images/airlines/british-airways.jpg'),
 ];
 
 class IataSection extends StatefulWidget {
@@ -63,7 +60,7 @@ class _IataSectionState extends State<IataSection>
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: TOGTColors.orange,
                     ),
@@ -104,14 +101,14 @@ class _IataSectionState extends State<IataSection>
                 ],
               ),
               const SizedBox(height: 26),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  _TrustBadge(icon: Icons.verified_rounded, label: 'IATA Accredited'),
-                  _TrustBadge(icon: Icons.trending_up_rounded, label: 'Transparent Fares'),
-                  _TrustBadge(icon: Icons.public_rounded, label: 'Global Reach'),
-                ],
-              ),
+              const _TrustCard(
+                  icon: Icons.verified_rounded, label: 'IATA Accredited'),
+              const SizedBox(height: 12),
+              const _TrustCard(
+                  icon: Icons.trending_up_rounded, label: 'Transparent Fares'),
+              const SizedBox(height: 12),
+              const _TrustCard(
+                  icon: Icons.public_rounded, label: 'Global Reach'),
               const SizedBox(height: 22),
               const _AirlineMarquee(),
             ],
@@ -180,7 +177,6 @@ class _CountUpState extends State<_CountUp>
             style: TOGTTypography.display.copyWith(
                 color: TOGTColors.orange,
                 fontWeight: FontWeight.w800,
-                fontFeatures: const [FontFeature.tabularFigures()],
                 fontSize: 26));
       },
     );
@@ -195,8 +191,8 @@ class _DividerDot extends StatelessWidget {
       Container(width: 6, height: 6, decoration: BoxDecoration(shape: BoxShape.circle, color: TOGTColors.white.withOpacity(.4)));
 }
 
-class _TrustBadge extends StatelessWidget {
-  const _TrustBadge({required this.icon, required this.label});
+class _TrustCard extends StatelessWidget {
+  const _TrustCard({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
@@ -204,20 +200,78 @@ class _TrustBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: TOGTColors.white.withOpacity(.08),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: TOGTColors.white.withOpacity(.12)),
       ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: TOGTColors.orange.withOpacity(.18),
+            ),
+            child: Icon(icon, color: TOGTColors.orange, size: 19),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(label,
+                style: TOGTTypography.small.copyWith(
+                    color: TOGTColors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12.5)),
+          ),
+          Icon(Icons.check_circle_outline_rounded,
+              color: TOGTColors.orange.withOpacity(.9), size: 18),
+        ],
+      ),
+    );
+  }
+}
+
+class _AirlineLogo extends StatelessWidget {
+  const _AirlineLogo({required this.name, required this.logo});
+
+  final String name;
+  final String logo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Column(
         children: [
-          Icon(icon, color: TOGTColors.orange, size: 20),
+          Container(
+            width: 48,
+            height: 48,
+            padding: const EdgeInsets.all(5),
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: TOGTColors.white,
+            ),
+            child: ClipOval(
+              child: Image.network(
+                ApiService.instance.resolveImageUrl(logo),
+                fit: BoxFit.contain,
+                cacheWidth: 96,
+                errorBuilder: (_, __, ___) => Icon(Icons.flight_rounded,
+                    color: TOGTColors.blue, size: 20),
+                loadingBuilder: (context, child, progress) =>
+                    progress == null
+                        ? child
+                        : const SizedBox.shrink(),
+              ),
+            ),
+          ),
           const SizedBox(height: 6),
-          Text(label,
-              textAlign: TextAlign.center,
+          Text(name,
               style: TOGTTypography.small.copyWith(
-                  color: TOGTColors.white.withOpacity(.9), fontSize: 10.5)),
+                  color: TOGTColors.white.withOpacity(.85), fontSize: 10)),
         ],
       ),
     );
@@ -231,30 +285,35 @@ class _AirlineMarquee extends StatefulWidget {
   State<_AirlineMarquee> createState() => _AirlineMarqueeState();
 }
 
-class _AirlineMarqueeState extends State<_AirlineMarquee> {
+class _AirlineMarqueeState extends State<_AirlineMarquee>
+    with SingleTickerProviderStateMixin {
   final ScrollController _scroll = ScrollController();
-  Timer? _timer;
+  late final Ticker _ticker = createTicker(_onTick);
+  Duration _last = Duration.zero;
+
+  static const _speed = 30.0;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(milliseconds: 50), (_) {
-      if (!mounted || !_scroll.hasClients) return;
-      if (_scroll.position.maxScrollExtent > 0 &&
-          _scroll.offset >= _scroll.position.maxScrollExtent - 2) {
-        _scroll.jumpTo(0);
-      }
-      _scroll.animateTo(
-        _scroll.offset + 1,
-        duration: const Duration(milliseconds: 40),
-        curve: Curves.linear,
-      );
-    });
+    _ticker.start();
+  }
+
+  void _onTick(Duration elapsed) {
+    if (!mounted || !_scroll.hasClients) return;
+    final max = _scroll.position.maxScrollExtent;
+    if (max <= 0) return;
+    final dt = (elapsed - _last).inMicroseconds / 1000000;
+    _last = elapsed;
+    if (dt <= 0 || dt > 1) return;
+    final half = max / 2;
+    final next = _scroll.offset + _speed * dt;
+    _scroll.jumpTo(next >= half ? next - half : next);
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _ticker.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -262,25 +321,22 @@ class _AirlineMarqueeState extends State<_AirlineMarquee> {
   @override
   Widget build(BuildContext context) {
     final items = [..._airlines, ..._airlines];
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        color: TOGTColors.white.withOpacity(.07),
-        child: SingleChildScrollView(
-          controller: _scroll,
-          scrollDirection: Axis.horizontal,
-          physics: const NeverScrollableScrollPhysics(),
-          child: Row(
-            children: items
-                .map((name) => Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: Text(name,
-                          style: TOGTTypography.h3.copyWith(
-                              color: TOGTColors.white.withOpacity(.85),
-                              fontSize: 13)),
-                    ))
-                .toList(),
+    return RepaintBoundary(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          color: TOGTColors.white.withOpacity(.07),
+          child: SingleChildScrollView(
+            controller: _scroll,
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            child: Row(
+              children: [
+                for (final airline in items)
+                  _AirlineLogo(name: airline.name, logo: airline.logo),
+              ],
+            ),
           ),
         ),
       ),

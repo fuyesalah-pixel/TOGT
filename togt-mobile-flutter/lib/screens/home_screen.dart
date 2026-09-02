@@ -65,6 +65,37 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Widget _buildFeatured(List<TPackage> featured) {
+    if (packages == null) {
+      return SizedBox(
+        height: 220,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: 3,
+          separatorBuilder: (_, __) => const SizedBox(width: 16),
+          itemBuilder: (_, __) => const ShimmerPackageCard(),
+        ),
+      );
+    }
+    if (error != null) return _ErrorPanel(message: error!, onRetry: _load);
+    return SizedBox(
+      height: 235,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: featured.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 16),
+        itemBuilder: (context, i) => StaggeredEntrance(
+          index: i,
+          child: PackageCard(
+            package: featured[i],
+            width: 250,
+            onTap: () => openPackageDetail(context, featured[i]),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final featured = (packages ?? []).take(6).toList();
@@ -75,126 +106,125 @@ class _HomeScreenState extends State<HomeScreen> {
         onRefresh: () async {
           await _load();
         },
-        child: ListView(
+        child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-          children: [
-            Row(
-              children: [
-                 Container(
-                   width: 48,
-                   height: 48,
-                   padding: const EdgeInsets.all(5),
-                   decoration: BoxDecoration(
-                     color: TOGTColors.white,
-                     borderRadius: BorderRadius.circular(14),
-                     border: Border.all(color: TOGTColors.blue.withOpacity(.12)),
-                   ),
-                   child: Image.asset('assets/logo/togt_mobile_logo.jpg', fit: BoxFit.contain),
-                 ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('TOGT Tour & Travel',
-                        style: TOGTTypography.h3),
-                    Text('Where would you like to go?',
-                        style: TOGTTypography.small),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 1.02, end: 1),
-              duration: const Duration(milliseconds: 700),
-              curve: Curves.easeOutCubic,
-              child: TextField(
-                readOnly: true,
-                 onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AllPackagesScreen())),
-                decoration: InputDecoration(
-                  hintText: 'Search destinations, packages…',
-                  prefixIcon:
-                      Icon(Icons.search_rounded, color: TOGTColors.orange),
-                  suffixIcon: Container(
-                    margin: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      gradient: TOGTColors.orangeGradient,
-                      borderRadius: BorderRadius.circular(12),
+          cacheExtent: 900,
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+              sliver: SliverMainAxisGroup(slivers: [
+                SliverToBoxAdapter(
+                  child: Column(children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: TOGTColors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: TOGTColors.blue.withOpacity(.12)),
+                          ),
+                          child: Image.asset('assets/logo/togt_mobile_logo.jpg', fit: BoxFit.contain),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('TOGT Tour & Travel', style: TOGTTypography.h3),
+                            Text('Where would you like to go?', style: TOGTTypography.small),
+                          ],
+                        ),
+                      ],
                     ),
-                    child: const Icon(Icons.tune_rounded, color: TOGTColors.white),
+                    const SizedBox(height: 20),
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 1.02, end: 1),
+                      duration: const Duration(milliseconds: 700),
+                      curve: Curves.easeOutCubic,
+                      child: TextField(
+                        readOnly: true,
+                        onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const AllPackagesScreen())),
+                        decoration: InputDecoration(
+                          hintText: 'Search destinations, packages…',
+                          prefixIcon: Icon(Icons.search_rounded, color: TOGTColors.orange),
+                          suffixIcon: Container(
+                            margin: const EdgeInsets.all(6),
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              gradient: TOGTColors.orangeGradient,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.tune_rounded, color: TOGTColors.white),
+                          ),
+                        ),
+                      ),
+                      builder: (_, v, child) =>
+                          Transform.scale(scale: v, alignment: Alignment.topCenter, child: child!),
+                    ),
+                  ]),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 22)),
+                SliverToBoxAdapter(
+                  child: RepaintBoundary(
+                    child: HeroCarousel(items: heroSlides),
                   ),
                 ),
-              ),
-              builder: (_, v, child) =>
-                  Transform.scale(scale: v, alignment: Alignment.topCenter, child: child!),
-            ),
-            const SizedBox(height: 22),
-            HeroCarousel(items: heroSlides),
-            const SizedBox(height: 26),
-            _SectionHeader(title: 'Services', onSeeAll: null),
-            const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: 4,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 8,
-              childAspectRatio: .76,
-              children: const [
-                _Service(icon: Icons.flight_takeoff_rounded, label: 'Tickets', type: 'FLIGHT'),
-                _Service(icon: Icons.mosque_rounded, label: 'Umrah', type: 'UMRAH'),
-                _Service(icon: Icons.landscape_rounded, label: 'Domestic', type: 'DOMESTIC'),
-                _Service(icon: Icons.public_rounded, label: 'Foreign', type: 'FOREIGN'),
-                _Service(icon: Icons.badge_outlined, label: 'Visa', type: 'VISA'),
-                _Service(icon: Icons.business_center_outlined, label: 'Consult', type: 'CONSULTING'),
-                _Service(icon: Icons.phone_in_talk_outlined, label: 'Contact', type: 'CONTACT'),
-                _Service(icon: Icons.card_giftcard_rounded, label: 'Gift', type: 'UMRAH_GIFT'),
-              ],
-            ),
-            const SizedBox(height: 26),
-            _SectionHeader(
-                title: 'Featured Packages',
-                onSeeAll: () {
-                  Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const AllPackagesScreen()));
-                }),
-            const SizedBox(height: 14),
-            if (packages == null)
-              SizedBox(
-                height: 220,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: 3,
-                  separatorBuilder: (_, __) => const SizedBox(width: 16),
-                  itemBuilder: (_, __) => const ShimmerPackageCard(),
+                const SliverToBoxAdapter(child: SizedBox(height: 26)),
+                const SliverToBoxAdapter(
+                  child: _SectionHeader(title: 'Services', onSeeAll: null),
                 ),
-              )
-            else if (error != null)
-              _ErrorPanel(message: error!, onRetry: _load)
-            else
-              SizedBox(
-                height: 235,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: featured.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 16),
-                  itemBuilder: (context, i) => StaggeredEntrance(
-                    index: i,
-                    child: PackageCard(
-                      package: featured[i],
-                      width: 250,
-                      onTap: () => openPackageDetail(context, featured[i]),
-                    ),
+                const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                const SliverToBoxAdapter(
+                  child: GridView.count(
+                    crossAxisCount: 4,
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 8,
+                    childAspectRatio: .76,
+                    children: [
+                      _Service(icon: Icons.flight_takeoff_rounded, label: 'Tickets', type: 'FLIGHT'),
+                      _Service(icon: Icons.mosque_rounded, label: 'Umrah', type: 'UMRAH'),
+                      _Service(icon: Icons.landscape_rounded, label: 'Domestic', type: 'DOMESTIC'),
+                      _Service(icon: Icons.public_rounded, label: 'Foreign', type: 'FOREIGN'),
+                      _Service(icon: Icons.badge_outlined, label: 'Visa', type: 'VISA'),
+                      _Service(icon: Icons.business_center_outlined, label: 'Consult', type: 'CONSULTING'),
+                      _Service(icon: Icons.phone_in_talk_outlined, label: 'Contact', type: 'CONTACT'),
+                      _Service(icon: Icons.card_giftcard_rounded, label: 'Gift', type: 'UMRAH_GIFT'),
+                    ],
                   ),
                 ),
-              ),
-            const SizedBox(height: 30),
-            const IataSection(),
-            const SizedBox(height: 30),
-            const GallerySection(),
-            const SizedBox(height: 30),
-            const TestimonialsSection(),
+                const SliverToBoxAdapter(child: SizedBox(height: 26)),
+                SliverToBoxAdapter(
+                  child: _SectionHeader(
+                      title: 'Featured Packages',
+                      onSeeAll: () {
+                        Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const AllPackagesScreen()));
+                      }),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 14)),
+                SliverToBoxAdapter(
+                  child: RepaintBoundary(child: _buildFeatured(featured)),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 30)),
+                const SliverToBoxAdapter(
+                  child: RepaintBoundary(child: IataSection()),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 30)),
+                const SliverToBoxAdapter(
+                  child: RepaintBoundary(child: GallerySection()),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 30)),
+                const SliverToBoxAdapter(
+                  child: RepaintBoundary(child: TestimonialsSection()),
+                ),
+              ]),
+            ),
           ],
         ),
       ),
