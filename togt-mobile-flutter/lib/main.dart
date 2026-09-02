@@ -21,7 +21,7 @@ Future<void> main() async {
 }
 
 Future<void> _runStartupUpdateFlow() async {
-  await Future<void>.delayed(const Duration(milliseconds: 2500));
+  await Future<void>.delayed(const Duration(milliseconds: 4200));
   final updated = await UpdateService.instance.consumeInstallToast();
   final update = await UpdateService.instance.checkForUpdate();
   final context = AppNavigator.navigatorKey.currentContext;
