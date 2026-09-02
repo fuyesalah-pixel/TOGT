@@ -159,7 +159,7 @@ export function SaudiaFlightBookingWizard() {
       const order = await withTimeout(createFlightOrder({ offerId: selected.id, offerRequestId, customerCurrency: displayCurrency, passengers: passengers.map((p, i) => ({ passengerId: passengerIds[i], ...p, email, phone })), seatSelection: current.seats, services: current.serviceIds.map((id) => ({ id, quantity: 1 })), seatAmount: currentSeatFee, ancillaryAmount: currentExtrasFee }));
       const checkout = await withTimeout(payFlightOrder(order.id));
       window.location.href = checkout.checkoutUrl;
-    } catch (cause) { console.error("Flight Pay Now failed", cause); setError(cause instanceof Error ? cause.message : "Payment could not be initialized."); setBusy(false); }
+    } catch (cause) { console.error("Flight Pay Now failed", cause); applyOrderError(cause); setBusy(false); }
   }
 
   async function holdForLater() {
@@ -178,7 +178,21 @@ export function SaudiaFlightBookingWizard() {
       const currentExtrasFee = current.services.filter((service) => current.serviceIds.includes(service.id)).reduce((sum, service) => sum + service.price, 0);
       const order = await withTimeout(createFlightOrder({ offerId: selected.id, offerRequestId, customerCurrency: displayCurrency, passengers: passengers.map((p, i) => ({ passengerId: passengerIds[i], ...p, email, phone })), seatSelection: current.seats, services: current.serviceIds.map((id) => ({ id, quantity: 1 })), seatAmount: currentSeatFee, ancillaryAmount: currentExtrasFee }));
       setBookingReference(order.duffelBookingRef ?? order.id); next(8);
-    } catch (cause) { console.error("Flight Pay Later failed", cause); setError(cause instanceof Error ? cause.message : "Could not hold this flight."); } finally { setBusy(false); }
+    } catch (cause) { console.error("Flight Pay Later failed", cause); applyOrderError(cause); } finally { setBusy(false); }
+  }
+
+  // Interprets a Duffel order error and routes the user back to the step they need to fix.
+  function applyOrderError(cause: unknown) {
+    const message = cause instanceof Error ? cause.message : "Could not create this flight booking.";
+    setError(message);
+    const lower = message.toLowerCase();
+    if (lower.includes("expired") || lower.includes("no longer") || lower.includes("expired offer")) {
+      setSelected(null); setOffers([]); next(1);
+    } else if (lower.includes("passenger") || lower.includes("invalid") || lower.includes("date of birth")) {
+      next(4);
+    } else if (lower.includes("seat") || lower.includes("baggage") || lower.includes("ancillary") || lower.includes("service")) {
+      next(5);
+    }
   }
 
   return <section id="flight-booking-wizard" className="relative overflow-hidden bg-gradient-to-br from-[#12394F] via-[#1F67B1] to-[#12394F] px-4 py-14 text-white sm:px-6">

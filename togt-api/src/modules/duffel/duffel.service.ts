@@ -88,6 +88,12 @@ export class DuffelService {
     return parseFloat(this.config.get<string>('duffel.markupPercent') ?? '8') || 8;
   }
 
+  // Duffel test tokens are prefixed `duffel_test_`; live tokens `duffel_live_`.
+  private isTestMode(): boolean {
+    const token = this.config.get<string>('duffel.accessToken') ?? '';
+    return token.startsWith('duffel_test_');
+  }
+
   // Price paid by the customer (ETB in Chapa). Converts Duffel's priced currency to ETB and applies markup.
   private async sellPrice(amount: number, currency: string): Promise<{ sellAmount: number; sellCurrency: string; exchangeRate: number }> {
     const base = await this.currency.convertToEtb(amount, currency);
@@ -131,9 +137,15 @@ export class DuffelService {
     const offerRequestId = request.id;
     const passengerIds = (request.passengers ?? []).map((p: { id: string }) => p.id as string);
 
-    const offers = await Promise.all(((request.offers ?? []) as unknown as DuffelOffer[]).map((offer: DuffelOffer) =>
-      this.normalize(offer),
-    ));
+    const showTestAirline = this.isTestMode();
+    const offers = await Promise.all(((request.offers ?? []) as unknown as DuffelOffer[])
+      .filter((offer) => {
+        if (showTestAirline) return true;
+        const firstSeg = (offer.slices ?? [])[0] as DuffelSlice | undefined;
+        const carrier = firstSeg?.segments?.[0]?.marketing_carrier;
+        return carrier ? carrier.iata_code !== 'ZZ' : true;
+      })
+      .map((offer: DuffelOffer) => this.normalize(offer)));
     this.logger.log(`Duffel search ${dto.origin}-${dto.destination}: ${offers.length} offers; ${offers.slice(0, 5).map((offer) => `${offer.id}=${offer.duffelPrice} ${offer.duffelCurrency}`).join(', ')}`);
 
     return { offerRequestId, passengerIds, offers };
@@ -228,7 +240,7 @@ export class DuffelService {
       const response = await this.client().seatMaps.get({ offer_id: offerId });
       return response.data;
     } catch (error) {
-      this.logger.warn(`Seat map unavailable for ${offerId}: ${error instanceof Error ? error.message : 'provider error'}`);
+      this.logger.warn(`Seat map unavailable for ${offerId}: ${this.providerErrorMessage(error)}`);
       return [];
     }
   }
@@ -252,12 +264,13 @@ export class DuffelService {
         })),
       };
     } catch (error) {
-      this.logger.warn(`Offer services unavailable for ${offerId}: ${error instanceof Error ? error.message : 'provider error'}`);
+      this.logger.warn(`Offer services unavailable for ${offerId}: ${this.providerErrorMessage(error)}`);
       return { offerId, currency: 'USD', services: [] };
     }
   }
 
   async createOrder(dto: CreateFlightOrderDto, actor: User) {
+    // 1. Re-fetch the offer so we use fresh pricing, expiry and available services.
     let offerResponse;
     try {
       offerResponse = await this.client().offers.get(dto.offerId, { return_available_services: true });
@@ -269,33 +282,22 @@ export class DuffelService {
     const offer = offerResponse.data as unknown as DuffelOffer;
     if (!offer) throw new NotFoundException('Offer not found');
     if (offer.payment_requirements?.requires_instant_payment) {
-      throw new BadRequestException('This fare requires instant payment and cannot be held for booking.');
+      throw new BadRequestException('This fare requires instant payment and cannot be held for booking. Choose a holdable fare or pay immediately.');
     }
     if (dto.passengers.some((passenger) => !passenger.passengerId?.startsWith('pas_'))) {
       throw new BadRequestException('Passenger session data is missing. Please search for flights again before booking.');
     }
 
-    const requestedServices = [
-      ...(dto.services ?? []).map((service) => ({ id: service.id, quantity: service.quantity ?? 1 })),
-      ...(dto.seatSelection ?? []).filter((seat) => seat.serviceId).map((seat) => ({ id: seat.serviceId as string, quantity: 1 })),
-    ];
-    const availableIds = new Set((offer.available_services ?? []).map((service) => service.id));
-    for (const service of requestedServices) {
-      if (!availableIds.has(service.id)) {
-        throw new BadRequestException('One of your selected services is no longer available. Please review your seat and baggage selection.');
-      }
-    }
-
+    // 2. Build the passenger payload and validate required fields before hitting Duffel.
     const passengers = dto.passengers.map((p, i) => {
       const bornOn = this.toIsoDate(p.dob);
+      if (!p.firstName?.trim() || !p.lastName?.trim() || !bornOn) throw new BadRequestException('Every passenger needs a valid first name, last name and date of birth.');
       const gender = (p.gender ?? '').toLowerCase().startsWith('f') ? 'f' : 'm';
-      const names = [p.firstName, p.lastName];
-      const title = gender === 'f' ? 'ms' : 'mr';
       return {
         id: p.passengerId || `passenger-${i + 1}`,
-        title,
-        given_name: p.firstName,
-        family_name: p.lastName,
+        title: gender === 'f' ? 'ms' : 'mr',
+        given_name: p.firstName.trim(),
+        family_name: p.lastName.trim(),
         born_on: bornOn,
         gender,
         email: p.email,
@@ -303,29 +305,57 @@ export class DuffelService {
         ...(p.nationality && { nationality: p.nationality.toUpperCase() }),
         ...(p.passportNumber ? {
           document_type: 'passport',
-          document_number: p.passportNumber,
+          document_number: p.passportNumber.trim(),
           document_expiry_date: this.toIsoDate(p.passportExpiry),
         } : {}),
       };
     });
 
+    // 3. Order-first strategy: create the CORE hold order with NO optional extras.
+    //    This isolates the booking from seat/baggage problems so a stale service
+    //    cannot block the booking. Extras are attached afterwards if still available.
     let orderResponse;
     try {
       orderResponse = await this.client().orders.create({
         type: 'hold',
         selected_offers: [dto.offerId],
         passengers,
-        ...(requestedServices.length ? { services: requestedServices } : {}),
       } as never);
     } catch (error) {
       const message = this.providerErrorMessage(error);
       this.logger.error(`Duffel order creation failed for ${dto.offerId}: ${message}`);
-      if (message.toLowerCase().includes('service') && message.toLowerCase().includes('available')) {
-        throw new BadRequestException('One of your selected services is no longer available. Please review your seat and baggage selection.');
-      }
       throw new BadRequestException(`Duffel could not create this order: ${message}`);
     }
     const order = orderResponse.data as unknown as DuffelOrder;
+
+    // 4. Attach selected seats/baggage after the core order exists (best effort).
+    const requestedServices: Array<{ id: string; quantity: number; passenger_id?: string }> = [
+      ...(dto.services ?? []).map((service) => ({ id: service.id, quantity: service.quantity ?? 1, ...(service.passengerId ? { passenger_id: service.passengerId } : {}) })),
+      ...(dto.seatSelection ?? []).filter((seat) => seat.serviceId).map((seat) => ({ id: seat.serviceId as string, quantity: 1, ...(seat.passengerId ? { passenger_id: seat.passengerId } : {}) })),
+    ];
+    const availableIds = new Set((offer.available_services ?? []).map((service) => service.id));
+    const validServices = requestedServices.filter((service) => availableIds.has(service.id));
+    if (validServices.length) {
+      try {
+        await this.client().orders.addServices(order.id, { services: validServices } as never);
+      } catch (error) {
+        const message = this.providerErrorMessage(error);
+        this.logger.warn(`Duffel extras failed for order ${order.id}, continuing without them: ${message}`);
+      }
+    }
+
+    // 5. Refresh the order so totals/booking reference reflect the final state.
+    try {
+      const refreshed = await this.client().orders.get(order.id);
+      const data = refreshed.data as unknown as DuffelOrder;
+      if (data?.total_amount) {
+        order.total_amount = data.total_amount;
+        order.total_currency = data.total_currency;
+        order.booking_reference = data.booking_reference ?? order.booking_reference;
+      }
+    } catch {
+      // Non-fatal: use the value we already have.
+    }
 
     const duffelAmount = Number.parseFloat(order.total_amount ?? '0') || 0;
     const duffelCurrency = order.total_currency || 'USD';
@@ -357,7 +387,7 @@ export class DuffelService {
         seatAmount: dto.seatAmount ?? 0,
         ancillaryAmount: dto.ancillaryAmount ?? 0,
         selectedSeats: dto.seatSelection as never,
-        selectedServices: [...(dto.services ?? []), ...(dto.seatSelection ?? [])] as never,
+        selectedServices: validServices as never,
         paymentRequiredBy: order.payment_required_by ? new Date(order.payment_required_by) : null,
       },
     });
@@ -697,14 +727,36 @@ export class DuffelService {
       return list.map((p) => `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim()).filter(Boolean).join(', ') || 'Passenger';
     } catch {
       return 'Passenger';
-    }
+}
   }
 
+  // Extracts the most specific Duffel validation details from a DuffelError instance.
+  // The Duffel JS SDK builds its error with an empty `message` (new Error() with no args)
+  // and carries the real details on `errors[]`, each shaped { code, title, detail, source }.
   private providerErrorMessage(error: unknown): string {
     if (!error || typeof error !== 'object') return 'provider rejected the order';
-    const value = error as { message?: unknown; errors?: unknown };
-    if (typeof value.message === 'string') return value.message;
-    if (Array.isArray(value.errors)) return value.errors.map((item) => JSON.stringify(item)).join('; ');
+    const value = error as {
+      message?: unknown;
+      errors?: Array<{ code?: string; title?: string; detail?: string; source?: { pointer?: string; parameter?: string } }>;
+      error?: { response?: unknown; message?: unknown } | null;
+    };
+
+    const summarize = (item: { code?: string; title?: string; detail?: string; source?: { pointer?: string; parameter?: string } }): string => {
+      const pointer = item.source?.pointer?.replace(/^\/data\//, '') ?? item.source?.parameter;
+      const parts = [item.code && `[${item.code}]`, item.title, item.detail].filter(Boolean);
+      const message = parts.join(' ');
+      return pointer && parts.length ? `${message} (${pointer})` : message || 'unknown Duffel error';
+    };
+
+    if (Array.isArray(value.errors)) {
+      const details = value.errors.map(summarize).filter(Boolean);
+      if (details.length) return details.join('; ');
+    }
+
+    // Nested SDK transport error (fetch failure) fallback.
+    if (value.error && typeof value.error.message === 'string' && value.error.message.trim()) return value.error.message;
+    if (typeof value.message === 'string' && value.message.trim()) return value.message;
+
     return 'provider rejected the order';
   }
 }
