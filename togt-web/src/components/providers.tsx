@@ -31,7 +31,7 @@ function NotificationToasts({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user) return;
-    const socket = io(API_URL, { withCredentials: true });
+    const socket = io(API_URL, { path: '/api/socket.io', withCredentials: true });
     const onNotification = (notification: ToastNotification) => {
       showToast(notification);
       window.setTimeout(() => setToasts((current) => current.filter((item) => item !== notification)), 8000);

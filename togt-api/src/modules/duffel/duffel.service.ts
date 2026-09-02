@@ -264,6 +264,9 @@ export class DuffelService {
     if (offer.payment_requirements?.requires_instant_payment) {
       throw new BadRequestException('This fare requires instant payment and cannot be held for booking.');
     }
+    if (dto.passengers.some((passenger) => !passenger.passengerId?.startsWith('pas_'))) {
+      throw new BadRequestException('Passenger session data is missing. Please search for flights again before booking.');
+    }
 
     const requestedServices = [
       ...(dto.services ?? []).map((service) => ({ id: service.id, quantity: service.quantity ?? 1 })),
@@ -297,12 +300,19 @@ export class DuffelService {
       };
     });
 
-    const orderResponse = await this.client().orders.create({
-      type: 'hold',
-      selected_offers: [dto.offerId],
-      passengers,
-      ...(requestedServices.length ? { services: requestedServices } : {}),
-    } as never);
+    let orderResponse;
+    try {
+      orderResponse = await this.client().orders.create({
+        type: 'hold',
+        selected_offers: [dto.offerId],
+        passengers,
+        ...(requestedServices.length ? { services: requestedServices } : {}),
+      } as never);
+    } catch (error) {
+      const message = this.providerErrorMessage(error);
+      this.logger.error(`Duffel order creation failed for ${dto.offerId}: ${message}`);
+      throw new BadRequestException(`Duffel could not create this order: ${message}`);
+    }
     const order = orderResponse.data as unknown as DuffelOrder;
 
     const duffelAmount = Number.parseFloat(order.total_amount ?? '0') || 0;
@@ -676,5 +686,13 @@ export class DuffelService {
     } catch {
       return 'Passenger';
     }
+  }
+
+  private providerErrorMessage(error: unknown): string {
+    if (!error || typeof error !== 'object') return 'provider rejected the order';
+    const value = error as { message?: unknown; errors?: unknown };
+    if (typeof value.message === 'string') return value.message;
+    if (Array.isArray(value.errors)) return value.errors.map((item) => JSON.stringify(item)).join('; ');
+    return 'provider rejected the order';
   }
 }

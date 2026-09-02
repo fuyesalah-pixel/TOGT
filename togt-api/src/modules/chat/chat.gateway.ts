@@ -15,6 +15,7 @@ import { Server, Socket } from 'socket.io';
  * joins the room `user:{id}` and receives `message:new` / `message:read`.
  */
 @WebSocketGateway({
+  path: '/api/socket.io',
   cors: { origin: true, credentials: true },
 })
 export class ChatGateway implements OnGatewayConnection {

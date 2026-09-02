@@ -68,7 +68,7 @@ export function useChatSocket(): Socket | null {
     if (!isAuthenticated) return;
     if (socketRef.current) return;
 
-    const socket = io(API_URL, { withCredentials: true });
+    const socket = io(API_URL, { path: '/api/socket.io', withCredentials: true });
     socketRef.current = socket;
     setSocket(socket);
 
