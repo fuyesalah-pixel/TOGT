@@ -178,15 +178,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: _SectionHeader(title: 'Services', onSeeAll: null),
                 ),
                 const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                const SliverToBoxAdapter(
+                SliverToBoxAdapter(
                   child: GridView.count(
                     crossAxisCount: 4,
                     shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
+                    physics: const NeverScrollableScrollPhysics(),
                     mainAxisSpacing: 16,
                     crossAxisSpacing: 8,
                     childAspectRatio: .76,
-                    children: [
+                    children: const [
                       _Service(icon: Icons.flight_takeoff_rounded, label: 'Tickets', type: 'FLIGHT'),
                       _Service(icon: Icons.mosque_rounded, label: 'Umrah', type: 'UMRAH'),
                       _Service(icon: Icons.landscape_rounded, label: 'Domestic', type: 'DOMESTIC'),
