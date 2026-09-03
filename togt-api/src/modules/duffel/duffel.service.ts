@@ -34,6 +34,8 @@ interface DuffelSlice {
 interface DuffelOffer {
   id: string;
   slices?: DuffelSlice[];
+  owner?: { name?: string; iata_code?: string };
+  airline?: { name?: string; iata_code?: string };
   total_amount?: string;
   total_currency?: string;
   cabin_class?: string;
@@ -88,12 +90,6 @@ export class DuffelService {
     return parseFloat(this.config.get<string>('duffel.markupPercent') ?? '8') || 8;
   }
 
-  // Duffel test tokens are prefixed `duffel_test_`; live tokens `duffel_live_`.
-  private isTestMode(): boolean {
-    const token = this.config.get<string>('duffel.accessToken') ?? '';
-    return token.startsWith('duffel_test_');
-  }
-
   // Price paid by the customer (ETB in Chapa). Converts Duffel's priced currency to ETB and applies markup.
   private async sellPrice(amount: number, currency: string): Promise<{ sellAmount: number; sellCurrency: string; exchangeRate: number }> {
     const base = await this.currency.convertToEtb(amount, currency);
@@ -137,18 +133,36 @@ export class DuffelService {
     const offerRequestId = request.id;
     const passengerIds = (request.passengers ?? []).map((p: { id: string }) => p.id as string);
 
-    const showTestAirline = this.isTestMode();
+    // Always drop Duffel Airways (IATA `ZZ`, flight 2120) regardless of test/live mode.
+    // Check the offer owner/airline AND every segment in every slice so a mixed itinerary
+    // that contains a ZZ leg is removed entirely, never reaching the frontend.
     const offers = await Promise.all(((request.offers ?? []) as unknown as DuffelOffer[])
-      .filter((offer) => {
-        if (showTestAirline) return true;
-        const firstSeg = (offer.slices ?? [])[0] as DuffelSlice | undefined;
-        const carrier = firstSeg?.segments?.[0]?.marketing_carrier;
-        return carrier ? carrier.iata_code !== 'ZZ' : true;
-      })
+      .filter((offer) => !this.isDuffelAirways(offer))
       .map((offer: DuffelOffer) => this.normalize(offer)));
     this.logger.log(`Duffel search ${dto.origin}-${dto.destination}: ${offers.length} offers; ${offers.slice(0, 5).map((offer) => `${offer.id}=${offer.duffelPrice} ${offer.duffelCurrency}`).join(', ')}`);
 
     return { offerRequestId, passengerIds, offers };
+  }
+
+  // Returns true when a Duffel offer is operated by or contains Duffel Airways (IATA `ZZ`).
+  private isDuffelAirways(offer: DuffelOffer): boolean {
+    const ownerCode = offer.owner?.iata_code?.toUpperCase();
+    const ownerName = (offer.owner?.name ?? '').toLowerCase();
+    const airlineCode = offer.airline?.iata_code?.toUpperCase();
+    const airlineName = (offer.airline?.name ?? '').toLowerCase();
+
+    if (ownerCode === 'ZZ' || airlineCode === 'ZZ') return true;
+    if (ownerName.includes('duffel') || airlineName.includes('duffel')) return true;
+
+    for (const slice of offer.slices ?? []) {
+      for (const segment of slice.segments) {
+        const carrierCode = segment.marketing_carrier?.iata_code?.toUpperCase();
+        const carrierName = (segment.marketing_carrier?.name ?? '').toLowerCase();
+        const flightNumber = segment.marketing_carrier_flight_number ?? '';
+        if (carrierCode === 'ZZ' || carrierName.includes('duffel') || flightNumber.includes('2120')) return true;
+      }
+    }
+    return false;
   }
 
   // Normalizes a Duffel offer into the compact FlightResult shape used by the web app.

@@ -119,7 +119,16 @@ export function searchFlights(params: {
   cabinClass?: string;
   directOnly?: boolean;
 }) {
-  return apiPost<SearchFlightsResponse>("/duffel/search", params);
+  return apiPost<SearchFlightsResponse>("/duffel/search", params).then((result) => {
+    // Belt-and-suspenders: never surface Duffel Airways (IATA `ZZ`) or its test flight 2120.
+    const filtered = (result.offers ?? []).filter((offer) => {
+      if ((offer.airlineCode ?? "").toUpperCase() === "ZZ") return false;
+      if ((offer.airline ?? "").toLowerCase().includes("duffel")) return false;
+      if ((offer.flightNumber ?? "").includes("2120")) return false;
+      return true;
+    });
+    return { ...result, offers: filtered };
+  });
 }
 
 export function getCurrencyRates() {
