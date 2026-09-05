@@ -6,6 +6,7 @@ import { Mail, Phone, ShieldCheck } from "lucide-react";
 type Verification = {
   name: string;
   fatherName?: string | null;
+  teamNumber?: string | null;
   idImageUrl?: string | null;
   contact: { phones: string[]; email: string; message: string };
 };
@@ -17,7 +18,8 @@ export default function VerifyPage() {
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("id");
     if (!id) { setError(true); return; }
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+    const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const apiUrl = configuredApiUrl && !/localhost|127\.0\.0\.1/.test(configuredApiUrl) ? configuredApiUrl : window.location.origin;
     fetch(`${apiUrl}/api/call-records/verify/${encodeURIComponent(id)}`)
       .then((response) => { if (!response.ok) throw new Error("Not found"); return response.json() as Promise<Verification>; })
       .then(setRecord)
@@ -34,6 +36,7 @@ export default function VerifyPage() {
           </div>
           <div className="mt-5 flex items-center justify-center gap-2 text-togt-blue"><ShieldCheck className="h-5 w-5" /><span className="text-sm font-bold uppercase tracking-wider">Verified TOGT ID</span></div>
           <h1 className="mt-3 text-2xl font-extrabold text-togt-navy">{record.name}</h1>
+          {record.teamNumber && <p className="mt-1 text-xs font-bold uppercase tracking-[.18em] text-togt-blue">Team {record.teamNumber}</p>}
           <p className="mt-6 text-base font-semibold text-togt-navy">{record.contact.message}</p>
           <div className="mt-5 space-y-2 text-sm text-slate-600"><p><Phone className="mr-2 inline h-4 w-4 text-togt-orange" />{record.contact.phones.join(" / ")}</p><p><Mail className="mr-2 inline h-4 w-4 text-togt-orange" />{record.contact.email}</p></div>
         </> : <div className="py-16 text-slate-500">{error ? "This ID could not be verified." : "Verifying ID..."}</div>}

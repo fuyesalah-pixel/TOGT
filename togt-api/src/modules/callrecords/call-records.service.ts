@@ -216,7 +216,7 @@ export class CallRecordsService {
   async verify(id: string) {
     const record = await this.prisma.callRecord.findUnique({
       where: { id },
-      select: { name: true, fatherName: true, idImageUrl: true },
+      select: { name: true, fatherName: true, teamNumber: true, idImageUrl: true },
     });
     if (!record) throw new NotFoundException('Call record not found');
     return {
