@@ -24,6 +24,9 @@ function decodeRole(token: string | undefined): string | null {
 export default function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // The QR verification page is intentionally locale-independent.
+  if (pathname === "/verify" || pathname.startsWith("/verify/")) return NextResponse.next();
+
   // Split locale prefix: /en/dashboard/worker -> locale=en, rest=/dashboard/worker
   const segments = pathname.split("/").filter(Boolean);
   const locale = LOCALES.includes(segments[0]) ? segments[0] : routing.defaultLocale;
