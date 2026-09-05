@@ -105,7 +105,7 @@ export function ChatTab({ initialUserId, initialMessage }: { initialUserId?: str
   return (
     <div>
       <PageHeader title="Chat" description="Real-time messaging" />
-      <div className="chat-container grid min-h-0 grid-cols-1 gap-4 overflow-hidden md:grid-cols-3" style={{ height: "calc(100vh - 240px)" }}>
+      <div className="chat-container grid min-h-[calc(100dvh-11rem)] grid-cols-1 gap-4 overflow-hidden md:min-h-0 md:grid-cols-3 md:[height:calc(100vh-240px)]">
         {/* Conversations */}
         <div className="chat-sidebar flex min-h-0 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
           {user?.role === "CUSTOMER" && <div className="border-b border-gray-100 p-3"><Button onClick={() => setNewChatOpen(true)} className="w-full bg-togt-orange text-white hover:bg-togt-orange/90">+ New Chat</Button></div>}
@@ -199,7 +199,7 @@ export function ChatTab({ initialUserId, initialMessage }: { initialUserId?: str
                   <div className="mb-2 flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-1.5 text-xs text-gray-600">
                     <Paperclip className="h-3.5 w-3.5" />
                     <span className="truncate">{file.name}</span>
-                    <button className="ml-auto text-red-500" onClick={() => setFile(null)}>
+                    <button type="button" className="ml-auto text-red-500" onClick={() => setFile(null)}>
                       Remove
                     </button>
                   </div>

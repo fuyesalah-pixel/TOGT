@@ -14,11 +14,13 @@ import { CreateTab } from "@/components/dashboard/worker/create-tab";
 import { ProgressTab } from "@/components/dashboard/worker/progress-tab";
 import { WorkerGroupsTab } from "@/components/dashboard/worker/groups-tab";
 import { TicketsTab } from "@/components/dashboard/shared/tickets-tab";
+import { CallTrackerTab } from "@/components/dashboard/shared/call-tracker-tab";
 
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "users", label: "Users" },
   { id: "tickets", label: "Tickets" },
+  { id: "calls", label: "Call Tracker" },
   { id: "packages", label: "Packages" },
   { id: "groups", label: "Groups" },
   { id: "create", label: "Create" },
@@ -41,6 +43,7 @@ export default function WorkerDashboardPage() {
       {tab === "overview" && <OverviewTab />}
       {tab === "users" && <UsersTab />}
       {tab === "tickets" && <TicketsTab staff />}
+      {tab === "calls" && <CallTrackerTab staff />}
       {tab === "packages" && <PackagesTab />}
       {tab === "groups" && <WorkerGroupsTab />}
       {tab === "create" && <CreateTab />}

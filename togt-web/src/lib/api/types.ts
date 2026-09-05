@@ -285,3 +285,87 @@ export interface GalleryItem {
   location: string;
   videoUrl?: string | null;
 }
+
+export interface CallRecordHistory {
+  id: string;
+  callRecordId: string;
+  changedById: string;
+  changedByName: string;
+  field: string;
+  fromValue?: string | null;
+  toValue?: string | null;
+  note?: string | null;
+  createdAt: string;
+}
+
+export interface CallRecord {
+  id: string;
+  teamNumber: string;
+  name: string;
+  phone: string;
+  fatherName?: string | null;
+  passportNumber?: string | null;
+  passportFileUrl?: string | null;
+  otherFileUrl?: string | null;
+  idImageUrl?: string | null;
+  serviceType: string;
+  packageTitle?: string | null;
+  tripType?: string | null;
+  destination?: string | null;
+  departureDate?: string | null;
+  tripDuration?: string | null;
+  passengerCount?: number | null;
+  totalAmount: number;
+  paidAmount?: number | null;
+  remainingAmount?: number | null;
+  currency: string;
+  paymentStatus?: PaymentStatus | null;
+  flightNumber?: string | null;
+  flightDate?: string | null;
+  flightBookingStatus?: string | null;
+  airline?: string | null;
+  additionalInfo?: string | null;
+  createdById: string;
+  createdBy?: { id: string; email: string; fullName: string } | null;
+  updatedById?: string | null;
+  updatedBy?: { id: string; email: string; fullName: string } | null;
+  createdAt: string;
+  updatedAt: string;
+  history?: CallRecordHistory[] | null;
+}
+
+export interface CallRecordFilters {
+  search?: string;
+  teamNumber?: string;
+  paymentStatus?: PaymentStatus;
+  page?: number;
+  limit?: number;
+}
+
+export interface CallRecordPayload {
+  name: string;
+  phone: string;
+  teamNumber: string;
+  fatherName?: string;
+  passportNumber?: string;
+  passportFileUrl?: string;
+  otherFileUrl?: string;
+  idImageUrl?: string;
+  serviceType?: string;
+  packageTitle?: string;
+  tripType?: string;
+  destination?: string;
+  departureDate?: string;
+  tripDuration?: string;
+  passengerCount?: number;
+  totalAmount?: number;
+  paidAmount?: number;
+  remainingAmount?: number;
+  currency?: string;
+  paymentStatus?: PaymentStatus | null;
+  flightNumber?: string;
+  flightDate?: string;
+  flightBookingStatus?: string;
+  airline?: string;
+  additionalInfo?: string;
+}

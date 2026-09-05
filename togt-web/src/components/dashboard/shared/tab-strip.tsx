@@ -17,10 +17,14 @@ export function TabStrip({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap gap-1 border-b border-gray-200">
+    <div role="tablist" aria-label="Dashboard sections" className="mb-6 flex flex-wrap gap-1 border-b border-gray-200">
       {tabs.map((tab) => (
         <button
           key={tab.id}
+          id={`tab-${tab.id}`}
+          role="tab"
+          aria-selected={active === tab.id}
+          tabIndex={active === tab.id ? 0 : -1}
           onClick={() => onChange(tab.id)}
           className={cn(
             "relative px-4 py-2.5 text-sm font-medium transition-colors",

@@ -22,8 +22,8 @@ export const metadata: Metadata = {
   description:
     "IATA-accredited travel agency offering ticketing, Umrah packages, domestic & foreigner tours, visa processing, and travel consulting.",
   icons: {
-    icon: "/icon.png",
-    apple: "/apple-icon.png",
+    icon: "/favicon.jpg",
+    apple: "/apple-touch-icon.jpg",
   },
 };
 

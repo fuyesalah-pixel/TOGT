@@ -176,6 +176,9 @@ model User {
   ticketHistory         TicketHistory[]
   flightOrders          FlightOrder[]
   processedRefunds      Ticket[] @relation("ProcessedRefunds")
+  callRecordsCreated    CallRecord[]  @relation("CreatedCallRecords")
+  callRecordsUpdated    CallRecord[]  @relation("UpdatedCallRecords")
+  callRecordHistory     CallRecordHistory[]
 }
 
 model Package {
@@ -483,4 +486,57 @@ model TicketHistory {
   reason    String
   createdAt DateTime @default(now())
   @@index([ticketId, createdAt])
+}
+
+model CallRecord {
+  id               String            @id @default(uuid())
+  teamNumber       String
+  name             String
+  phone            String
+  fatherName       String?
+  passportNumber   String?
+  passportFileUrl  String?
+  otherFileUrl     String?
+  idImageUrl       String?
+  serviceType      String            @default("CONSULTING")
+  packageTitle     String?
+  tripType         String?
+  destination      String?
+  departureDate    DateTime?
+  tripDuration     String?
+  passengerCount   Int?
+  totalAmount      Float            @default(0)
+  paidAmount       Float?
+  remainingAmount  Float?
+  currency         String            @default("ETB")
+  paymentStatus    PaymentStatus?
+  flightNumber     String?
+  flightDate       DateTime?
+  flightBookingStatus String?
+  airline          String?
+  additionalInfo   String?
+  createdById      String
+  createdBy        User              @relation("CreatedCallRecords", fields: [createdById], references: [id])
+  updatedById      String?
+  updatedBy        User?             @relation("UpdatedCallRecords", fields: [updatedById], references: [id])
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  history          CallRecordHistory[]
+  @@index([createdById, createdAt])
+  @@index([teamNumber])
+}
+
+model CallRecordHistory {
+  id            String     @id @default(uuid())
+  callRecordId   String
+  callRecord    CallRecord @relation(fields: [callRecordId], references: [id], onDelete: Cascade)
+  changedById   String
+  changedBy     User       @relation(fields: [changedById], references: [id])
+  changedByName String
+  field         String
+  fromValue     String?
+  toValue       String?
+  note          String?
+  createdAt     DateTime   @default(now())
+  @@index([callRecordId, createdAt])
 }

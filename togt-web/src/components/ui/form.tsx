@@ -158,7 +158,7 @@ const FormMessage = React.forwardRef<
       className={cn("text-sm font-medium text-destructive", className)}
       {...props}
     >
-      {body}
+        <span aria-hidden="true" className="mr-1 inline-block">!</span>{body}
     </p>
   )
 })

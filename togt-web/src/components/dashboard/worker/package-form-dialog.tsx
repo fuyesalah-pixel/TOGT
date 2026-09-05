@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { ImagePlus, Plus, X } from "lucide-react";
 import type { Package, PackageType } from "@/lib/api/types";
 import type { PackagePayload } from "@/lib/api/packages";
@@ -65,20 +65,50 @@ function ListEditor({
   placeholder: string;
 }) {
   const [draft, setDraft] = useState("");
+
+  const extractItems = (raw: string): string[] =>
+    raw
+      .split(",,")
+      .map((part) => part.trim().replace(/^,|,$/g, "").trim())
+      .filter((part) => part.length > 0);
+
+  const commit = (raw: string) => {
+    const newItems = extractItems(raw);
+    if (newItems.length > 0) {
+      onChange([...items, ...newItems]);
+    }
+  };
+
   const add = () => {
-    const value = draft.trim();
-    if (value) {
-      onChange([...items, value]);
+    if (draft.trim()) {
+      commit(draft);
       setDraft("");
     }
   };
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const idx = value.lastIndexOf(",,");
+    if (idx !== -1) {
+      const before = value.slice(0, idx);
+      const after = value.slice(idx + 2);
+      const newItems = extractItems(before);
+      if (newItems.length > 0) {
+        onChange([...items, ...newItems]);
+      }
+      setDraft(after);
+    } else {
+      setDraft(value);
+    }
+  };
+
   return (
     <div>
       <Label>{label}</Label>
       <div className="flex gap-2">
         <Input
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={handleChange}
           placeholder={placeholder}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -86,11 +116,13 @@ function ListEditor({
               add();
             }
           }}
+          onBlur={add}
         />
         <Button type="button" variant="outline" size="icon" onClick={add} aria-label={`Add ${label}`}>
           <Plus className="h-4 w-4" />
         </Button>
       </div>
+      <p className="mt-1 text-xs text-gray-400">Separate multiple items with double comma (,,)</p>
       {items.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {items.map((item, i) => (

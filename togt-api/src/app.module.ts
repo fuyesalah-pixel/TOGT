@@ -25,6 +25,7 @@ import { CurrencyModule } from './modules/currency/currency.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
 import { TelegramModule } from './modules/telegram/telegram.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
+import { CallRecordsModule } from './modules/callrecords/call-records.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -51,6 +52,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     ChatbotModule,
     TelegramModule,
     TicketsModule,
+    CallRecordsModule,
     ScheduleModule.forRoot(),
   ],
   providers: [

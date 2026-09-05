@@ -672,3 +672,12 @@
 }
 
 }
+@media print {
+  body * { visibility: hidden !important; }
+  #id-card-master, #id-card-master * { visibility: visible !important; }
+  #id-card-master { position: fixed !important; left: 0 !important; top: 0 !important; width: 360px !important; min-width: 360px !important; max-width: 360px !important; height: 560px !important; min-height: 560px !important; max-height: 560px !important; margin: 0 !important; box-shadow: none !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+
+body.print-id-mode > * { visibility: hidden !important; }
+body.print-id-mode #id-card-master,
+body.print-id-mode #id-card-master * { visibility: visible !important; }

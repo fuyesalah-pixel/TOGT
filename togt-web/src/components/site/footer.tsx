@@ -59,7 +59,7 @@ export function Footer() {
   const locale = useLocale();
 
   return (
-    <footer className="relative bg-[#0e2d3f] text-white overflow-hidden">
+    <footer id="footer" className="relative bg-[#0e2d3f] text-white overflow-hidden">
 
       {/* Orange gradient top border */}
       <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-[#1F67B1] via-[#FF9300] to-[#1F67B1]" />
@@ -96,7 +96,7 @@ export function Footer() {
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
                 <Image
-                  src="/images/logo/TOGT_Tour_Travel_Final Logo Png.png"
+                  src="/images/logo/TOGT_Tour_Travel_Final_Logo_For_Print.jpg"
                   alt="TOGT Tour and Travel"
                   width={36}
                   height={36}

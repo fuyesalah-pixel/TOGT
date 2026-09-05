@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Image from "next/image";
 import { Bell, ExternalLink, LogOut, Menu, Plane, LayoutDashboard, Users, Package, Plus, LineChart, MessageCircle, Settings, Layers, ShieldCheck, Activity, Ticket, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -34,11 +35,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     ],
     WORKER: [
       { id: "overview", label: "Overview", icon: LayoutDashboard }, { id: "users", label: "Users", icon: Users }, { id: "tickets", label: "Tickets", icon: Ticket },
+      { id: "calls", label: "Call Tracker", icon: Activity },
       { id: "packages", label: "Packages", icon: Package }, { id: "groups", label: "Groups", icon: Users }, { id: "create", label: "Create", icon: Plus },
       { id: "progress", label: "Progress", icon: LineChart }, { id: "chat", label: "Chat", icon: MessageCircle }, { id: "notifications", label: "Notifications", icon: Bell }, { id: "settings", label: "Settings", icon: Settings },
     ],
     GUIDE: [{ id: "overview", label: "Overview", icon: LayoutDashboard }, { id: "groups", label: "My Groups", icon: Users }, { id: "tracking", label: "GPS Tracking", icon: Activity }, { id: "plans", label: "Tour Plans", icon: Layers }, { id: "chat", label: "Chat", icon: MessageCircle }, { id: "notifications", label: "Notifications", icon: Bell }, { id: "settings", label: "Settings", icon: Settings }],
-     ADMIN: [{ id: "overview", label: "Overview", icon: LayoutDashboard }, { id: "users", label: "Users", icon: Users }, { id: "tickets", label: "Tickets", icon: Ticket }, { id: "packages", label: "Packages", icon: Package }, { id: "groups", label: "Groups", icon: Users }, { id: "tracking", label: "Tracking", icon: Activity }, { id: "reports", label: "Reports", icon: LineChart }, { id: "reviews", label: "Reviews", icon: ShieldCheck }, { id: "notifications", label: "Notifications", icon: Bell }, { id: "settings", label: "Settings", icon: Settings }],
+     ADMIN: [{ id: "overview", label: "Overview", icon: LayoutDashboard }, { id: "users", label: "Users", icon: Users }, { id: "tickets", label: "Tickets", icon: Ticket }, { id: "calls", label: "Call Tracker", icon: Activity }, { id: "packages", label: "Packages", icon: Package }, { id: "groups", label: "Groups", icon: Users }, { id: "tracking", label: "Tracking", icon: Activity }, { id: "reports", label: "Reports", icon: LineChart }, { id: "reviews", label: "Reviews", icon: ShieldCheck }, { id: "notifications", label: "Notifications", icon: Bell }, { id: "settings", label: "Settings", icon: Settings }],
     TECH: [{ id: "health", label: "System Health", icon: Activity }, { id: "settings", label: "Settings", icon: Settings }],
   };
   const tabs = roleTabs[user.role] ?? roleTabs.CUSTOMER;
@@ -57,20 +59,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       {/* Sidebar */}
       <aside className={`${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} fixed inset-y-0 left-0 z-40 flex ${sidebarExpanded ? "w-60" : "w-16"} flex-col bg-togt-navy text-white transition-all duration-300`}>
         <div className={`flex items-center border-b border-white/10 py-5 ${sidebarExpanded ? "gap-2.5 px-5" : "justify-center px-2"}`}>
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-togt-orange">
-            <Plane className="h-5 w-5 text-white" />
+          <span title="TOGT Tour & Travel" className={`flex shrink-0 items-center justify-center overflow-hidden rounded-lg ${sidebarExpanded ? "h-10 max-w-[180px] bg-white px-1" : "h-9 w-9 bg-togt-orange"}`}>
+            {sidebarExpanded ? <Image src="/images/logo/TOGT_Tour_Travel_Final_Logo_For_Print.jpg" alt="TOGT Tour & Travel" width={180} height={50} className="h-8 w-auto max-w-[180px] object-contain" /> : <Plane className="h-5 w-5 text-white" />}
           </span>
-          <div className={sidebarExpanded ? "" : "hidden"}>
-            <p className="text-sm font-extrabold leading-tight">TOGT</p>
-            <p className="text-[11px] text-white/60 leading-tight">Tour &amp; Travel</p>
-          </div>
           <button className="ml-auto hidden rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white lg:block" onClick={() => setSidebarExpanded((value) => !value)} aria-label={sidebarExpanded ? "Collapse sidebar" : "Expand sidebar"} title={sidebarExpanded ? "Collapse sidebar" : "Expand sidebar"}>{sidebarExpanded ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}</button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-5">
           <div className={`rounded-xl bg-white/5 p-3.5 ${sidebarExpanded ? "" : "p-2"}`}>
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-togt-blue to-togt-orange text-sm font-bold">
+            <div className={`flex items-center ${sidebarExpanded ? "gap-3" : "justify-center"}`}>
+              <span title={sidebarExpanded ? undefined : `${user.fullName} · ${user.email}`} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-togt-blue to-togt-orange text-sm font-bold">
                 {initials}
               </span>
               <div className={`min-w-0 ${sidebarExpanded ? "" : "hidden"}`}>
@@ -94,17 +92,19 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         <div className="border-t border-white/10 p-3 space-y-1">
           <Link
             href="/"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+            title={sidebarExpanded ? undefined : "Back to website"}
+            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white ${sidebarExpanded ? "" : "justify-center px-2"}`}
           >
             <ExternalLink className="h-4 w-4" />
-            Back to website
+            <span className={sidebarExpanded ? "" : "hidden"}>Back to website</span>
           </Link>
           <button
             onClick={logout}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/80 transition-colors hover:bg-red-500/20 hover:text-white"
+            title={sidebarExpanded ? undefined : "Logout"}
+            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/80 transition-colors hover:bg-red-500/20 hover:text-white ${sidebarExpanded ? "" : "justify-center px-2"}`}
           >
             <LogOut className="h-4 w-4" />
-            Logout
+            <span className={sidebarExpanded ? "" : "hidden"}>Logout</span>
           </button>
         </div>
       </aside>
@@ -117,14 +117,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             {user.role.charAt(0) + user.role.slice(1).toLowerCase()} Dashboard
           </p></div>
           <div className="flex items-center gap-4">
-            <a href={`${pathname}?tab=notifications`} className="relative text-gray-500" aria-label="Notifications">
+            <Link href={`${pathname}?tab=notifications`} className="relative text-gray-500" aria-label="Notifications">
               <Bell className="h-5 w-5" />
               {(unreadNotifications?.unreadCount ?? unread) > 0 && (
                 <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-togt-orange px-1 text-[10px] font-bold text-white">
                   {(unreadNotifications?.unreadCount ?? unread) > 99 ? "99+" : (unreadNotifications?.unreadCount ?? unread)}
                 </span>
               )}
-            </a>
+            </Link>
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-togt-blue to-togt-orange text-xs font-bold text-white">
               {initials}
             </span>

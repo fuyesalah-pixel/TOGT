@@ -1,0 +1,1 @@
+ALTER TABLE "CallRecord" ADD COLUMN "flightDate" TIMESTAMP(3);

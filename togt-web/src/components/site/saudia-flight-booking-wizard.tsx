@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, Loader2, Plane, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, Check, Loader2, Plane, ShieldCheck, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "next-intl";
 import {
@@ -84,9 +84,33 @@ export function SaudiaFlightBookingWizard() {
   const [usdToEtb, setUsdToEtb] = useState(55.5);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [errorOpen, setErrorOpen] = useState(false);
+  const [invalidFields, setInvalidFields] = useState<string[]>([]);
   const [bookingReference, setBookingReference] = useState("");
 
   useEffect(() => { getCurrencyRates().then((value) => setUsdToEtb(value.USD_TO_ETB)).catch(() => undefined); }, []);
+  useEffect(() => { if (error) setErrorOpen(true); }, [error]);
+  useEffect(() => {
+    const root = document.getElementById("flight-booking-wizard");
+    if (!root) return;
+    const controls = Array.from(root.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input, select"));
+    controls.forEach((control) => { control.style.borderColor = ""; control.removeAttribute("aria-invalid"); });
+    const dates = Array.from(root.querySelectorAll<HTMLInputElement>('input[type="date"]'));
+    const numbers = Array.from(root.querySelectorAll<HTMLInputElement>('input[type="number"]'));
+    const selects = Array.from(root.querySelectorAll<HTMLSelectElement>("select"));
+    const map: Record<string, HTMLInputElement | HTMLSelectElement | undefined> = { departure: dates[0], return: dates[1], adults: numbers[0], children: numbers[1], infants: numbers[2], destination: selects[1] };
+    invalidFields.forEach((field) => { const control = map[field]; if (control) { control.style.borderColor = "#E53E3E"; control.setAttribute("aria-invalid", "true"); } });
+    const first = invalidFields.map((field) => map[field]).find(Boolean);
+    first?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (invalidFields.includes("passengers")) {
+      const empty = controls.filter((control) => !control.value).filter((control) => control instanceof HTMLInputElement || control instanceof HTMLSelectElement);
+      empty.forEach((control) => { control.style.borderColor = "#E53E3E"; control.setAttribute("aria-invalid", "true"); });
+      empty[0]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    const clear = (event: Event) => { const target = event.target as HTMLInputElement | HTMLSelectElement; if (target.value) { target.style.borderColor = ""; target.removeAttribute("aria-invalid"); } };
+    controls.forEach((control) => { control.addEventListener("input", clear); control.addEventListener("change", clear); });
+    return () => controls.forEach((control) => { control.removeEventListener("input", clear); control.removeEventListener("change", clear); });
+  }, [invalidFields]);
 
   const passengerCount = adults + children + infants;
   const fare = selected?.price ?? 0;
@@ -95,12 +119,22 @@ export function SaudiaFlightBookingWizard() {
   const displayedTotal = fare + seatFee + extrasFee;
   const price = (etb: number, usd?: number) => `${(displayCurrency === "USD" ? (usd ?? etb / usdToEtb) : etb).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${displayCurrency}`;
   const sortedOffers = useMemo(() => [...offers].sort((a, b) => sort === "cheap" ? a.price - b.price : a.departureAt.localeCompare(b.departureAt)), [offers, sort]);
+  const today = new Date().toISOString().slice(0, 10);
 
   const next = (target: Step) => { setError(""); setStep(target); window.setTimeout(() => document.getElementById("flight-booking-wizard")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40); };
 
   async function search() {
     setError("");
-    if (!departureDate || (tripType === "round" && !returnDate) || origin === destination) { setError("Choose valid airports and dates first."); return; }
+    const invalid = [
+      ...(!departureDate || departureDate < today ? ["departure"] : []),
+      ...(tripType === "round" && (!returnDate || returnDate < departureDate) ? ["return"] : []),
+      ...(origin === destination ? ["destination"] : []),
+      ...(!Number.isInteger(adults) || adults < 1 ? ["adults"] : []),
+      ...(!Number.isInteger(children) || children < 0 ? ["children"] : []),
+      ...(!Number.isInteger(infants) || infants < 0 ? ["infants"] : []),
+    ];
+    setInvalidFields(invalid);
+    if (invalid.length) { setError("Please fill all required fields correctly."); return; }
     setBusy(true);
     try {
       const result = await searchFlights({ origin, destination, departureDate, returnDate: tripType === "round" ? returnDate : undefined, adults, children, infants, cabinClass });
@@ -111,18 +145,21 @@ export function SaudiaFlightBookingWizard() {
 
   async function chooseOffer(offer: OfferResult) {
     setSelected(offer); setSeats([]); setSelectedSeats([]); setServices([]); setSelectedServices([]); setError("");
+    setBusy(true);
+    let extrasError = "";
     try {
       const [seatMap, serviceResult] = await Promise.all([getSeatMap(offer.id), getOfferServices(offer.id)]);
       setSeats(seatsFromMaps(seatMap)); setServices(serviceResult.services);
-    } catch { setSeats([]); setServices([]); }
+    } catch (cause) { setSeats([]); setServices([]); extrasError = cause instanceof Error ? `Optional flight extras could not be loaded: ${cause.message}` : "Optional flight extras could not be loaded."; }
     setPassengers(Array.from({ length: passengerCount }, emptyPassenger));
-    setEmail(user?.email ?? ""); setPhone(user?.phone ?? ""); next(3);
+    setEmail(user?.email ?? ""); setPhone(user?.phone ?? ""); setBusy(false); next(3); if (extrasError) setError(extrasError);
   }
 
   function updatePassenger(index: number, key: keyof Passenger, value: string) { setPassengers((current) => current.map((passenger, i) => i === index ? { ...passenger, [key]: value } : passenger)); }
 
   function validatePassengers() {
-    if (passengers.length !== passengerCount || passengers.some((p) => !p.firstName || !p.lastName || !p.dob || !p.gender || !p.nationality || !p.passportNumber || !p.passportExpiry) || !email || !phone) { setError("Complete every passenger and contact field."); return false; }
+    if (passengers.length !== passengerCount || passengers.some((p) => !p.firstName || !p.lastName || !p.dob || !p.gender || !p.nationality || !p.passportNumber || !p.passportExpiry) || !email || !phone) { setInvalidFields(["passengers"]); setError("Please fill all required fields."); return false; }
+    setInvalidFields([]);
     return true;
   }
 
@@ -145,6 +182,7 @@ export function SaudiaFlightBookingWizard() {
   async function payNow() {
     if (!selected) { setError("Please select a flight first."); return; }
     if (!user) { setError("Please sign in before paying for a flight."); return; }
+    if (!validatePassengers()) return;
     setBusy(true); setError("");
     try {
       const current = await withTimeout(refreshSelections());
@@ -165,6 +203,7 @@ export function SaudiaFlightBookingWizard() {
   async function holdForLater() {
     if (!selected) { setError("Please select a flight first."); return; }
     if (!user) { setError("Please sign in before saving a flight booking."); return; }
+    if (!validatePassengers()) return;
     setBusy(true); setError("");
     try {
       const current = await withTimeout(refreshSelections());
@@ -198,8 +237,10 @@ export function SaudiaFlightBookingWizard() {
   return <section id="flight-booking-wizard" className="relative overflow-hidden bg-gradient-to-br from-[#12394F] via-[#1F67B1] to-[#12394F] px-4 py-14 text-white sm:px-6">
     <div className="mx-auto max-w-6xl">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[.25em] text-[#FF9300]">TOGT Flight Desk</p><h2 className="mt-2 text-3xl font-extrabold">Book your journey</h2></div><div className="flex rounded-full border border-white/20 bg-white/10 p-1 text-xs">{(["ETB", "USD"] as const).map((currency) => <button key={currency} type="button" onClick={() => setDisplayCurrency(currency)} className={`rounded-full px-3 py-1.5 font-bold ${displayCurrency === currency ? "bg-[#FF9300]" : "text-white/70"}`}>{currency}</button>)}</div></div>
-      <div className="mb-8 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">{STEP_LABELS.map((label, index) => { const number = index + 1; return <button key={label} type="button" disabled={number > step && !selected} onClick={() => number < step && next(number as Step)} className={`flex items-center gap-2 rounded-lg p-2 text-left text-xs ${number === step ? "bg-[#FF9300] text-white" : number < step ? "bg-emerald-500/80 text-white" : "bg-white/10 text-white/50"}`}><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black/15 font-bold">{number < step ? <Check className="h-3.5 w-3.5" /> : number}</span><span className="hidden sm:block">{label}</span></button>; })}</div>
-      {error && <div className="mb-5 rounded-xl border border-red-300/30 bg-red-500/15 p-3 text-sm text-red-100">{error}</div>}
+       <div className="mb-8 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">{STEP_LABELS.map((label, index) => { const number = index + 1; return <button key={label} type="button" disabled={number > step} onClick={() => number < step && next(number as Step)} className={`flex items-center gap-2 rounded-lg p-2 text-left text-xs ${number === step ? "bg-[#FF9300] text-white" : number < step ? "bg-emerald-500/80 text-white" : "cursor-not-allowed bg-white/10 text-white/50"}`}><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black/15 font-bold">{number < step ? <Check className="h-3.5 w-3.5" /> : number}</span><span className="hidden sm:block">{label}</span></button>; })}</div>
+       {error && !errorOpen && <div role="alert" className="mb-5 flex items-start gap-2 rounded-xl border border-red-300/30 bg-red-500/15 p-3 text-sm text-red-100"><span className="mt-0.5 font-bold text-[#FF9300]">!</span><span>{error}</span></div>}
+       <div className="relative mb-4 flex items-center justify-between overflow-hidden rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-sm sm:hidden"><span className="font-semibold">Step {step} of {STEP_LABELS.length}</span><span className="text-white/80">{STEP_LABELS[step - 1]}</span><span className="absolute bottom-0 left-0 h-1 bg-togt-orange transition-all" style={{ width: `${(step / STEP_LABELS.length) * 100}%` }} /></div>
+       {errorOpen && error && <div role="dialog" aria-modal="true" aria-labelledby="booking-error-title" className="fixed inset-0 z-[1100] flex items-center justify-center bg-togt-navy/55 p-4 backdrop-blur-sm"><div className="relative w-full max-w-md rounded-2xl bg-white p-6 text-togt-navy shadow-2xl"><button type="button" onClick={() => setErrorOpen(false)} aria-label="Close booking error" className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-togt-navy"><X className="h-4 w-4" /></button><div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600"><AlertTriangle className="h-6 w-6" /></div><h3 id="booking-error-title" className="mt-4 text-xl font-extrabold">Booking Error</h3><p className="mt-2 pr-5 text-sm leading-6 text-slate-600">{error}</p><div className="mt-6 flex justify-end"><button type="button" onClick={() => setErrorOpen(false)} className="rounded-xl bg-togt-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-togt-navy">Close</button></div></div></div>}
 
       {step === 1 && <div className="rounded-2xl bg-white p-5 text-[#12394F] shadow-2xl md:p-8"><div className="mb-5 flex gap-2">{(["round", "oneway"] as const).map((type) => <button key={type} type="button" onClick={() => setTripType(type)} className={`rounded-full px-5 py-2 text-sm font-bold ${tripType === type ? "bg-[#FF9300] text-white" : "bg-slate-100"}`}>{type === "round" ? "Round trip" : "One way"}</button>)}</div><div className="grid gap-4 md:grid-cols-4"><label>From<select value={origin} onChange={(e) => setOrigin(e.target.value)} className="mt-1 w-full rounded-lg border p-3">{AIRPORTS.map((airport) => <option key={airport.code} value={airport.code}>{airport.code} · {airport.city}</option>)}</select></label><label>To<select value={destination} onChange={(e) => setDestination(e.target.value)} className="mt-1 w-full rounded-lg border p-3">{AIRPORTS.map((airport) => <option key={airport.code} value={airport.code}>{airport.code} · {airport.city}</option>)}</select></label><label>Departure<input type="date" value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} className="mt-1 w-full rounded-lg border p-3" /></label><label>Return{tripType === "round" ? <input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} className="mt-1 w-full rounded-lg border p-3" /> : <span className="mt-1 block rounded-lg bg-slate-100 p-3 text-slate-400">Not required</span>}</label></div><div className="mt-5 grid gap-4 sm:grid-cols-4"><label>Adults<input type="number" min="1" value={adults} onChange={(e) => setAdults(Number(e.target.value))} className="mt-1 w-full rounded-lg border p-3" /></label><label>Children<input type="number" min="0" value={children} onChange={(e) => setChildren(Number(e.target.value))} className="mt-1 w-full rounded-lg border p-3" /></label><label>Infants<input type="number" min="0" value={infants} onChange={(e) => setInfants(Number(e.target.value))} className="mt-1 w-full rounded-lg border p-3" /></label><label>Cabin<select value={cabinClass} onChange={(e) => setCabinClass(e.target.value)} className="mt-1 w-full rounded-lg border p-3"><option value="economy">Economy</option><option value="premium_economy">Premium economy</option><option value="business">Business</option><option value="first">First</option></select></label></div><button type="button" disabled={busy} onClick={search} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#FF9300] py-3 font-bold text-white">{busy && <Loader2 className="h-4 w-4 animate-spin" />}Search flights <ArrowRight className="h-4 w-4" /></button></div>}
 

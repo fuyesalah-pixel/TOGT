@@ -17,11 +17,13 @@ import { AdminGroupsTab } from "@/components/dashboard/admin/groups-admin-tab";
 import { TicketsTab } from "@/components/dashboard/shared/tickets-tab";
 import { AdminTrackingTab } from "@/components/dashboard/admin/tracking-tab";
 import { ReportsTab } from "@/components/dashboard/admin/reports-tab";
+import { CallTrackerTab } from "@/components/dashboard/shared/call-tracker-tab";
 
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "users", label: "Users" },
   { id: "tickets", label: "Tickets" },
+  { id: "calls", label: "Call Tracker" },
   { id: "tracking", label: "Tracking" },
   { id: "reports", label: "Reports" },
   { id: "packages", label: "Packages" },
@@ -45,6 +47,7 @@ export default function AdminDashboardPage() {
       {tab === "overview" && <OverviewTab />}
       {tab === "users" && <UsersAdminTab />}
       {tab === "tickets" && <TicketsTab staff admin />}
+      {tab === "calls" && <CallTrackerTab staff />}
       {tab === "tracking" && <AdminTrackingTab />}
       {tab === "reports" && <ReportsTab />}
       {tab === "packages" && <PackagesTab />}
