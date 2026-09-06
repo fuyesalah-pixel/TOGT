@@ -27,8 +27,17 @@ export default function middleware(req: NextRequest) {
   // The QR verification page is intentionally locale-independent.
   if (pathname === "/verify" || pathname.startsWith("/verify/")) return NextResponse.next();
 
-  // Split locale prefix: /en/dashboard/worker -> locale=en, rest=/dashboard/worker
   const segments = pathname.split("/").filter(Boolean);
+  if (!LOCALES.includes(segments[0])) {
+    const saved = req.cookies.get("NEXT_LOCALE")?.value;
+    const browser = req.headers.get("accept-language")?.split(",")[0]?.split("-")[0]?.toLowerCase();
+    const preferred = saved && LOCALES.includes(saved) ? saved : LOCALES.includes(browser ?? "") ? browser : routing.defaultLocale;
+    const redirect = req.nextUrl.clone();
+    redirect.pathname = `/${preferred}${pathname === "/" ? "" : pathname}`;
+    return NextResponse.redirect(redirect);
+  }
+
+  // Split locale prefix: /en/dashboard/worker -> locale=en, rest=/dashboard/worker
   const locale = LOCALES.includes(segments[0]) ? segments[0] : routing.defaultLocale;
   const rest = "/" + segments.slice(LOCALES.includes(segments[0]) ? 1 : 0).join("/");
 

@@ -27,6 +27,7 @@ export function LanguageSwitcher() {
       value={locale}
       onValueChange={(value) => {
         if (value) {
+          document.cookie = `NEXT_LOCALE=${value}; Path=/; Max-Age=31536000; SameSite=Lax`;
           router.replace(pathname, { locale: value });
         }
       }}

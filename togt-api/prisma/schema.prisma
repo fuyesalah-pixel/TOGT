@@ -195,6 +195,16 @@ model Package {
   maxMembers  Int         @default(50)
   includes    String[]
   excludes    String[]
+  titleAr     String?
+  descriptionAr String?
+  includesAr  String[] @default([])
+  excludesAr  String[] @default([])
+  titleAm     String?
+  descriptionAm String?
+  includesAm  String[] @default([])
+  excludesAm  String[] @default([])
+  translationStatus String @default("PENDING")
+  translationAttempts Int @default(0)
   isActive    Boolean     @default(true)
   isCustom    Boolean     @default(false)
   destination String?
@@ -213,6 +223,14 @@ model GalleryItem {
   location    String?
   date        String?
   description String
+  titleAr     String?
+  categoryAr  String?
+  locationAr  String?
+  descriptionAr String?
+  titleAm     String?
+  categoryAm  String?
+  locationAm  String?
+  descriptionAm String?
   images      String[] @default([])
   videoUrl    String?
   createdById String
@@ -224,6 +242,10 @@ model FAQItem {
   id          String   @id @default(uuid())
   question    String
   answer      String
+  questionAr  String?
+  answerAr    String?
+  questionAm  String?
+  answerAm    String?
   category    String
   order       Int      @default(0)
   isActive    Boolean  @default(true)

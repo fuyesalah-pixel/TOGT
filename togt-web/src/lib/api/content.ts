@@ -1,12 +1,12 @@
 import { apiGet, apiPost } from "./client";
 import type { FaqItem, GalleryItem } from "./types";
 
-export function getFaq(): Promise<FaqItem[]> {
-  return apiGet<FaqItem[]>("/content/faq");
+export function getFaq(locale = "en"): Promise<FaqItem[]> {
+  return apiGet<FaqItem[]>(`/content/faq?locale=${locale}`);
 }
 
-export function getGallery(): Promise<GalleryItem[]> {
-  return apiGet<GalleryItem[]>("/content/gallery");
+export function getGallery(locale = "en"): Promise<GalleryItem[]> {
+  return apiGet<GalleryItem[]>(`/content/gallery?locale=${locale}`);
 }
 
 export interface GalleryPayload {

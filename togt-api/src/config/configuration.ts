@@ -45,6 +45,12 @@ export default () => ({
     from: process.env.HOSTINGER_SMTP_FROM ?? '',
   },
   cookieSecure: process.env.COOKIE_SECURE === 'true',
+  openRouter: {
+    apiKey: process.env.OPENROUTER_API_KEY ?? process.env.OPENAI_API_KEY ?? '',
+    baseUrl: process.env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai/api/v1',
+    arabicModel: process.env.OPENROUTER_ARABIC_MODEL ?? 'google/gemini-2.5-flash',
+    amharicModel: process.env.OPENROUTER_AMHARIC_MODEL ?? 'google/gemini-2.5-flash',
+  },
   duffel: {
     accessToken: process.env.DUFFEL_ACCESS_TOKEN ?? '',
     apiUrl: process.env.DUFFEL_API_URL ?? 'https://api.duffel.com',

@@ -14,6 +14,7 @@ import {
   type PackagePayload,
 } from "@/lib/api/packages";
 import type { Package } from "@/lib/api/types";
+import { useLocale } from "next-intl";
 
 /** Public active packages (raw API shape) */
 export function usePackages(params?: PackageFilters) {
@@ -33,10 +34,11 @@ export function useAllPackages(params?: PackageFilters) {
 
 /** Public packages mapped to the display shape the site components render */
 export function useDisplayPackages(params?: PackageFilters) {
+  const locale = useLocale();
   const query = usePackages(params);
   return {
     ...query,
-    data: query.data?.map(toDisplayPackage),
+    data: query.data?.map((pkg) => toDisplayPackage(pkg, locale)),
   };
 }
 

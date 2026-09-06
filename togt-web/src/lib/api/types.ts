@@ -78,6 +78,15 @@ export interface Package {
   maxMembers: number;
   includes: string[];
   excludes: string[];
+  titleAr?: string | null;
+  descriptionAr?: string | null;
+  includesAr?: string[];
+  excludesAr?: string[];
+  titleAm?: string | null;
+  descriptionAm?: string | null;
+  includesAm?: string[];
+  excludesAm?: string[];
+  translationStatus?: string;
   isActive: boolean;
   isCustom: boolean;
   destination?: string | null;

@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePackageDto } from './dto/create-package.dto';
 import { UpdatePackageDto } from './dto/update-package.dto';
 import { ChatGateway } from '../chat/chat.gateway';
+import { TranslationService } from './translation.service';
 
 interface PackageFilters {
   type?: string;
@@ -12,7 +13,7 @@ interface PackageFilters {
 
 @Injectable()
 export class PackagesService {
-  constructor(private readonly prisma: PrismaService, private readonly gateway: ChatGateway) {}
+  constructor(private readonly prisma: PrismaService, private readonly gateway: ChatGateway, private readonly translations: TranslationService) {}
 
   private buildWhere(filters: PackageFilters, onlyActive: boolean): Prisma.PackageWhereInput {
     const where: Prisma.PackageWhereInput = {};
@@ -63,7 +64,7 @@ export class PackagesService {
         groupId: dto.groupId,
         createdById: userId,
       },
-    }).then((pkg) => { this.gateway.emitToRole('CUSTOMER', 'packageCreated', pkg); this.gateway.emitToRole('WORKER', 'packageCreated', pkg); return pkg; });
+    }).then((pkg) => { this.gateway.emitToRole('CUSTOMER', 'packageCreated', pkg); this.gateway.emitToRole('WORKER', 'packageCreated', pkg); void this.translations.translatePackage(pkg.id); return pkg; });
   }
 
   async update(id: string, dto: UpdatePackageDto) {
@@ -77,6 +78,7 @@ export class PackagesService {
     });
     this.gateway.emitToRole('CUSTOMER', 'packageUpdated', updated);
     this.gateway.emitToRole('WORKER', 'packageUpdated', updated);
+    void this.translations.translatePackage(updated.id);
     return updated;
   }
 

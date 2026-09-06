@@ -2,19 +2,22 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFaq, createGallery, getFaq, getGallery, type FaqPayload, type GalleryPayload } from "@/lib/api/content";
+import { useLocale } from "next-intl";
 
 export function useFaq() {
+  const locale = useLocale();
   return useQuery({
-    queryKey: ["content", "faq"],
-    queryFn: getFaq,
+    queryKey: ["content", "faq", locale],
+    queryFn: () => getFaq(locale),
     staleTime: 5 * 60_000,
   });
 }
 
 export function useGallery() {
+  const locale = useLocale();
   return useQuery({
-    queryKey: ["content", "gallery"],
-    queryFn: getGallery,
+    queryKey: ["content", "gallery", locale],
+    queryFn: () => getGallery(locale),
     staleTime: 5 * 60_000,
   });
 }

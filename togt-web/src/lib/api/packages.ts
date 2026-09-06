@@ -101,20 +101,25 @@ export type MockPackage = DisplayPackage;
 
 const FALLBACK_IMAGE = "/images/packages/world-custom.jpg";
 
-export function toDisplayPackage(p: Package): DisplayPackage {
+export function toDisplayPackage(p: Package, locale = "en"): DisplayPackage {
+  const localized = locale === "ar"
+    ? { title: p.titleAr, description: p.descriptionAr, includes: p.includesAr, excludes: p.excludesAr }
+    : locale === "am"
+      ? { title: p.titleAm, description: p.descriptionAm, includes: p.includesAm, excludes: p.excludesAm }
+      : { title: undefined, description: undefined, includes: undefined, excludes: undefined };
   const durationMatch = p.duration?.match(/(\d+)/);
   return {
     id: p.id,
     type: p.type.toLowerCase(),
-    title: p.title,
+    title: localized.title || p.title,
     price: p.price ?? 0,
     currency: p.currency ?? "ETB",
     durationDays: durationMatch ? parseInt(durationMatch[1], 10) : 1,
-    includes: p.includes ?? [],
+    includes: localized.includes?.length ? localized.includes : (p.includes ?? []),
     image: p.image ?? FALLBACK_IMAGE,
     images: p.images?.length ? p.images : [p.image ?? FALLBACK_IMAGE],
-    excluded: p.excludes ?? [],
-    fullDescription: p.description,
+    excluded: localized.excludes?.length ? localized.excludes : (p.excludes ?? []),
+    fullDescription: localized.description || p.description,
     details: {
       ...(p.duration ? { duration: p.duration } : {}),
       groupSize: `${p.maxMembers} travelers maximum`,
