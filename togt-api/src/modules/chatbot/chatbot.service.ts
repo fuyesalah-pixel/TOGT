@@ -57,7 +57,7 @@ export class ChatbotService {
     const context = `Services: ${services}\nPolicies: ${policy}\nContact: +251 99 797 9741 / +251 99 797 9740, info@togttrading.com, Jemo 1, Addis Ababa.\nPackages:\n${packageResults.map((item) => `- ${item.id}: ${item.title}, ${item.price ?? 'custom'} ${item.currency ?? 'ETB'}, ${item.duration ?? 'varies'}: ${item.description}`).join('\n')}\nFAQ:\n${faqResults.map((item) => `Q: ${item.question}\nA: ${item.answer}`).join('\n')}\nGallery:\n${galleryResults.map((item) => `- ${item.title}: ${item.description}`).join('\n')}`;
     const language = this.language(dto.message);
     const languageRules = language === 'Amharic' ? 'Use proper Amharic script (አማርኛ), formal but friendly Ethiopian travel language, and write ETB as ብር where natural. Avoid unnecessary English words.' : language === 'Arabic' ? 'Use clear, polite Modern Standard Arabic.' : 'Use natural professional English.';
-    const system = `You are Ahmed, a warm senior TOGT travel consultant. Speak naturally and concisely in ${language}. ${languageRules} Use only the supplied live context; never invent prices. Ask a follow-up when useful.\n${context}`;
+    const system = `You are Ahmed, a warm senior TOGT travel consultant. The user wrote in ${language}. You MUST answer in ${language}${language === 'Amharic' ? ' using proper Amharic script (አማርኛ)' : ''} and never switch language. ${languageRules} Use only the supplied live context; never invent prices. Ask a follow-up when useful.\n${context}`;
     let text = this.fallback(dto.message, packageResults, faqResults, galleryResults);
     const meta = { packages: packageResults.map((item) => ({ id: item.id, title: item.title, description: item.description, image: item.image, price: item.price, currency: item.currency, duration: item.duration, includes: item.includes.slice(0, 4) })) };
     const writeWords = () => { for (const word of text.split(/\s+/)) response.write(`data: ${JSON.stringify({ chunk: `${word} ` })}\n\n`); };
@@ -71,7 +71,7 @@ export class ChatbotService {
       if (gemini) {
         try {
           const model = new GoogleGenerativeAI(gemini.key).getGenerativeModel({ model: gemini.model });
-          const result = await model.generateContentStream(`${system}\nPrevious conversation:\n${history.map((item) => `${item.role}: ${item.content}`).join('\n')}\nUser: ${dto.message}\nRespond in natural Amharic script.`);
+          const result = await model.generateContentStream(`${system}\nPrevious conversation:\n${history.map((item) => `${item.role}: ${item.content}`).join('\n')}\nUser: ${dto.message}`);
           text = '';
           for await (const chunk of result.stream) { const part = chunk.text(); text += part; streamed = true; response.write(`data: ${JSON.stringify({ chunk: part })}\n\n`); }
           this.logger.log(`Gemini reply for Amharic (${gemini.model})`);
@@ -146,7 +146,7 @@ export class ChatbotService {
         const gemini = await this.geminiProvider();
         if (gemini) {
           const model = new GoogleGenerativeAI(gemini.key).getGenerativeModel({ model: gemini.model });
-          const result = await model.generateContent(`${`You are TOGT AI Assistant, a concise professional travel support agent for Amharic customers. Answer only from the supplied context and respond in natural Amharic script.\n\n${context}`}\nUser: ${dto.message}`);
+          const result = await model.generateContent(`${`You are TOGT AI Assistant, a concise professional travel support agent. The user wrote in ${language}. You MUST answer in ${language}${language === 'Amharic' ? ' using proper Amharic script (አማርኛ)' : ''}. Answer only from the supplied context.\n\n${context}`}\nUser: ${dto.message}`);
           const value = result.response.text();
           if (value) reply = value;
         }
@@ -154,7 +154,7 @@ export class ChatbotService {
       if (!reply || language !== 'Amharic') {
         const provider = await this.completionsProvider(language);
         if (provider) {
-          const res = await fetch(`${provider.baseUrl}/chat/completions`, { method: 'POST', headers: { Authorization: `Bearer ${provider.key}`, 'Content-Type': 'application/json', ...(provider.name === 'OpenRouter' ? { 'HTTP-Referer': 'https://travel.togttrading.com', 'X-Title': 'TOGT Tour and Travel' } : {}) }, body: JSON.stringify({ model: provider.model, temperature: 0.2, messages: [{ role: 'system', content: `You are TOGT AI Assistant, a concise professional travel support agent. Answer only from the supplied context. If context is insufficient, say so and direct the customer to support. Respond in the user's language.\n\n${context}` }, { role: 'user', content: dto.message }] }) });
+          const res = await fetch(`${provider.baseUrl}/chat/completions`, { method: 'POST', headers: { Authorization: `Bearer ${provider.key}`, 'Content-Type': 'application/json', ...(provider.name === 'OpenRouter' ? { 'HTTP-Referer': 'https://travel.togttrading.com', 'X-Title': 'TOGT Tour and Travel' } : {}) }, body: JSON.stringify({ model: provider.model, temperature: 0.2, messages: [{ role: 'system', content: `You are TOGT AI Assistant, a concise professional travel support agent. The user wrote in ${language}; you MUST answer in ${language} and never switch. Answer only from the supplied context. If context is insufficient, say so and direct the customer to support.\n\n${context}` }, { role: 'user', content: dto.message }] }) });
           const payload = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
           if (res.ok && payload.choices?.[0]?.message?.content) reply = payload.choices[0].message.content;
         }
