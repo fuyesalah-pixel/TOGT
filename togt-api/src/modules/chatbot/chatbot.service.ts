@@ -4,17 +4,46 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AskChatbotDto } from './dto/ask-chatbot.dto';
 import { Response } from 'express';
 import { ValkeyService } from '../../valkey/valkey.service';
+import { CredentialService } from '../system/credential.service';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const services = 'Ticket Office, Umrah Packages, Domestic Tours, Foreigner Tours, Visa Processing, and Travel Consulting';
 const policy = 'Refunds and cancellations depend on airline, visa authority, supplier, fare, and package rules. Customers should request changes through TOGT support before travel.';
 
+interface CompletionsProvider {
+  key: string;
+  baseUrl: string;
+  model: string;
+  name: string;
+}
+
 @Injectable()
 export class ChatbotService {
   private readonly logger = new Logger(ChatbotService.name);
-  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, private readonly valkey: ValkeyService) {}
+  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, private readonly valkey: ValkeyService, private readonly credentials: CredentialService) {}
 
   private language(text: string) { return /[\u0600-\u06FF]/.test(text) ? 'Arabic' : /[\u1200-\u137F]/.test(text) ? 'Amharic' : 'English'; }
+
+  private async completionsProvider(language: string): Promise<CompletionsProvider | undefined> {
+    const openRouterKey = await this.credentials.get('OPENROUTER');
+    if (openRouterKey) {
+      const model = language === 'Arabic'
+        ? this.config.get<string>('openRouter.arabicModel') ?? 'google/gemini-2.5-flash'
+        : language === 'Amharic'
+          ? this.config.get<string>('openRouter.amharicModel') ?? 'google/gemini-2.5-flash'
+          : this.config.get<string>('OPENROUTER_MODEL') ?? 'google/gemini-2.5-flash';
+      return { key: openRouterKey, baseUrl: this.config.get<string>('openRouter.baseUrl') ?? 'https://openrouter.ai/api/v1', model, name: 'OpenRouter' };
+    }
+    const openAiKey = await this.credentials.get('OPENAI');
+    if (openAiKey) return { key: openAiKey, baseUrl: 'https://api.openai.com/v1', model: this.config.get<string>('OPENAI_MODEL') ?? 'gpt-4o-mini', name: 'OpenAI' };
+    return undefined;
+  }
+
+  private async geminiProvider(): Promise<{ key: string; model: string } | undefined> {
+    const key = await this.credentials.get('GEMINI');
+    if (key) return { key, model: this.config.get<string>('GEMINI_MODEL') ?? 'gemini-2.5-flash' };
+    return undefined;
+  }
 
   async stream(dto: AskChatbotDto, response: Response) {
     const conversationId = dto.conversationId ?? `guest-${Date.now()}`;
@@ -30,27 +59,72 @@ export class ChatbotService {
     const languageRules = language === 'Amharic' ? 'Use proper Amharic script (አማርኛ), formal but friendly Ethiopian travel language, and write ETB as ብር where natural. Avoid unnecessary English words.' : language === 'Arabic' ? 'Use clear, polite Modern Standard Arabic.' : 'Use natural professional English.';
     const system = `You are Ahmed, a warm senior TOGT travel consultant. Speak naturally and concisely in ${language}. ${languageRules} Use only the supplied live context; never invent prices. Ask a follow-up when useful.\n${context}`;
     let text = this.fallback(dto.message, packageResults, faqResults, galleryResults);
-    const geminiKey = this.config.get<string>('GEMINI_API_KEY');
-    if (language === 'Amharic' && geminiKey) {
-      response.status(200).set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
-      try {
-        const model = new GoogleGenerativeAI(geminiKey).getGenerativeModel({ model: this.config.get<string>('GEMINI_MODEL') ?? 'gemini-1.5-flash' });
-        const result = await model.generateContentStream(`${system}\nPrevious conversation:\n${history.map((item) => `${item.role}: ${item.content}`).join('\n')}\nUser: ${dto.message}\nRespond in natural Amharic script.`);
-        text = '';
-        for await (const chunk of result.stream) { const part = chunk.text(); text += part; response.write(`data: ${JSON.stringify({ chunk: part })}\n\n`); }
-      } catch (error) { this.logger.warn(`Gemini request failed: ${(error as Error).message}`); for (const word of text.split(/\s+/)) response.write(`data: ${JSON.stringify({ chunk: `${word} ` })}\n\n`); }
-      await this.valkey.push(`chatbot:conversation:${conversationId}`, JSON.stringify({ role: 'user', content: dto.message })); await this.valkey.push(`chatbot:conversation:${conversationId}`, JSON.stringify({ role: 'assistant', content: text }));
-      response.write(`data: ${JSON.stringify({ meta: { packages: packageResults.map((item) => ({ id: item.id, title: item.title, description: item.description, image: item.image, price: item.price, currency: item.currency, duration: item.duration, includes: item.includes.slice(0, 4) })) } })}\n\n`); response.write('data: [DONE]\n\n'); response.end(); return;
-    }
-    const apiKey = this.config.get<string>('OPENAI_API_KEY');
-    if (apiKey) {
-      try { const result = await fetch(`${this.config.get<string>('OPENAI_BASE_URL') ?? 'https://api.openai.com/v1'}/chat/completions`, { method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', ...(this.config.get<string>('OPENAI_BASE_URL')?.includes('openrouter') ? { 'HTTP-Referer': 'https://travel.togttrading.com', 'X-Title': 'TOGT Tour and Travel' } : {}) }, body: JSON.stringify({ model: this.config.get<string>('OPENAI_MODEL') ?? 'gpt-4o-mini', temperature: 0.7, max_tokens: 500, messages: [{ role: 'system', content: system }, ...history, { role: 'user', content: dto.message }], tools: [{ type: 'function', function: { name: 'search_packages', description: 'Search live available packages', parameters: { type: 'object', properties: { query: { type: 'string' }, maxPrice: { type: 'number' } }, required: ['query'] } } }, { type: 'function', function: { name: 'search_faq', description: 'Search live FAQ', parameters: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } } }] }) }); const payload = await result.json() as { choices?: Array<{ message?: { content?: string } }> }; text = payload.choices?.[0]?.message?.content ?? text; } catch (error) { this.logger.warn(`OpenAI request failed: ${(error as Error).message}`); }
-    }
-    await this.valkey.push(`chatbot:conversation:${conversationId}`, JSON.stringify({ role: 'user', content: dto.message })); await this.valkey.push(`chatbot:conversation:${conversationId}`, JSON.stringify({ role: 'assistant', content: text }));
+    const meta = { packages: packageResults.map((item) => ({ id: item.id, title: item.title, description: item.description, image: item.image, price: item.price, currency: item.currency, duration: item.duration, includes: item.includes.slice(0, 4) })) };
+    const writeWords = () => { for (const word of text.split(/\s+/)) response.write(`data: ${JSON.stringify({ chunk: `${word} ` })}\n\n`); };
     response.status(200).set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
-    for (const word of text.split(/\s+/)) { response.write(`data: ${JSON.stringify({ chunk: `${word} ` })}\n\n`); await new Promise((resolve) => setTimeout(resolve, 18)); }
-    response.write(`data: ${JSON.stringify({ meta: { packages: packageResults.map((item) => ({ id: item.id, title: item.title, description: item.description, image: item.image, price: item.price, currency: item.currency, duration: item.duration, includes: item.includes.slice(0, 4) })) } })}\n\n`);
-    response.write('data: [DONE]\n\n'); response.end();
+
+    await this.valkey.push(`chatbot:conversation:${conversationId}`, JSON.stringify({ role: 'user', content: dto.message }));
+
+    let streamed = false;
+    if (language === 'Amharic') {
+      const gemini = await this.geminiProvider();
+      if (gemini) {
+        try {
+          const model = new GoogleGenerativeAI(gemini.key).getGenerativeModel({ model: gemini.model });
+          const result = await model.generateContentStream(`${system}\nPrevious conversation:\n${history.map((item) => `${item.role}: ${item.content}`).join('\n')}\nUser: ${dto.message}\nRespond in natural Amharic script.`);
+          text = '';
+          for await (const chunk of result.stream) { const part = chunk.text(); text += part; streamed = true; response.write(`data: ${JSON.stringify({ chunk: part })}\n\n`); }
+          this.logger.log(`Gemini reply for Amharic (${gemini.model})`);
+        } catch (error) { this.logger.warn(`Gemini request failed: ${(error as Error).message}`); streamed = false; text = this.fallback(dto.message, packageResults, faqResults, galleryResults); }
+      } else {
+        this.logger.warn('No Gemini credential configured for Amharic; trying OpenRouter.');
+      }
+    }
+    if (!streamed) {
+      const provider = await this.completionsProvider(language);
+      if (provider) {
+        try {
+          const result = await fetch(`${provider.baseUrl}/chat/completions`, { method: 'POST', headers: { Authorization: `Bearer ${provider.key}`, 'Content-Type': 'application/json', ...(provider.name === 'OpenRouter' ? { 'HTTP-Referer': 'https://travel.togttrading.com', 'X-Title': 'TOGT Tour and Travel' } : {}) }, body: JSON.stringify({ model: provider.model, temperature: 0.7, max_tokens: 500, stream: true, messages: [{ role: 'system', content: system }, ...history, { role: 'user', content: dto.message }] }) });
+          if (!result.ok || !result.body) throw new Error(`HTTP ${result.status}`);
+          text = '';
+          const reader = result.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() ?? '';
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed.startsWith('data:')) continue;
+              const payload = trimmed.slice(5).trim();
+              if (payload === '[DONE]') continue;
+              try {
+                const json = JSON.parse(payload) as { choices?: Array<{ delta?: { content?: string } }> };
+                const part = json.choices?.[0]?.delta?.content ?? '';
+                if (part) { text += part; streamed = true; response.write(`data: ${JSON.stringify({ chunk: part })}\n\n`); }
+              } catch { /* ignore partial JSON lines */ }
+            }
+          }
+          if (!streamed) throw new Error('Empty stream');
+          this.logger.log(`${provider.name} reply via ${provider.model}`);
+        } catch (error) {
+          this.logger.warn(`Completions request failed: ${(error as Error).message}`);
+          streamed = false;
+        }
+      } else {
+        this.logger.warn('No runtime AI credential configured for OpenRouter/OpenAI; used fallback.');
+      }
+      if (!streamed) { text = this.fallback(dto.message, packageResults, faqResults, galleryResults); writeWords(); }
+    }
+
+    await this.valkey.push(`chatbot:conversation:${conversationId}`, JSON.stringify({ role: 'assistant', content: text }));
+    this.logger.log(`Chatbot stream resolved ${language === 'Amharic' ? '(Gemini path)' : ''} ${text ? 'AI reply' : 'fallback'}`);
+    response.write(`data: ${JSON.stringify({ meta })}\n\n`);
+    response.write('data: [DONE]\n\n');
+    response.end();
   }
 
   async ask(dto: AskChatbotDto) {
@@ -65,15 +139,27 @@ export class ChatbotService {
     const relevantFaqs = faqs.map((item) => ({ item, score: score(`${item.question} ${item.answer} ${item.category}`) })).sort((a, b) => b.score - a.score).slice(0, 5).map(({ item }) => item);
     const relevantGallery = gallery.map((item) => ({ item, score: score(`${item.title} ${item.description} ${item.category} ${item.location}`) })).sort((a, b) => b.score - a.score).slice(0, 3).map(({ item }) => item);
     const context = [`Services: ${services}`, `Policies: ${policy}`, `Contact: +251 99 797 9741, +251 99 797 9740, info@togttrading.com, Jemo 1, Front of Saba Building, Addis Ababa.`, `Packages:\n${relevantPackages.map((item) => `- ${item.title}: ${item.price ?? 'custom price'} ${item.currency ?? 'ETB'}, ${item.duration ?? 'duration varies'}; ${item.description}`).join('\n')}`, `FAQ:\n${relevantFaqs.map((item) => `Q: ${item.question}\nA: ${item.answer}`).join('\n')}`, `Gallery:\n${relevantGallery.map((item) => `- ${item.title}: ${item.description} (${item.location ?? 'TOGT'})`).join('\n')}`].join('\n\n');
-    const apiKey = this.config.get<string>('OPENAI_API_KEY');
+    const language = this.language(dto.message);
     let reply = this.fallback(dto.message, relevantPackages, relevantFaqs, relevantGallery);
-    if (apiKey) {
-      try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: this.config.get<string>('OPENAI_MODEL') ?? 'gpt-4o-mini', temperature: 0.2, messages: [{ role: 'system', content: `You are TOGT AI Assistant, a concise professional travel support agent. Answer only from the supplied context. If context is insufficient, say so and direct the customer to support. Respond in the user's language.\n\n${context}` }, { role: 'user', content: dto.message }] }) });
-        const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
-        if (response.ok && payload.choices?.[0]?.message?.content) reply = payload.choices[0].message.content;
-      } catch (error) { this.logger.warn(`OpenAI request failed: ${(error as Error).message}`); }
-    }
+    try {
+      if (language === 'Amharic') {
+        const gemini = await this.geminiProvider();
+        if (gemini) {
+          const model = new GoogleGenerativeAI(gemini.key).getGenerativeModel({ model: gemini.model });
+          const result = await model.generateContent(`${`You are TOGT AI Assistant, a concise professional travel support agent for Amharic customers. Answer only from the supplied context and respond in natural Amharic script.\n\n${context}`}\nUser: ${dto.message}`);
+          const value = result.response.text();
+          if (value) reply = value;
+        }
+      }
+      if (!reply || language !== 'Amharic') {
+        const provider = await this.completionsProvider(language);
+        if (provider) {
+          const res = await fetch(`${provider.baseUrl}/chat/completions`, { method: 'POST', headers: { Authorization: `Bearer ${provider.key}`, 'Content-Type': 'application/json', ...(provider.name === 'OpenRouter' ? { 'HTTP-Referer': 'https://travel.togttrading.com', 'X-Title': 'TOGT Tour and Travel' } : {}) }, body: JSON.stringify({ model: provider.model, temperature: 0.2, messages: [{ role: 'system', content: `You are TOGT AI Assistant, a concise professional travel support agent. Answer only from the supplied context. If context is insufficient, say so and direct the customer to support. Respond in the user's language.\n\n${context}` }, { role: 'user', content: dto.message }] }) });
+          const payload = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
+          if (res.ok && payload.choices?.[0]?.message?.content) reply = payload.choices[0].message.content;
+        }
+      }
+    } catch (error) { this.logger.warn(`AI request failed: ${(error as Error).message}`); }
     return { reply, suggestions: ['View packages', 'Umrah information', 'Book a ticket', 'Contact support'], packages: relevantPackages, links: [{ label: 'Book a service', url: '#smart-form' }, { label: 'Contact support', url: '#smart-form' }] };
   }
 
