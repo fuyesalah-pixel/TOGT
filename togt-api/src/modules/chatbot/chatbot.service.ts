@@ -48,9 +48,6 @@ export class ChatbotService {
   async stream(dto: AskChatbotDto, response: Response) {
     const conversationId = dto.conversationId ?? `guest-${Date.now()}`;
     const history = (await this.valkey.list(`chatbot:conversation:${conversationId}`)).reverse().map((item) => JSON.parse(item) as { role: 'user' | 'assistant'; content: string });
-    const lng = this.language(dto.message);
-    const probe = Buffer.from(dto.message.slice(0, 40), 'utf8').toString('hex');
-    this.logger.log(`Chatbot debug: lang=${lng} userHex=${probe.slice(0, 80)} src='${dto.message.slice(0, 24)}'`);
     const words = dto.message.toLowerCase().split(/\W+/).filter((word) => word.length > 2);
     const [packages, faqs, gallery] = await Promise.all([this.prisma.package.findMany({ where: { isActive: true }, take: 50 }), this.prisma.fAQItem.findMany({ where: { isActive: true }, take: 100 }), this.prisma.galleryItem.findMany({ take: 50, orderBy: { createdAt: 'desc' } })]);
     const score = (text: string) => words.reduce((total, word) => total + (text.toLowerCase().includes(word) ? 1 : 0), 0);
@@ -112,7 +109,7 @@ export class ChatbotService {
             }
           }
           if (!streamed) throw new Error('Empty stream');
-          this.logger.log(`Chatbot reply: model=${provider.model} firstHex=${Buffer.from(text.slice(0, 24), 'utf8').toString('hex').slice(0, 60)}`);
+          this.logger.log(`${provider.name} reply via ${provider.model}`);
         } catch (error) {
           this.logger.warn(`Completions request failed: ${(error as Error).message}`);
           streamed = false;
