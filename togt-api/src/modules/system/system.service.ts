@@ -22,7 +22,7 @@ export class SystemService {
   }
 
   private key() {
-    const raw = this.config.get<string>('systemEncryptionKey') || process.env.SYSTEM_CONFIG_ENCRYPTION_KEY;
+    const raw = this.config.get<string>('systemEncryptionKey') || process.env.SYSTEM_CONFIG_ENCRYPTION_KEY || process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
     if (!raw) throw new ServiceUnavailableException('System encryption key is not configured');
     return createHash('sha256').update(raw).digest();
   }

@@ -30,7 +30,7 @@ export class CredentialService {
   }
 
   private decrypt(value: string) {
-    const raw = this.config.get<string>('systemEncryptionKey') || process.env.SYSTEM_CONFIG_ENCRYPTION_KEY;
+    const raw = this.config.get<string>('systemEncryptionKey') || process.env.SYSTEM_CONFIG_ENCRYPTION_KEY || process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
     if (!raw) throw new ServiceUnavailableException('System encryption key is not configured');
     const [iv, tag, encrypted] = value.split('.');
     if (!iv || !tag || !encrypted) throw new ServiceUnavailableException('Stored credential is invalid');
