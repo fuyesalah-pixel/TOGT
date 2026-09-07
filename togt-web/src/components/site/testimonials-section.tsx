@@ -166,7 +166,7 @@ export function TestimonialsSection() {
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="h-[2px] w-10 bg-gradient-to-r from-transparent to-[#FF9300] rounded-full" />
             <span className="text-[#FF9300] font-bold tracking-[0.25em] text-xs uppercase">
-              Testimonials
+               {t("eyebrow")}
             </span>
             <div className="h-[2px] w-10 bg-gradient-to-l from-transparent to-[#FF9300] rounded-full" />
           </div>

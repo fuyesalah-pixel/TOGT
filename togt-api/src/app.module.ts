@@ -27,6 +27,7 @@ import { TelegramModule } from './modules/telegram/telegram.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
 import { CallRecordsModule } from './modules/callrecords/call-records.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { SystemModule } from './modules/system/system.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     TicketsModule,
     CallRecordsModule,
     ScheduleModule.forRoot(),
+    SystemModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

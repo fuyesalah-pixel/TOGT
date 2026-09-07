@@ -23,7 +23,7 @@ export class UsersController {
   constructor(private readonly users: UsersService) {}
 
   @Get()
-  @Roles(Role.WORKER, Role.ADMIN, Role.TECH)
+  @Roles(Role.WORKER, Role.ADMIN)
   findAll(@Query() query: QueryUsersDto) {
     return this.users.findAll(query);
   }
@@ -36,7 +36,7 @@ export class UsersController {
 
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() actor: User) {
-    const privileged = actor.role === Role.WORKER || actor.role === Role.ADMIN || actor.role === Role.TECH;
+    const privileged = actor.role === Role.WORKER || actor.role === Role.ADMIN;
     if (!privileged && actor.id !== id) throw new ForbiddenException('Not allowed');
     return this.users.findOne(id);
   }

@@ -172,6 +172,7 @@ export class ServiceRequestsService {
 
   async setAmount(id: string, amount: number, actor: User) {
     if (!Number.isFinite(amount) || amount <= 0) throw new ForbiddenException('Amount must be greater than zero');
+    if (!(new Set<Role>([Role.CUSTOMER, Role.WORKER, Role.ADMIN])).has(actor.role)) throw new ForbiddenException('Not allowed');
     const request = await this.prisma.serviceRequest.findUnique({ where: { id } });
     if (!request || (actor.role === Role.CUSTOMER && request.userId !== actor.id)) throw new ForbiddenException('Request not found');
     if (request.paymentStatus !== 'UNPAID') throw new ForbiddenException('Only unpaid requests can be updated');
@@ -196,12 +197,13 @@ export class ServiceRequestsService {
   }
 
   async addDocument(id: string, file: Express.Multer.File, actor: User) {
+    if (!(new Set<Role>([Role.CUSTOMER, Role.WORKER, Role.ADMIN])).has(actor.role)) throw new ForbiddenException('Not allowed');
     const request = await this.prisma.serviceRequest.findUnique({ where: { id } });
     if (!request) throw new NotFoundException('Service request not found');
     if (actor.role === Role.CUSTOMER && request.userId !== actor.id) {
       throw new ForbiddenException('Not allowed');
     }
-    const url = await this.uploads.upload(file, 'service-requests');
+    const url = `r2-private://${await this.uploads.uploadPrivate(file, 'service-requests')}`;
     const current = request.formData && typeof request.formData === 'object' && !Array.isArray(request.formData)
       ? request.formData as Record<string, unknown>
       : {};
@@ -210,5 +212,18 @@ export class ServiceRequestsService {
       where: { id },
       data: { formData: { ...current, documents: [...documents, url] } as Prisma.InputJsonValue },
     });
+  }
+
+  async getDocumentUrl(id: string, index: number, actor: User) {
+    if (!Number.isInteger(index) || index < 0) throw new NotFoundException('Document not found');
+    const request = await this.prisma.serviceRequest.findUnique({ where: { id } });
+    if (!request) throw new NotFoundException('Service request not found');
+    if (actor.role === Role.CUSTOMER && request.userId !== actor.id) throw new ForbiddenException('Not allowed');
+    const formData = request.formData && typeof request.formData === 'object' && !Array.isArray(request.formData) ? request.formData as Record<string, unknown> : {};
+    const documents = Array.isArray(formData.documents) ? formData.documents : [];
+    const document = documents[index];
+    if (typeof document !== 'string') throw new NotFoundException('Document not found');
+    if (!document.startsWith('r2-private://')) return { url: document };
+    return { url: await this.uploads.signedUrl(document.slice('r2-private://'.length)) };
   }
 }

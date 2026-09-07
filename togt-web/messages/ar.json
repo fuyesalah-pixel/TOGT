@@ -220,7 +220,13 @@
     "downloadTicket": "تحميل التذكرة الإلكترونية",
     "finish": "إنهاء",
     "newSearch": "بحث جديد",
-    "errPassengers": "يرجى إكمال جميع بيانات الركاب قبل المتابعة."
+    "errPassengers": "يرجى إكمال جميع بيانات الركاب قبل المتابعة.",
+    "gender": "الجنس",
+    "selectGender": "اختر الجنس",
+    "contactDetails": "بيانات التواصل",
+    "contactEmail": "البريد الإلكتروني",
+    "contactPhone": "رقم الهاتف",
+    "errContact": "يرجى إدخال البريد الإلكتروني ورقم الهاتف."
   },
   "Visa": {
     "title": "معالجة التأشيرات",
@@ -367,9 +373,17 @@
     "contactButton": "تواصل معنا"
   },
   "Testimonials": {
+    "eyebrow": "آراء المسافرين",
     "title": "ماذا يقول عملاؤنا",
     "seeMore": "شاهد المزيد من التقييمات",
     "noMore": "لا توجد تقييمات إضافية"
+  },
+  "DownloadApp": {
+    "eyebrow": "تطبيق الهاتف",
+    "title": "حمّل تطبيقنا",
+    "description": "خذ TOGT معك أينما ذهبت. احجز الباقات، تابع طلباتك، وتواصل مع الدعم أثناء رحلتك.",
+    "guideHome": "الرئيسية", "guideHomeDetail": "اكتشف الرحلات والجولات وباقات العمرة.", "guidePackage": "اختر باقة", "guidePackageDetail": "اضغط على الباقة لمعرفة تفاصيلها.", "guideForm": "املأ النموذج", "guideFormDetail": "أرسل بيانات رحلتك بأمان.", "guideSuccess": "تم إرسال الطلب", "guideSuccessDetail": "نجح الطلب! سنبقيك على اطلاع.",
+    "featureBook": "احجز الباقات من هاتفك", "featureTrack": "تابع طلباتك لحظة بلحظة", "featureChat": "تواصل مع دعم TOGT", "featureGps": "تتبع الأهل في رحلات العمرة", "featureQibla": "محدد القبلة ومنبه الأذان", "featureNotifications": "إشعارات فورية متعددة اللغات", "downloadFor": "تحميل لـ", "android": "تطبيق أندرويد", "comingSoon": "قريباً على", "appStore": "متجر التطبيقات", "version": "الإصدار 1.0.0 · Android 8+ · iOS 13+"
   },
   "Footer": {
     "rights": "جميع الحقوق محفوظة.",

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
+import '../services/locale_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/user_model.dart';
@@ -30,6 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final u = user;
     if (u != null && (u.role == UserRole.worker || u.role == UserRole.admin || u.role == UserRole.tech)) {
       return _WebOnlyProfile(role: u.role, onLogout: () async {
@@ -63,9 +66,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(width: 14),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(u?.name ?? 'Guest Traveler', style: TOGTTypography.h2),
+                   Text(u?.name ?? l10n.guestTraveler, style: TOGTTypography.h2),
                   const SizedBox(height: 3),
-                  Text(u?.email ?? 'Not signed in', style: TOGTTypography.small),
+                   Text(u?.email ?? l10n.notSignedIn, style: TOGTTypography.small),
                   if (u != null) ...[
                     const SizedBox(height: 6),
                     Container(
@@ -85,23 +88,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 26),
           _MenuCard(children: [
-             _MenuItem(icon: Icons.receipt_long_rounded, label: 'My Requests', onTap: () => _push(context, const MyRequestsScreen())),
-             _MenuItem(icon: Icons.airplane_ticket_outlined, label: 'My Tickets', onTap: () => _push(context, const MyTicketsScreen())),
-             _MenuItem(icon: Icons.history_rounded, label: 'History', onTap: () => _push(context, const HistoryScreen())),
-            _MenuItem(icon: Icons.star_outline_rounded, label: 'Reviews', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReviewsScreen()))),
-             _MenuItem(icon: Icons.location_on_outlined, label: 'Parent Tracking', onTap: () => _push(context, const ParentTrackingScreen())),
+             _MenuItem(icon: Icons.receipt_long_rounded, label: l10n.myRequests, onTap: () => _push(context, const MyRequestsScreen())),
+             _MenuItem(icon: Icons.airplane_ticket_outlined, label: l10n.myTickets, onTap: () => _push(context, const MyTicketsScreen())),
+             _MenuItem(icon: Icons.history_rounded, label: l10n.history, onTap: () => _push(context, const HistoryScreen())),
+            _MenuItem(icon: Icons.star_outline_rounded, label: l10n.reviews, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReviewsScreen()))),
+             _MenuItem(icon: Icons.location_on_outlined, label: l10n.parentTracking, onTap: () => _push(context, const ParentTrackingScreen())),
           ]),
           const SizedBox(height: 16),
           _MenuCard(children: [
-             _MenuItem(icon: Icons.notifications_none_rounded, label: 'Notifications', onTap: () => _push(context, const NotificationsScreen())),
-              _MenuItem(icon: Icons.payments_outlined, label: 'Payments', onTap: () => _push(context, const PaymentScreen())),
-             _MenuItem(icon: Icons.settings_outlined, label: 'Settings', onTap: () => _push(context, const SettingsScreen())),
-             _MenuItem(icon: Icons.language_rounded, label: 'Language', trailing: 'English / Arabic', onTap: () => _language(context)),
-            _MenuItem(icon: Icons.support_agent_rounded, label: 'Help & Support', onTap: () {}),
+             _MenuItem(icon: Icons.notifications_none_rounded, label: l10n.notifications, onTap: () => _push(context, const NotificationsScreen())),
+              _MenuItem(icon: Icons.payments_outlined, label: l10n.payments, onTap: () => _push(context, const PaymentScreen())),
+             _MenuItem(icon: Icons.settings_outlined, label: l10n.settings, onTap: () => _push(context, const SettingsScreen())),
+             _MenuItem(icon: Icons.language_rounded, label: l10n.language, trailing: l10n.english, onTap: () => _language(context)),
+             _MenuItem(icon: Icons.support_agent_rounded, label: l10n.helpSupport, onTap: () {}),
           ]),
           const SizedBox(height: 26),
           AnimatedButton(
-            label: u == null ? 'Sign In' : 'Log Out',
+             label: u == null ? l10n.signIn : l10n.logOut,
             icon: u == null ? Icons.login_rounded : Icons.logout_rounded,
             gradient: u == null ? TOGTColors.orangeGradient : LinearGradient(colors: [TOGTColors.red, TOGTColors.red.withOpacity(.8)]),
             onPressed: () async {
@@ -109,15 +112,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               final confirmed = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  title: const Text('Sign Out'),
-                  content: const Text('Are you sure you want to sign out?'),
+                   title: Text(l10n.signOut),
+                   content: Text(l10n.signOutQuestion),
                   actions: [
                     TextButton(
                         onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text('Cancel')),
+                         child: Text(l10n.cancel)),
                     TextButton(
                         onPressed: () => Navigator.pop(ctx, true),
-                        child: const Text('Sign Out')),
+                         child: Text(l10n.signOut)),
                   ],
                 ),
               );
@@ -128,7 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           const SizedBox(height: 12),
-          Center(child: Text('TOGT Tour & Travel v1.0.0', style: TOGTTypography.small)),
+           Center(child: Text('${l10n.appTitle} v1.0.0', style: TOGTTypography.small)),
         ],
       ),
     );
@@ -136,16 +139,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _open(BuildContext context, String title, String endpoint) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DashboardListScreen(title: title, endpoint: endpoint)));
   void _push(BuildContext context, Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
-  void _settings(BuildContext context) => showDialog(context: context, builder: (_) => AlertDialog(title: const Text('Settings'), content: const Text('Your profile and notification preferences are managed securely with your TOGT account.'), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))]));
+  void _settings(BuildContext context) { final l10n = AppLocalizations.of(context); showDialog(context: context, builder: (_) => AlertDialog(title: Text(l10n.settings), content: Text(l10n.supportPreferences), actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.close))])); }
   void _language(BuildContext context) => showModalBottomSheet(
     context: context,
-    builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      ListTile(title: const Text('English'), onTap: () => _saveLanguage(context, 'english')),
-      ListTile(title: const Text('Arabic'), onTap: () => _saveLanguage(context, 'arabic')),
-    ])),
+    builder: (_) { final l10n = AppLocalizations.of(context); return SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      ListTile(title: Text(l10n.english), onTap: () => _saveLanguage(context, 'en')),
+      ListTile(title: Text(l10n.arabic), onTap: () => _saveLanguage(context, 'ar')),
+      ListTile(title: Text(l10n.amharic), onTap: () => _saveLanguage(context, 'am')),
+    ])); },
   );
 
   Future<void> _saveLanguage(BuildContext context, String language) async {
+    await LocaleService.instance.setLocale(language);
     final id = user?.id;
     if (id != null) await ApiService.instance.patch('/users/$id', body: {'languagePref': language});
     if (context.mounted) Navigator.pop(context);
@@ -158,16 +163,16 @@ class _WebOnlyProfile extends StatelessWidget {
   final VoidCallback onLogout;
 
   @override
-  Widget build(BuildContext context) => SafeArea(child: Center(child: Padding(padding: const EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [
+  Widget build(BuildContext context) { final l10n = AppLocalizations.of(context); return SafeArea(child: Center(child: Padding(padding: const EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [
     const Icon(Icons.web_asset_rounded, size: 64, color: TOGTColors.orange),
     const SizedBox(height: 20),
-    Text('Please Use Web Version', style: TOGTTypography.h1, textAlign: TextAlign.center),
+    Text(l10n.pleaseUseWeb, style: TOGTTypography.h1, textAlign: TextAlign.center),
     const SizedBox(height: 10),
     Text('Your role (${role.name.toUpperCase()}) requires the full dashboard available on the web.', textAlign: TextAlign.center, style: TOGTTypography.body),
     const SizedBox(height: 24),
-    FilledButton.icon(onPressed: () => launchUrl(Uri.parse('https://travel.togttrading.com'), mode: LaunchMode.externalApplication), icon: const Icon(Icons.open_in_new_rounded), label: const Text('Open Web Version')),
-    TextButton.icon(onPressed: onLogout, icon: const Icon(Icons.logout_rounded), label: const Text('Logout')),
-  ]))));
+    FilledButton.icon(onPressed: () => launchUrl(Uri.parse('https://travel.togttrading.com'), mode: LaunchMode.externalApplication), icon: const Icon(Icons.open_in_new_rounded), label: Text(l10n.openWebVersion)),
+    TextButton.icon(onPressed: onLogout, icon: const Icon(Icons.logout_rounded), label: Text(l10n.logout)),
+  ])))); }
 }
 
 class _MenuCard extends StatelessWidget {

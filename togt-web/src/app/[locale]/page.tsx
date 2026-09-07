@@ -18,12 +18,16 @@ import { TestimonialsSection } from "@/components/site/testimonials-section";
 import { Footer } from "@/components/site/footer";
 import { FloatingButtons } from "@/components/site/floating-buttons";
 import { SmartFormProvider } from "@/components/smart-form/smart-form-context";
+import { JsonLd } from "@/components/seo/json-ld";
+import { breadcrumbSchema, organizationSchema } from "@/lib/seo";
 
 export default function HomePage() {
   return (
     <SmartFormProvider>
       <Navbar />
       <main>
+        <JsonLd data={organizationSchema} />
+        <JsonLd data={breadcrumbSchema([{ name: "Home", path: "/en" }])} />
         <Hero />
         <About />
         <SaudiaFlightBookingWizard />

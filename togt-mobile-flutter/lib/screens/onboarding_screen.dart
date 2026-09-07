@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import 'login_screen.dart';
@@ -18,26 +19,23 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late final AnimationController _contentC = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 600), value: 1);
 
-  static const slides = [
+  List<({IconData icon, String title, String text, List<Color> colors})> slides(AppLocalizations l10n) => [
     (
       icon: Icons.flight_takeoff_rounded,
-      title: 'Welcome to TOGT',
-      text: 'Ethiopia\'s IATA-accredited travel partner. Flights, tours, visas — '
-          'all in one beautiful app.',
+       title: l10n.welcomeToTogt,
+       text: l10n.iataDescriptionShort,
       colors: [Color(0xFF1F67B1), Color(0xFF12394F)],
     ),
     (
       icon: Icons.card_travel_rounded,
-      title: 'Book Packages Easily',
-      text: 'Umrah journeys, domestic adventures and world tours. Browse, compare '
-          'and book in seconds.',
+       title: l10n.bookPackagesEasily,
+       text: l10n.umrahJourneys,
       colors: [Color(0xFFFF9300), Color(0xFFE07C00)],
     ),
     (
       icon: Icons.travel_explore_rounded,
-      title: 'Track Your Journey',
-      text: 'Chat with our team, follow your bookings and stay updated every step '
-          'of the way.',
+       title: l10n.trackJourney,
+       text: l10n.requestStatus,
       colors: [Color(0xFF2BB673), Color(0xFF1F67B1)],
     ),
   ];
@@ -50,7 +48,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Future<void> _goNext() async {
-    if (_page < slides.length - 1) {
+    if (_page < 2) {
       await _contentC.reverse();
       await _controller.nextPage(
           duration: const Duration(milliseconds: 450), curve: Curves.easeOutCubic);
@@ -66,14 +64,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final currentSlides = slides(l10n);
     return Scaffold(
       body: Stack(
         children: [
           PageView.builder(
             controller: _controller,
-            itemCount: slides.length,
+             itemCount: currentSlides.length,
             onPageChanged: (i) => setState(() => _page = i),
-            itemBuilder: (context, i) => _buildSlide(slides[i]),
+             itemBuilder: (context, i) => _buildSlide(currentSlides[i], currentSlides.length),
           ),
           SafeArea(
             child: Align(
@@ -82,7 +82,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 padding: const EdgeInsets.all(16),
                 child: TextButton(
                   onPressed: _finish,
-                  child: Text('Skip',
+                   child: Text(l10n.skip,
                       style: TOGTTypography.button.copyWith(color: TOGTColors.grey)),
                 ),
               ),
@@ -93,7 +93,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  Widget _buildSlide(({IconData icon, String title, String text, List<Color> colors}) slide) {
+  Widget _buildSlide(({IconData icon, String title, String text, List<Color> colors}) slide, int slideCount) {
     final (icon: icon, title: title, text: text, colors: colors) = slide;
     return Container(
       color: TOGTColors.white,
@@ -128,7 +128,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(slides.length, (i) {
+                   children: List.generate(slideCount, (i) {
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
                       margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -148,7 +148,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     style: TOGTTypography.body.copyWith(fontSize: 15.5, height: 1.55),
                     textAlign: TextAlign.center),
                 const SizedBox(height: 48),
-                _NavButtons(page: _page, onNext: _goNext, onDone: _finish, color: colors.first),
+                 _NavButtons(page: _page, onNext: _goNext, onDone: _finish, color: colors.first),
               ],
             ),
           ),
@@ -168,6 +168,7 @@ class _NavButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isLast = page == 2;
     return Row(
       children: [
@@ -177,7 +178,7 @@ class _NavButtons extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: isLast ? null : onNext,
             icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-            label: const Text('Next'),
+             label: Text(l10n.next),
             style: ElevatedButton.styleFrom(
               backgroundColor: color,
               foregroundColor: TOGTColors.white,
@@ -191,7 +192,7 @@ class _NavButtons extends StatelessWidget {
         const Spacer(),
         TextButton(
           onPressed: onDone,
-          child: Text(isLast ? 'Get Started' : '',
+           child: Text(isLast ? l10n.getStarted : '',
               style: TOGTTypography.button.copyWith(color: color)),
         ),
       ],

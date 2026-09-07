@@ -82,4 +82,20 @@ export class ContentController {
   deleteGallery(@Param('id') id: string) {
     return this.prisma.galleryItem.delete({ where: { id } });
   }
+
+  @Get('faq/:id')
+  @Public()
+  async getFaqOne(@Param('id') id: string, @Query('locale') locale?: string) {
+    const item = await this.prisma.fAQItem.findFirst({ where: { id, isActive: true } });
+    if (!item) return null;
+    return { ...item, question: locale === 'ar' ? item.questionAr || item.question : locale === 'am' ? item.questionAm || item.question : item.question, answer: locale === 'ar' ? item.answerAr || item.answer : locale === 'am' ? item.answerAm || item.answer : item.answer };
+  }
+
+  @Get('gallery/:id')
+  @Public()
+  async getGalleryOne(@Param('id') id: string, @Query('locale') locale?: string) {
+    const item = await this.prisma.galleryItem.findUnique({ where: { id } });
+    if (!item) return null;
+    return { ...item, title: locale === 'ar' ? item.titleAr || item.title : locale === 'am' ? item.titleAm || item.title : item.title, category: locale === 'ar' ? item.categoryAr || item.category : locale === 'am' ? item.categoryAm || item.category : item.category, location: locale === 'ar' ? item.locationAr || item.location : locale === 'am' ? item.locationAm || item.location : item.location, description: locale === 'ar' ? item.descriptionAr || item.description : locale === 'am' ? item.descriptionAm || item.description : item.description, image: item.images[0] ?? '/images/gallery/iata-2026.jpg' };
+  }
 }

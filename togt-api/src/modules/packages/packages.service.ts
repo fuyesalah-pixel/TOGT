@@ -44,6 +44,12 @@ export class PackagesService {
     });
   }
 
+  async findActiveOne(id: string) {
+    const pkg = await this.prisma.package.findFirst({ where: { id, isActive: true } });
+    if (!pkg) throw new NotFoundException('Package not found');
+    return pkg;
+  }
+
   create(dto: CreatePackageDto, userId: string) {
     return this.prisma.package.create({
       data: {

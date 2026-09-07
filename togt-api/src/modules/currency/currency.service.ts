@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 export interface CurrencyRates {
@@ -23,7 +23,8 @@ export class CurrencyService {
     if (currency.toUpperCase() === 'ETB') return amount;
     const cached = await this.load();
     const code = currency.toUpperCase();
-    const usdToCurrency = cached.all[code] ?? 1;
+    const usdToCurrency = cached.all[code];
+    if (!usdToCurrency || usdToCurrency <= 0) throw new BadRequestException(`Unsupported currency: ${currency}`);
     const usdAmount = code === 'USD' ? amount : amount / usdToCurrency;
     return usdAmount * cached.rates.USD_TO_ETB;
   }
@@ -31,7 +32,8 @@ export class CurrencyService {
   async convertToUsd(amount: number, currency: string): Promise<number> {
     if (currency.toUpperCase() === 'USD') return amount;
     const cached = await this.load();
-    const usdToCurrency = cached.all[currency.toUpperCase()] ?? 1;
+    const usdToCurrency = cached.all[currency.toUpperCase()];
+    if (!usdToCurrency || usdToCurrency <= 0) throw new BadRequestException(`Unsupported currency: ${currency}`);
     return amount / usdToCurrency;
   }
 

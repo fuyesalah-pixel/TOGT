@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../l10n/app_localizations.dart';
 
 import '../services/auth_service.dart';
 import '../theme/colors.dart';
@@ -30,20 +31,21 @@ class _LoginScreenState extends State<LoginScreen>
   Future<void> _signIn() async {
     if (_busy) return;
     setState(() => _busy = true);
+    final l10n = AppLocalizations.of(context);
     try {
       final user = await AuthService.instance.signInWithGoogle();
       if (user == null) return;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Signed in as ${user.name} (${user.role.name})')));
+          content: Text(l10n.signedInAs(user.name, user.role.name))));
       Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeShell()));
     } on PlatformException catch (e) {
       debugPrint('Google sign-in error: ${e.code} ${e.message} ${e.details}');
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Google sign-in failed (${e.code}). Check Google account setup and try again.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.googleSignInFailed)));
     } catch (e) {
       final message = e.toString().contains('Google OAuth') || e.toString().contains('401')
-          ? 'Google sign-in is not available yet. Please try again later.'
-          : 'Unable to sign in right now. Please try again.';
+          ? l10n.signInUnavailable
+          : l10n.unableSignIn;
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -59,6 +61,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
@@ -102,13 +105,13 @@ class _LoginScreenState extends State<LoginScreen>
                                child: Image.asset('assets/logo/togt_mobile_logo.jpg', width: 120, height: 120, fit: BoxFit.contain),
                             ),
                             const SizedBox(height: 24),
-                            const Text('Welcome aboard',
+                             Text(l10n.welcome,
                                 style: TextStyle(
                                     fontSize: 26,
                                     fontWeight: FontWeight.w800,
                                     color: TOGTColors.white)),
                             const SizedBox(height: 8),
-                            Text('Sign in to book your next journey',
+                             Text(l10n.signInJourney,
                                 style: TextStyle(
                                     fontSize: 14.5,
                                     color: TOGTColors.white.withOpacity(.75))),
@@ -131,9 +134,9 @@ class _LoginScreenState extends State<LoginScreen>
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                              if (_busy)
-                               Container(height: 54, decoration: BoxDecoration(gradient: TOGTColors.blueGradient, borderRadius: BorderRadius.circular(18)), child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: TOGTColors.white)), SizedBox(width: 12), Text('Connecting to Google...', style: TextStyle(color: TOGTColors.white, fontWeight: FontWeight.w700))]))
-                             else
-                               AnimatedButton(label: 'Continue with Google', icon: Icons.g_mobiledata_rounded, gradient: TOGTColors.blueGradient, onPressed: _signIn),
+                                Container(height: 54, decoration: BoxDecoration(gradient: TOGTColors.blueGradient, borderRadius: BorderRadius.circular(18)), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: TOGTColors.white)), const SizedBox(width: 12), Text(l10n.connectingGoogle, style: const TextStyle(color: TOGTColors.white, fontWeight: FontWeight.w700))]))
+                              else
+                                AnimatedButton(label: l10n.continueGoogle, icon: Icons.g_mobiledata_rounded, gradient: TOGTColors.blueGradient, onPressed: _signIn),
                           ],
                         ),
                       ),

@@ -166,7 +166,7 @@ export class UsersService {
   }
 
   async getChanges(id: string, actor: User) {
-    if (actor.role !== Role.ADMIN && actor.role !== Role.WORKER && actor.role !== Role.TECH && actor.id !== id) {
+    if (actor.role !== Role.ADMIN && actor.role !== Role.WORKER && actor.id !== id) {
       throw new ForbiddenException('Not allowed');
     }
     const target = await this.prisma.user.findUnique({ where: { id }, select: { id: true } });
@@ -230,16 +230,10 @@ export class UsersService {
     await this.prisma.$transaction(async (tx) => {
       if (target.role === Role.WORKER) {
         await tx.serviceRequest.updateMany({ where: { assignedToId: id }, data: { assignedToId: null } });
-        await tx.progressHistory.deleteMany({ where: { changedById: id } });
       }
       if (target.role === Role.GUIDE) {
         await tx.groupMember.deleteMany({ where: { userId: id, role: 'GUIDE' } });
-        await tx.locationTracking.deleteMany({ where: { userId: id } });
-        await tx.tourPlanStep.updateMany({ where: { confirmedById: id }, data: { confirmedById: null, confirmationStatus: 'PENDING', confirmedAt: null } });
       }
-      await tx.chatMessage.deleteMany({ where: { OR: [{ senderId: id }, { receiverId: id }] } });
-      await tx.conversation.deleteMany({ where: { OR: [{ customerId: id }, { workerId: id }] } });
-      await tx.notification.deleteMany({ where: { userId: id } });
       await tx.user.update({ where: { id }, data: { role: effectiveRole } });
       await tx.profileChangeLog.create({ data: { userId: id, fieldName: 'role', oldValue: target.role, newValue: effectiveRole } });
     });

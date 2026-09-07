@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 import '../models/review_item.dart';
 import '../services/content_service.dart';
@@ -40,17 +41,18 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionTitle(title: 'Testimonials', subtitle: 'What our travelers say'),
+        _SectionTitle(title: l10n.testimonials, subtitle: l10n.travelerReviews),
         const SizedBox(height: 14),
         if (_reviews == null && _error == null)
           const _ReviewsSkeleton()
         else if (_error != null)
           _ReviewsError(message: _error!, onRetry: _load)
         else if (_reviews!.isEmpty)
-          const _EmptyReviews()
+          _EmptyReviews()
         else ...[
           for (var i = 0; i < _visible && i < _reviews!.length; i++) ...[
             StaggeredTestimonialCard(
@@ -66,7 +68,7 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
                 onPressed: () => setState(
                     () => _visible = (_visible + _pageSize).clamp(0, _reviews!.length)),
                 icon: const Icon(Icons.expand_more_rounded, color: TOGTColors.orange),
-                label: const Text('See More Reviews',
+                 label: Text(l10n.seeMoreReviews,
                     style: TextStyle(color: TOGTColors.orange)),
               ),
             ),
@@ -76,7 +78,7 @@ class _TestimonialsSectionState extends State<TestimonialsSection> {
               child: TextButton.icon(
                 onPressed: () => setState(() => _visible = _pageSize),
                 icon: const Icon(Icons.expand_less_rounded, color: TOGTColors.grey),
-                label: const Text('Show Less',
+                 label: Text(l10n.showLess,
                     style: TextStyle(color: TOGTColors.grey)),
               ),
             ),
@@ -124,6 +126,7 @@ class _ReviewsError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -133,11 +136,11 @@ class _ReviewsError extends StatelessWidget {
       child: Column(children: [
         const Icon(Icons.rate_review_outlined, color: TOGTColors.grey, size: 32),
         const SizedBox(height: 8),
-        Text('Reviews unavailable', style: TOGTTypography.h3),
+         Text(l10n.reviewsUnavailable, style: TOGTTypography.h3),
         const SizedBox(height: 4),
         Text(message, style: TOGTTypography.small, textAlign: TextAlign.center),
         const SizedBox(height: 10),
-        TextButton(onPressed: onRetry, child: const Text('Retry')),
+         TextButton(onPressed: onRetry, child: Text(l10n.retry)),
       ]),
     );
   }
@@ -148,16 +151,17 @@ class _EmptyReviews extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: TOGTColors.white,
         borderRadius: BorderRadius.circular(18),
       ),
-      child: const Column(children: [
+      child: Column(children: [
         Icon(Icons.star_border_rounded, color: TOGTColors.grey, size: 30),
         SizedBox(height: 8),
-        Text('No reviews yet', style: TextStyle(color: TOGTColors.grey)),
+        Text(l10n.noReviews, style: const TextStyle(color: TOGTColors.grey)),
       ]),
     );
   }

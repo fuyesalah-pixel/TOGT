@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/package_model.dart';
 import '../services/request_service.dart';
 import '../services/auth_service.dart';
@@ -46,7 +47,7 @@ class _BookingScreenState extends State<BookingScreen> {
       if (user.phone != null) _field('phone').text = user.phone!;
       if (user.passportNumber != null) _field('passportNumber').text = user.passportNumber!;
       if (user.nationality != null) _field('nationality').text = user.nationality!;
-      WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Form pre-filled from your profile'))); });
+      WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).formPrefilled))); });
     }
     if (widget.package.destination != null && (_isDomestic || _isForeign)) _field('destination').text = widget.package.destination!;
     if (_isUmrah) _field('packageType').text = widget.package.type.label.replaceFirst('Umrah ', '');
@@ -59,9 +60,10 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
     if (_submitting) return;
     if (_field('fullName').text.trim().isEmpty || _field('phone').text.trim().isEmpty || _field('email').text.trim().isEmpty) {
-      setState(() => _error = 'Please fill in your name and phone number.');
+      setState(() => _error = l10n.fillNamePhone);
       return;
     }
     setState(() {
@@ -86,7 +88,7 @@ class _BookingScreenState extends State<BookingScreen> {
         },
       );
     } catch (e) {
-      setState(() => _error = 'Submission failed: ${e.toString()}');
+      setState(() => _error = l10n.submissionFailed(e.toString()));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -94,8 +96,9 @@ class _BookingScreenState extends State<BookingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Book Package')),
+      appBar: AppBar(title: Text(l10n.bookPackage)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(22, 10, 22, 40),
         child: Column(
@@ -138,7 +141,7 @@ class _BookingScreenState extends State<BookingScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Travelers', style: TOGTTypography.h3),
+                Text(l10n.travelers, style: TOGTTypography.h3),
                 Container(
                   decoration: BoxDecoration(
                     color: TOGTColors.white,
@@ -176,7 +179,7 @@ class _BookingScreenState extends State<BookingScreen> {
             ],
             const SizedBox(height: 26),
             AnimatedButton(
-              label: 'Confirm Booking',
+              label: l10n.confirmBooking,
               onPressed: _submitting ? null : _submit,
             ),
           ],

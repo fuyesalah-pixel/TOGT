@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/colors.dart';
 import 'onboarding_screen.dart';
 import '../services/auth_service.dart';
@@ -50,6 +51,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: TOGTColors.white,
       body: Stack(
@@ -104,7 +106,7 @@ class _SplashScreenState extends State<SplashScreen>
               opacity: taglineOpacity,
               child: Column(
                 children: [
-                  const Text('Your journey begins here',
+                   Text(l10n.yourJourneyBegins,
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: TOGTColors.navy)),
                   const SizedBox(height: 22),
                   SizedBox(

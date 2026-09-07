@@ -142,8 +142,10 @@ class ApiService {
       setTokens(accessToken: data['accessToken']?.toString(), refreshToken: data['refreshToken']?.toString());
       final prefs = await SharedPreferences.getInstance();
       const secure = FlutterSecureStorage();
-      if (_accessToken != null) { await prefs.setString('togt_token', _accessToken!); await secure.write(key: 'togt_token', value: _accessToken); }
-      if (_refreshToken != null) { await prefs.setString('togt_refresh', _refreshToken!); await secure.write(key: 'togt_refresh', value: _refreshToken); }
+       if (_accessToken != null) { await secure.write(key: 'togt_token', value: _accessToken); }
+       if (_refreshToken != null) { await secure.write(key: 'togt_refresh', value: _refreshToken); }
+       await prefs.remove('togt_token');
+       await prefs.remove('togt_refresh');
       return _accessToken != null;
     } catch (_) {
       return false;

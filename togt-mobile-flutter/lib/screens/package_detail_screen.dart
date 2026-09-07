@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 import '../models/package_model.dart';
 import '../services/api_service.dart';
@@ -35,6 +36,7 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final p = widget.package;
     return Scaffold(
       body: CustomScrollView(
@@ -111,16 +113,16 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> {
                           _Chip(icon: Icons.schedule_rounded, label: p.duration!),
                         if (p.destination != null)
                           _Chip(icon: Icons.place_rounded, label: p.destination!),
-                        _Chip(icon: Icons.group_rounded, label: 'Max ${p.maxMembers}'),
+                         _Chip(icon: Icons.group_rounded, label: '${l10n.travelers}: ${p.maxMembers}'),
                       ],
                     ),
                     const SizedBox(height: 20),
-                    Text('About this package', style: TOGTTypography.h2),
+                     Text(l10n.aboutPackage, style: TOGTTypography.h2),
                     const SizedBox(height: 8),
                     Text(p.description, style: TOGTTypography.body.copyWith(height: 1.6)),
                     if (galleryImages.length > 1) ...[
                       const SizedBox(height: 24),
-                      Text('Gallery', style: TOGTTypography.h2),
+                       Text(l10n.gallery, style: TOGTTypography.h2),
                       const SizedBox(height: 12),
                       SizedBox(
                         height: 170,
@@ -161,7 +163,7 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> {
                     ],
                     if (p.includes.isNotEmpty) ...[
                       const SizedBox(height: 24),
-                      Text('What\'s included', style: TOGTTypography.h2),
+                       Text(l10n.included, style: TOGTTypography.h2),
                       const SizedBox(height: 10),
                       ...p.includes.map((e) => Padding(
                             padding: const EdgeInsets.only(bottom: 7),
@@ -175,7 +177,7 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> {
                     ],
                     if (p.excludes.isNotEmpty) ...[
                       const SizedBox(height: 16),
-                      Text('Not included', style: TOGTTypography.h2),
+                       Text(l10n.notIncluded, style: TOGTTypography.h2),
                       const SizedBox(height: 10),
                       ...p.excludes.map((e) => Padding(
                             padding: const EdgeInsets.only(bottom: 7),
@@ -188,7 +190,7 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> {
                     ],
                     const SizedBox(height: 32),
                     AnimatedButton(
-                      label: 'Book Now',
+                       label: l10n.bookNow,
                       icon: Icons.airplane_ticket_rounded,
                       onPressed: () => Navigator.of(context).push(MaterialPageRoute(
                           builder: (_) => BookingScreen(package: p))),

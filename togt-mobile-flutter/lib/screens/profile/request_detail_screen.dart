@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../services/document_service.dart';
 import '../../services/payment_service.dart';
@@ -58,11 +59,12 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     try { final url = await DocumentService.instance.uploadPath(image.path, folder: 'service-requests'); if (url != null && mounted) setState(() => uploads.add(url)); } catch (e) { if (mounted) setState(() => error = 'Upload failed: $e'); } finally { if (mounted) setState(() => uploading = false); }
   }
   @override Widget build(BuildContext context) {
-    if (error != null && request == null) return Scaffold(appBar: AppBar(title: const Text('Request Details')), body: Center(child: Text('Unable to load request\n$error', textAlign: TextAlign.center)));
-    if (request == null) return Scaffold(appBar: AppBar(title: const Text('Request Details')), body: const Center(child: CircularProgressIndicator()));
+    final l10n = AppLocalizations.of(context);
+    if (error != null && request == null) return Scaffold(appBar: AppBar(title: Text(l10n.requestDetails)), body: Center(child: Text(l10n.failedLoad(l10n.requestDetails, error!), textAlign: TextAlign.center)));
+    if (request == null) return Scaffold(appBar: AppBar(title: Text(l10n.requestDetails)), body: const Center(child: CircularProgressIndicator()));
     final r = request!; final type = (r['serviceType'] ?? 'Request').toString(); final status = (r['status'] ?? 'PENDING').toString(); final payment = (r['paymentStatus'] ?? 'UNPAID').toString().toUpperCase(); final details = (r['formData'] is Map ? Map<String, dynamic>.from(r['formData']) : <String, dynamic>{});
     final amount = double.tryParse((r['amount'] ?? details['amount'] ?? details['price'] ?? packageAmount ?? '').toString());
-    return Scaffold(appBar: AppBar(title: const Text('Request Details')), body: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(18), children: [
+    return Scaffold(appBar: AppBar(title: Text(l10n.requestDetails)), body: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(18), children: [
       _card(Row(children: [CircleAvatar(backgroundColor: TOGTColors.blue, child: Icon(_icon(type), color: Colors.white)), const SizedBox(width: 12), Expanded(child: Text(type, style: Theme.of(context).textTheme.headlineSmall)), _badge(status)])),
       const SizedBox(height: 12),
       _card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Package & request', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), const SizedBox(height: 10), ...details.entries.where((e) => e.key != 'packageId').take(8).map((e) => Padding(padding: const EdgeInsets.only(bottom: 5), child: Text('${e.key}: ${e.value}')))])),

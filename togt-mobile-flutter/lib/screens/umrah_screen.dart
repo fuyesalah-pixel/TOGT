@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 import '../models/package_model.dart';
 import '../services/package_service.dart';
@@ -40,6 +41,7 @@ class _UmrahScreenState extends State<UmrahScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return SafeArea(
       bottom: false,
       child: ListView(
@@ -70,13 +72,13 @@ class _UmrahScreenState extends State<UmrahScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Umrah Journeys',
+                       Text(l10n.umrahJourneys,
                           style: TextStyle(
                               fontSize: 21,
                               fontWeight: FontWeight.w800,
                               color: TOGTColors.white)),
                       const SizedBox(height: 4),
-                      Text('Economy · VIP · Honeymoon · Custom',
+                       Text(l10n.umrahPackages,
                           style:
                               TextStyle(color: TOGTColors.white.withOpacity(.75), fontSize: 12.5)),
                     ],
@@ -86,19 +88,19 @@ class _UmrahScreenState extends State<UmrahScreen>
             ),
           ),
           const SizedBox(height: 24),
-          Text('Prayer Tools', style: TOGTTypography.h2),
+           Text(l10n.prayerTools, style: TOGTTypography.h2),
           const SizedBox(height: 12),
           Row(
             children: [
-              _ToolCard(icon: Icons.explore_rounded, label: 'Qibla', color: TOGTColors.green),
+               _ToolCard(icon: Icons.explore_rounded, label: l10n.qibla, color: TOGTColors.green),
               const SizedBox(width: 12),
-              _ToolCard(icon: Icons.access_time_filled_rounded, label: 'Prayer Times', color: TOGTColors.blue),
+               _ToolCard(icon: Icons.access_time_filled_rounded, label: l10n.prayerTimes, color: TOGTColors.blue),
               const SizedBox(width: 12),
-              _ToolCard(icon: Icons.notifications_active_rounded, label: 'Azan Alarm', color: TOGTColors.orange),
+               _ToolCard(icon: Icons.notifications_active_rounded, label: l10n.azanAlarm, color: TOGTColors.orange),
             ],
           ),
           const SizedBox(height: 26),
-          Text('Umrah Packages', style: TOGTTypography.h2),
+           Text(l10n.umrahPackages, style: TOGTTypography.h2),
           const SizedBox(height: 14),
           if (_packages == null)
             GridView.count(
@@ -125,7 +127,7 @@ class _UmrahScreenState extends State<UmrahScreen>
               child: Column(children: [
                 Icon(Icons.mosque_outlined, size: 40, color: TOGTColors.grey),
                 const SizedBox(height: 10),
-                Text('No Umrah packages yet.\nStart the API and seed data to see them.',
+                 Text(l10n.noUmrahPackages,
                     textAlign: TextAlign.center, style: TOGTTypography.body),
               ]),
             )

@@ -373,9 +373,21 @@
     "contactButton": "Contact Us"
   },
   "Testimonials": {
+    "eyebrow": "Traveler reviews",
     "title": "What Our Travelers Say",
     "seeMore": "See More",
     "noMore": "No more reviews"
+  },
+  "DownloadApp": {
+    "eyebrow": "Mobile App",
+    "title": "Download Our App",
+    "description": "Take TOGT everywhere. Book packages, track requests, chat with support, and stay connected during your journey.",
+    "guideHome": "TOGT Home", "guideHomeDetail": "Find flights, tours, and Umrah packages.",
+    "guidePackage": "Choose a package", "guidePackageDetail": "Tap a package card to see the details.",
+    "guideForm": "Fill your form", "guideFormDetail": "Send your travel details securely.",
+    "guideSuccess": "Request submitted", "guideSuccessDetail": "Success! TOGT will keep you updated.",
+    "featureBook": "Book packages from your phone", "featureTrack": "Track service requests in real time", "featureChat": "Chat with TOGT support", "featureGps": "GPS parent tracking for Umrah", "featureQibla": "Qibla locator and Azan alarm", "featureNotifications": "Instant multilingual notifications",
+    "downloadFor": "Download for", "android": "Android APK", "comingSoon": "Coming soon on", "appStore": "App Store", "version": "Version 1.0.0 · Android 8+ · iOS 13+"
   },
   "Footer": {
     "rights": "All rights reserved.",

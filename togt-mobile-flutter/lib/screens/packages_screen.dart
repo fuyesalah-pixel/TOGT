@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 import '../models/package_model.dart';
 import '../services/package_service.dart';
@@ -102,6 +103,7 @@ class _AllPackagesScreenState extends State<AllPackagesScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final body = RefreshIndicator(
       color: TOGTColors.orange,
       onRefresh: () => _load(force: true),
@@ -116,15 +118,15 @@ class _AllPackagesScreenState extends State<AllPackagesScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Explore Packages', style: TOGTTypography.h1),
+                    Text(l10n.explorePackages, style: TOGTTypography.h1),
                     const SizedBox(height: 6),
-                    Text('${_filtered.length} journeys available',
+                    Text('${_filtered.length} ${l10n.travelers.toLowerCase()}',
                         style: TOGTTypography.small),
                     const SizedBox(height: 16),
                     TextField(
                       onChanged: (v) => setState(() => _query = v),
                       decoration: InputDecoration(
-                        hintText: 'Search packages…',
+                        hintText: l10n.searchPackages,
                         prefixIcon: Icon(Icons.search_rounded, color: TOGTColors.orange),
                       ),
                     ),
@@ -134,12 +136,12 @@ class _AllPackagesScreenState extends State<AllPackagesScreen>
                       child: ListView(
                         scrollDirection: Axis.horizontal,
                         children: [
-                          _chip('All', PackageFilter.all),
-                          _chip('Umrah', PackageFilter.umrah),
-                          _chip('Domestic', PackageFilter.domestic),
-                          _chip('Tourist', PackageFilter.tourist),
-                          _chip('Foreign', PackageFilter.foreign),
-                          _chip('Custom', PackageFilter.custom),
+                          _chip(l10n.all, PackageFilter.all),
+                          _chip(l10n.umrah, PackageFilter.umrah),
+                          _chip(l10n.domesticTours, PackageFilter.domestic),
+                          _chip(l10n.touristTours, PackageFilter.tourist),
+                          _chip(l10n.foreignTravel, PackageFilter.foreign),
+                          _chip(l10n.custom, PackageFilter.custom),
                         ],
                       ),
                     ),
@@ -168,14 +170,14 @@ class _AllPackagesScreenState extends State<AllPackagesScreen>
             SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
-                child: Text('Failed to load packages\n$_error',
+                 child: Text(l10n.failedLoadPackages(_error ?? ''),
                     textAlign: TextAlign.center, style: TOGTTypography.body),
               ),
             )
           else if (_filtered.isEmpty)
             const SliverFillRemaining(
               hasScrollBody: false,
-              child: Center(child: Text('No packages found', style: TOGTTypography.body)),
+              child: Center(child: Text(l10n.noPackagesFound, style: TOGTTypography.body)),
             )
           else
             SliverPadding(

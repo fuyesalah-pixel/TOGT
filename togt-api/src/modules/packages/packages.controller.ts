@@ -27,6 +27,12 @@ export class PackagesController {
     return this.packages.findActive({ type, destination });
   }
 
+  @Get(':id')
+  @Public()
+  findActiveOne(@Param('id') id: string) {
+    return this.packages.findActiveOne(id);
+  }
+
   @Get('all')
   @Roles(Role.WORKER, Role.ADMIN)
   findAll(@Query('type') type?: string, @Query('destination') destination?: string) {

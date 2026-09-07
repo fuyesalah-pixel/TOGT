@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart' show Ticker;
 
+import '../l10n/app_localizations.dart';
 import '../services/api_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
@@ -42,6 +43,7 @@ class _IataSectionState extends State<IataSection>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return FadeTransition(
       opacity: _fade,
       child: SlideTransition(
@@ -70,7 +72,7 @@ class _IataSectionState extends State<IataSection>
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'IATA Accredited Member Agency',
+                       l10n.iataAccredited,
                       style: TOGTTypography.small.copyWith(
                           color: TOGTColors.orange,
                           fontWeight: FontWeight.w700,
@@ -80,35 +82,33 @@ class _IataSectionState extends State<IataSection>
                 ],
               ),
               const SizedBox(height: 14),
-              Text('Proud IATA Member Agency',
+              Text(l10n.proudIata,
                   style: TOGTTypography.h2.copyWith(color: TOGTColors.white)),
               const SizedBox(height: 8),
               Text(
-                'We work with the International Air Transport Association (IATA) — '
-                'connecting you to over 370 member airlines across 120+ countries, '
-                'covering 85% of global air traffic.',
+                 l10n.iataDescriptionShort,
                 style: TOGTTypography.body.copyWith(
                     color: TOGTColors.white.withOpacity(.82), height: 1.5),
               ),
               const SizedBox(height: 24),
               Row(
                 children: [
-                  _Counter(value: 370, suffix: '+', label: 'Member Airlines'),
+                   _Counter(value: 370, suffix: '+', label: l10n.memberAirlines),
                   const _DividerDot(),
-                  _Counter(value: 120, suffix: '+', label: 'Countries'),
+                   _Counter(value: 120, suffix: '+', label: l10n.countries),
                   const _DividerDot(),
-                  _Counter(value: 85, suffix: '%', label: 'Global Air Traffic'),
+                   _Counter(value: 85, suffix: '%', label: l10n.globalAirTraffic),
                 ],
               ),
               const SizedBox(height: 26),
-              const _TrustCard(
-                  icon: Icons.verified_rounded, label: 'IATA Accredited'),
+              _TrustCard(
+                  icon: Icons.verified_rounded, label: l10n.iataAccredited),
               const SizedBox(height: 12),
-              const _TrustCard(
-                  icon: Icons.trending_up_rounded, label: 'Transparent Fares'),
+              _TrustCard(
+                  icon: Icons.trending_up_rounded, label: l10n.transparentFares),
               const SizedBox(height: 12),
-              const _TrustCard(
-                  icon: Icons.public_rounded, label: 'Global Reach'),
+              _TrustCard(
+                  icon: Icons.public_rounded, label: l10n.globalReach),
               const SizedBox(height: 22),
               const _AirlineMarquee(),
             ],

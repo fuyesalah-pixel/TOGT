@@ -462,6 +462,7 @@ export class DuffelService {
     if (order.paymentRequiredBy && new Date(order.paymentRequiredBy).getTime() < Date.now()) {
       throw new BadRequestException('This booking opportunity has expired. Please search again.');
     }
+    if (order.paymentId) throw new BadRequestException('Payment has already been initialized for this order. Verify the existing payment or contact support.');
     const secret = this.config.get<string>('CHAPA_SECRET_KEY');
     if (!secret) {
       this.logger.error(`Chapa flight initialization blocked for ${order.id}: CHAPA_SECRET_KEY is missing`);
@@ -507,9 +508,12 @@ export class DuffelService {
   async confirmOrder(id: string, actor?: User) {
     const order = await this.prisma.flightOrder.findUnique({ where: { id } });
     if (!order) throw new NotFoundException('Flight order not found');
+    if (actor) this.assertCustomerOrOwned(order, actor);
     if (order.status === FlightOrderStatus.CONFIRMED) return this.orderView(order);
     if (order.status === FlightOrderStatus.CANCELLED) throw new BadRequestException('Order is cancelled.');
-    if (actor) this.assertCustomerOrOwned(order, actor);
+    if (order.status !== FlightOrderStatus.AWAITING_TICKET || !order.paidAt) {
+      throw new BadRequestException('Verified payment is required before ticketing this order.');
+    }
     return this.payDuffel(order.id);
   }
 
@@ -570,10 +574,13 @@ export class DuffelService {
   }
 
   // Called by the payment service once Chapa confirms a flight payment, or via the verify endpoint.
-  async onChapaPaymentSucceeded(txRef: string, chapaPaymentId: string) {
+  async onChapaPaymentSucceeded(txRef: string, chapaPaymentId: string, paidAmount?: number, paidCurrency?: string) {
     const order = await this.prisma.flightOrder.findFirst({ where: { paymentId: txRef } });
     if (!order) return { status: 'ignored' };
     if (order.status === FlightOrderStatus.CONFIRMED) return { status: 'success', flightOrderId: order.id };
+    if (paidAmount == null || Math.abs(order.sellAmount - paidAmount) > 0.01 || (paidCurrency && paidCurrency.toUpperCase() !== order.sellCurrency.toUpperCase())) {
+      throw new BadRequestException('Payment amount or currency does not match the flight order');
+    }
     await this.prisma.flightOrder.update({
       where: { id: order.id },
       data: { status: FlightOrderStatus.AWAITING_TICKET, paidAt: new Date() },
@@ -586,7 +593,7 @@ export class DuffelService {
       const reason = err instanceof Error ? err.message : 'unknown error';
       await this.prisma.flightOrder.update({
         where: { id: order.id },
-        data: { paymentId: chapaPaymentId },
+        data: { status: FlightOrderStatus.AWAITING_TICKET },
       });
       await this.notifications.notifyUser(order.userId, {
         type: 'STATUS_UPDATE',
@@ -647,13 +654,14 @@ export class DuffelService {
     const response = await fetch(`${chapaUrl}/transaction/verify/${encodeURIComponent(txRef)}`, {
       headers: { Authorization: `Bearer ${secret}` },
     });
-    const payload = (await response.json()) as { status?: string; data?: { status?: string; amount?: number; currency?: string } };
+    const payload = (await response.json()) as { status?: string; data?: { status?: string; amount?: number | string; currency?: string } };
     const status = payload.data?.status ?? payload.status ?? 'pending';
     if (status.toLowerCase() === 'success' && order.status === FlightOrderStatus.HELD) {
-      await this.onChapaPaymentSucceeded(txRef, txRef);
+      const amount = Number(payload.data?.amount);
+      await this.onChapaPaymentSucceeded(txRef, txRef, amount, payload.data?.currency);
     }
     const fresh = await this.prisma.flightOrder.findUnique({ where: { id: order.id } });
-    return { status, flightOrderId: order.id, bookingReference: fresh?.duffelBookingRef ?? null };
+    return { status, amount: Number(payload.data?.amount), currency: payload.data?.currency, flightOrderId: order.id, bookingReference: fresh?.duffelBookingRef ?? null };
   }
 
   private orderView(o: {

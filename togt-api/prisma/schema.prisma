@@ -60,26 +60,26 @@ enum FlightOrderStatus {
 }
 
 model FlightOrder {
-  id                   String           @id @default(uuid())
+  id                   String            @id @default(uuid())
   userId               String
-  user                 User             @relation(fields: [userId], references: [id])
+  user                 User              @relation(fields: [userId], references: [id])
   duffelOfferRequestId String?
   duffelOfferId        String
-  duffelOrderId        String?          @unique
+  duffelOrderId        String?           @unique
   duffelBookingRef     String?
-  ticketId             String?          @unique
+  ticketId             String?           @unique
   origin               String
   destination          String
   departureDate        String
   returnDate           String?
-  cabinClass           String           @default("economy")
+  cabinClass           String            @default("economy")
   tripSummary          Json
   passengers           Json
   duffelAmount         Float
   duffelCurrency       String
   sellAmount           Float
-  sellCurrency         String           @default("ETB")
-  customerCurrency     String           @default("ETB")
+  sellCurrency         String            @default("ETB")
+  customerCurrency     String            @default("ETB")
   exchangeRate         Float?
   baseFare             Float?
   taxes                Float?
@@ -92,8 +92,8 @@ model FlightOrder {
   status               FlightOrderStatus @default(HELD)
   paymentId            String?
   paidAt               DateTime?
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
   @@index([userId, createdAt])
   @@index([paymentId])
@@ -134,108 +134,108 @@ enum PaymentStatus {
 }
 
 model User {
-  id             String    @id @default(uuid())
-  email          String    @unique
-  googleId       String    @unique
-  fullName       String
-  phone          String?
-  address        String?
-  birthday       DateTime?
-  nationality    String?
+  id                String    @id @default(uuid())
+  email             String    @unique
+  googleId          String    @unique
+  fullName          String
+  phone             String?
+  address           String?
+  birthday          DateTime?
+  nationality       String?
   passportIssueDate DateTime?
-  avatarUrl      String?
-  passportNumber String?
-  passportExpiry DateTime?
-  role           Role      @default(CUSTOMER)
-  status         Status    @default(ACTIVE)
-  languagePref   String    @default("en")
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  avatarUrl         String?
+  passportNumber    String?
+  passportExpiry    DateTime?
+  role              Role      @default(CUSTOMER)
+  status            Status    @default(ACTIVE)
+  languagePref      String    @default("en")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  packages         Package[]
-  serviceRequests  ServiceRequest[]
-  assignedRequests ServiceRequest[]  @relation("AssignedRequests")
-  reviews          Review[]
-  sentMessages     ChatMessage[]     @relation("Sender")
-  receivedMessages ChatMessage[]     @relation("Receiver")
-  notifications    Notification[]
-  groupMembers     GroupMember[]
-  createdGroups    Group[]           @relation("CreatedGroups")
-  progressHistory  ProgressHistory[]
-  galleryItems     GalleryItem[]
-  faqItems         FAQItem[]
-  knownDevices     KnownDevice[]
-  deviceTokens     DeviceToken[]
-  confirmedPlanSteps TourPlanStep[] @relation("ConfirmedPlanSteps")
-  locationUpdates  LocationTracking[]
-  geofenceAlerts    GeofenceAlert[]
-  customerConversations Conversation[] @relation("CustomerConversations")
-  workerConversations   Conversation[] @relation("WorkerConversations")
+  packages              Package[]
+  serviceRequests       ServiceRequest[]
+  assignedRequests      ServiceRequest[]    @relation("AssignedRequests")
+  reviews               Review[]
+  sentMessages          ChatMessage[]       @relation("Sender")
+  receivedMessages      ChatMessage[]       @relation("Receiver")
+  notifications         Notification[]
+  groupMembers          GroupMember[]
+  createdGroups         Group[]             @relation("CreatedGroups")
+  progressHistory       ProgressHistory[]
+  galleryItems          GalleryItem[]
+  faqItems              FAQItem[]
+  knownDevices          KnownDevice[]
+  deviceTokens          DeviceToken[]
+  confirmedPlanSteps    TourPlanStep[]      @relation("ConfirmedPlanSteps")
+  locationUpdates       LocationTracking[]
+  geofenceAlerts        GeofenceAlert[]
+  customerConversations Conversation[]      @relation("CustomerConversations")
+  workerConversations   Conversation[]      @relation("WorkerConversations")
   profileChanges        ProfileChangeLog[]
   tickets               Ticket[]
   ticketHistory         TicketHistory[]
   flightOrders          FlightOrder[]
-  processedRefunds      Ticket[] @relation("ProcessedRefunds")
-  callRecordsCreated    CallRecord[]  @relation("CreatedCallRecords")
-  callRecordsUpdated    CallRecord[]  @relation("UpdatedCallRecords")
+  processedRefunds      Ticket[]            @relation("ProcessedRefunds")
+  callRecordsCreated    CallRecord[]        @relation("CreatedCallRecords")
+  callRecordsUpdated    CallRecord[]        @relation("UpdatedCallRecords")
   callRecordHistory     CallRecordHistory[]
 }
 
 model Package {
-  id          String      @id @default(uuid())
-  title       String
-  description String
-  type        PackageType
-  image       String?
-  images      String[]    @default([])
-  videoUrl    String?
-  price       Float?
-  currency    String?
-  duration    String?
-  maxMembers  Int         @default(50)
-  includes    String[]
-  excludes    String[]
-  titleAr     String?
-  descriptionAr String?
-  includesAr  String[] @default([])
-  excludesAr  String[] @default([])
-  titleAm     String?
-  descriptionAm String?
-  includesAm  String[] @default([])
-  excludesAm  String[] @default([])
-  translationStatus String @default("PENDING")
-  translationAttempts Int @default(0)
-  isActive    Boolean     @default(true)
-  isCustom    Boolean     @default(false)
-  destination String?
-  groupId     String?
-  group       Group?      @relation(fields: [groupId], references: [id])
-  createdById String
-  createdBy   User        @relation(fields: [createdById], references: [id])
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id                  String      @id @default(uuid())
+  title               String
+  description         String
+  type                PackageType
+  image               String?
+  images              String[]    @default([])
+  videoUrl            String?
+  price               Float?
+  currency            String?
+  duration            String?
+  maxMembers          Int         @default(50)
+  includes            String[]
+  excludes            String[]
+  titleAr             String?
+  descriptionAr       String?
+  includesAr          String[]    @default([])
+  excludesAr          String[]    @default([])
+  titleAm             String?
+  descriptionAm       String?
+  includesAm          String[]    @default([])
+  excludesAm          String[]    @default([])
+  translationStatus   String      @default("PENDING")
+  translationAttempts Int         @default(0)
+  isActive            Boolean     @default(true)
+  isCustom            Boolean     @default(false)
+  destination         String?
+  groupId             String?
+  group               Group?      @relation(fields: [groupId], references: [id])
+  createdById         String
+  createdBy           User        @relation(fields: [createdById], references: [id])
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 }
 
 model GalleryItem {
-  id          String   @id @default(uuid())
-  title       String
-  category    String
-  location    String?
-  date        String?
-  description String
-  titleAr     String?
-  categoryAr  String?
-  locationAr  String?
+  id            String   @id @default(uuid())
+  title         String
+  category      String
+  location      String?
+  date          String?
+  description   String
+  titleAr       String?
+  categoryAr    String?
+  locationAr    String?
   descriptionAr String?
-  titleAm     String?
-  categoryAm  String?
-  locationAm  String?
+  titleAm       String?
+  categoryAm    String?
+  locationAm    String?
   descriptionAm String?
-  images      String[] @default([])
-  videoUrl    String?
-  createdById String
-  createdBy   User     @relation(fields: [createdById], references: [id])
-  createdAt   DateTime @default(now())
+  images        String[] @default([])
+  videoUrl      String?
+  createdById   String
+  createdBy     User     @relation(fields: [createdById], references: [id])
+  createdAt     DateTime @default(now())
 }
 
 model FAQItem {
@@ -255,77 +255,79 @@ model FAQItem {
 }
 
 model ServiceRequest {
-  id           String        @id @default(uuid())
-  userId       String
-  user         User          @relation(fields: [userId], references: [id])
-  serviceType  ServiceType
-  status       RequestStatus @default(PENDING)
-  formData     Json
-  packageId    String?
-  assignedToId String?
-  assignedTo   User?         @relation("AssignedRequests", fields: [assignedToId], references: [id])
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  completedAt  DateTime?
+  id            String        @id @default(uuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  serviceType   ServiceType
+  status        RequestStatus @default(PENDING)
+  formData      Json
+  packageId     String?
+  assignedToId  String?
+  assignedTo    User?         @relation("AssignedRequests", fields: [assignedToId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  completedAt   DateTime?
   paymentStatus PaymentStatus @default(UNPAID)
-  paymentId    String?
-  amount       Float?
-  currency     String @default("ETB")
-  paidAt       DateTime?
+  paymentId     String?
+  amount        Float?
+  currency      String        @default("ETB")
+  paidAt        DateTime?
 
   reviews         Review[]
   progressHistory ProgressHistory[]
 }
 
 model Group {
-  id          String        @id @default(uuid())
-  name        String
-  packageId   String?
-  startDate   DateTime
-  endDate     DateTime
-  status      GroupStatus   @default(UPCOMING)
-  createdById String
-  createdBy   User          @relation("CreatedGroups", fields: [createdById], references: [id])
-  members     GroupMember[]
-  planSteps   TourPlanStep[]
-  packages    Package[]
-  isHidden    Boolean       @default(false)
+  id              String             @id @default(uuid())
+  name            String
+  packageId       String?
+  startDate       DateTime
+  endDate         DateTime
+  status          GroupStatus        @default(UPCOMING)
+  createdById     String
+  createdBy       User               @relation("CreatedGroups", fields: [createdById], references: [id])
+  members         GroupMember[]
+  planSteps       TourPlanStep[]
+  packages        Package[]
+  isHidden        Boolean            @default(false)
   locationUpdates LocationTracking[]
-  geofenceAlerts GeofenceAlert[]
-  createdAt   DateTime      @default(now())
+  geofenceAlerts  GeofenceAlert[]
+  createdAt       DateTime           @default(now())
 }
 
 model GroupMember {
-  id       String     @id @default(uuid())
-  groupId  String
-  group    Group      @relation(fields: [groupId], references: [id])
-  userId   String
-  user     User       @relation(fields: [userId], references: [id])
-  role     MemberRole @default(MEMBER)
-  assignmentStatus String @default("PENDING")
-  joinedAt DateTime   @default(now())
+  id               String     @id @default(uuid())
+  groupId          String
+  group            Group      @relation(fields: [groupId], references: [id])
+  userId           String
+  user             User       @relation(fields: [userId], references: [id])
+  role             MemberRole @default(MEMBER)
+  assignmentStatus String     @default("PENDING")
+  joinedAt         DateTime   @default(now())
+
   @@unique([groupId, userId])
 }
 
 model TourPlanStep {
-  id          String   @id @default(uuid())
-  groupId     String
-  group       Group    @relation(fields: [groupId], references: [id])
-  title       String
-  description String?
-  location    String?
-  estimatedAt DateTime?
-  status      String   @default("UPCOMING")
-  confirmationStatus String @default("PENDING")
-  rejectedReason String?
-  priority    String   @default("MEDIUM")
-  notes       String?
-  actualAt    DateTime?
-  confirmedAt DateTime?
-  confirmedById String?
-  confirmedBy User? @relation("ConfirmedPlanSteps", fields: [confirmedById], references: [id])
-  completedAt DateTime?
-  createdAt   DateTime @default(now())
+  id                 String    @id @default(uuid())
+  groupId            String
+  group              Group     @relation(fields: [groupId], references: [id])
+  title              String
+  description        String?
+  location           String?
+  estimatedAt        DateTime?
+  status             String    @default("UPCOMING")
+  confirmationStatus String    @default("PENDING")
+  rejectedReason     String?
+  priority           String    @default("MEDIUM")
+  notes              String?
+  actualAt           DateTime?
+  confirmedAt        DateTime?
+  confirmedById      String?
+  confirmedBy        User?     @relation("ConfirmedPlanSteps", fields: [confirmedById], references: [id])
+  completedAt        DateTime?
+  createdAt          DateTime  @default(now())
+
   @@index([groupId, estimatedAt])
 }
 
@@ -339,21 +341,23 @@ model LocationTracking {
   longitude Float
   accuracy  Float?
   createdAt DateTime @default(now())
+
   @@index([groupId, userId, createdAt])
 }
 
 model GeofenceAlert {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   groupId        String
-  group          Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group          Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
   memberId       String
-  member         User     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member         User      @relation(fields: [memberId], references: [id], onDelete: Cascade)
   distanceMeters Float
-  active         Boolean  @default(true)
-  lastAlertAt    DateTime @default(now())
+  active         Boolean   @default(true)
+  lastAlertAt    DateTime  @default(now())
   resolvedAt     DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
   @@unique([groupId, memberId])
   @@index([groupId, active])
 }
@@ -372,30 +376,31 @@ model Review {
 }
 
 model ChatMessage {
-  id         String   @id @default(uuid())
-  senderId   String
-  sender     User     @relation("Sender", fields: [senderId], references: [id])
-  receiverId String
-  receiver   User     @relation("Receiver", fields: [receiverId], references: [id])
-  message    String
-  fileUrl    String?
-  fileType   String?
+  id             String        @id @default(uuid())
+  senderId       String
+  sender         User          @relation("Sender", fields: [senderId], references: [id])
+  receiverId     String
+  receiver       User          @relation("Receiver", fields: [receiverId], references: [id])
+  message        String
+  fileUrl        String?
+  fileType       String?
   conversationId String?
-  conversation Conversation? @relation(fields: [conversationId], references: [id])
-  isRead     Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
+  isRead         Boolean       @default(false)
+  createdAt      DateTime      @default(now())
 }
 
 model Conversation {
-  id         String   @id @default(uuid())
+  id         String        @id @default(uuid())
   customerId String
-  customer   User     @relation("CustomerConversations", fields: [customerId], references: [id])
+  customer   User          @relation("CustomerConversations", fields: [customerId], references: [id])
   workerId   String?
-  worker     User?    @relation("WorkerConversations", fields: [workerId], references: [id])
-  channel    String   @default("direct")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  worker     User?         @relation("WorkerConversations", fields: [workerId], references: [id])
+  channel    String        @default("direct")
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
   messages   ChatMessage[]
+
   @@index([customerId, updatedAt])
   @@index([workerId, updatedAt])
 }
@@ -422,6 +427,7 @@ model KnownDevice {
   os          String?
   lastSeenAt  DateTime @default(now())
   createdAt   DateTime @default(now())
+
   @@unique([userId, fingerprint])
 }
 
@@ -433,6 +439,7 @@ model DeviceToken {
   platform  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
   @@index([userId])
 }
 
@@ -458,99 +465,103 @@ model ProfileChangeLog {
   ipAddress  String?
   deviceInfo String?
   changedAt  DateTime @default(now())
+
   @@index([userId, changedAt])
 }
 
 model Ticket {
-  id                 String       @id @default(uuid())
-  ticketNumber       String       @unique
-  userId             String
-  user               User         @relation(fields: [userId], references: [id])
-  airline            String
-  flightNumber       String
-  origin             String
-  destination        String
-  departureAt        DateTime
-  arrivalAt          DateTime?
-  passengerName      String
-  passengerDetails   Json
-  seat               String?
-  cabinClass         String        @default("Economy")
-  paymentMethod      String?
-  totalAmount        Float
-  currency           String        @default("ETB")
-  status             TicketStatus  @default(PENDING)
-  refundReason       String?
-  refundRequestedAt  DateTime?
-  refundProcessedAt  DateTime?
-  processedById      String?
-  processedBy        User?         @relation("ProcessedRefunds", fields: [processedById], references: [id])
-  bookedAt           DateTime      @default(now())
-  completedAt        DateTime?
-  updatedAt          DateTime      @updatedAt
-  reminder24Sent     Boolean       @default(false)
-  reminder3Sent      Boolean       @default(false)
-  history            TicketHistory[]
+  id                String          @id @default(uuid())
+  ticketNumber      String          @unique
+  userId            String
+  user              User            @relation(fields: [userId], references: [id])
+  airline           String
+  flightNumber      String
+  origin            String
+  destination       String
+  departureAt       DateTime
+  arrivalAt         DateTime?
+  passengerName     String
+  passengerDetails  Json
+  seat              String?
+  cabinClass        String          @default("Economy")
+  paymentMethod     String?
+  totalAmount       Float
+  currency          String          @default("ETB")
+  status            TicketStatus    @default(PENDING)
+  refundReason      String?
+  refundRequestedAt DateTime?
+  refundProcessedAt DateTime?
+  processedById     String?
+  processedBy       User?           @relation("ProcessedRefunds", fields: [processedById], references: [id])
+  bookedAt          DateTime        @default(now())
+  completedAt       DateTime?
+  updatedAt         DateTime        @updatedAt
+  reminder24Sent    Boolean         @default(false)
+  reminder3Sent     Boolean         @default(false)
+  history           TicketHistory[]
+
   @@index([userId, departureAt])
   @@index([status, departureAt])
 }
 
 model TicketHistory {
-  id         String   @id @default(uuid())
-  ticketId  String
-  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  statusFrom String?
-  statusTo   String
-  changedById String
-  changedBy User     @relation(fields: [changedById], references: [id])
+  id            String   @id @default(uuid())
+  ticketId      String
+  ticket        Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  statusFrom    String?
+  statusTo      String
+  changedById   String
+  changedBy     User     @relation(fields: [changedById], references: [id])
   changedByName String
-  note      String?
-  reason    String
-  createdAt DateTime @default(now())
+  note          String?
+  reason        String
+  createdAt     DateTime @default(now())
+
   @@index([ticketId, createdAt])
 }
 
 model CallRecord {
-  id               String            @id @default(uuid())
-  teamNumber       String
-  name             String
-  phone            String
-  fatherName       String?
-  passportNumber   String?
-  passportFileUrl  String?
-  otherFileUrl     String?
-  idImageUrl       String?
-  serviceType      String            @default("CONSULTING")
-  packageTitle     String?
-  tripType         String?
-  destination      String?
-  departureDate    DateTime?
-  tripDuration     String?
-  passengerCount   Int?
-  totalAmount      Float            @default(0)
-  paidAmount       Float?
-  remainingAmount  Float?
-  currency         String            @default("ETB")
-  paymentStatus    PaymentStatus?
-  flightNumber     String?
-  flightDate       DateTime?
+  id                  String              @id @default(uuid())
+  teamNumber          String
+  name                String
+  phone               String
+  fatherName          String?
+  passportNumber      String?
+  passportFileUrl     String?
+  otherFileUrl        String?
+  idImageUrl          String?
+  serviceType         String              @default("CONSULTING")
+  packageTitle        String?
+  tripType            String?
+  destination         String?
+  departureDate       DateTime?
+  tripDuration        String?
+  passengerCount      Int?
+  totalAmount         Float               @default(0)
+  paidAmount          Float?
+  remainingAmount     Float?
+  currency            String              @default("ETB")
+  paymentStatus       PaymentStatus?
+  flightNumber        String?
+  flightDate          DateTime?
   flightBookingStatus String?
-  airline          String?
-  additionalInfo   String?
-  createdById      String
-  createdBy        User              @relation("CreatedCallRecords", fields: [createdById], references: [id])
-  updatedById      String?
-  updatedBy        User?             @relation("UpdatedCallRecords", fields: [updatedById], references: [id])
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  history          CallRecordHistory[]
+  airline             String?
+  additionalInfo      String?
+  createdById         String
+  createdBy           User                @relation("CreatedCallRecords", fields: [createdById], references: [id])
+  updatedById         String?
+  updatedBy           User?               @relation("UpdatedCallRecords", fields: [updatedById], references: [id])
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  history             CallRecordHistory[]
+
   @@index([createdById, createdAt])
   @@index([teamNumber])
 }
 
 model CallRecordHistory {
   id            String     @id @default(uuid())
-  callRecordId   String
+  callRecordId  String
   callRecord    CallRecord @relation(fields: [callRecordId], references: [id], onDelete: Cascade)
   changedById   String
   changedBy     User       @relation(fields: [changedById], references: [id])
@@ -560,5 +571,55 @@ model CallRecordHistory {
   toValue       String?
   note          String?
   createdAt     DateTime   @default(now())
+
   @@index([callRecordId, createdAt])
+}
+
+model SystemSecret {
+  id             String    @id @default(uuid())
+  provider       String    @unique
+  ciphertext     String
+  enabled        Boolean   @default(true)
+  lastTestedAt   DateTime?
+  lastTestStatus String?
+  rotatedAt      DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model SystemAuditLog {
+  id        String   @id @default(uuid())
+  actorId   String
+  action    String
+  target    String?
+  outcome   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+}
+
+model SystemMaintenance {
+  id          String    @id @default(uuid())
+  enabled     Boolean   @default(false)
+  message     String    @default("TOGT is temporarily unavailable for maintenance.")
+  startsAt    DateTime?
+  endsAt      DateTime?
+  updatedById String?
+  updatedAt   DateTime  @updatedAt
+}
+
+model SystemBackup {
+  id          String    @id @default(uuid())
+  status      String
+  destination String
+  sizeBytes   BigInt?
+  checksum    String?
+  error       String?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  createdById String?
+
+  @@index([startedAt])
 }

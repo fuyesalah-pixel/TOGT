@@ -103,6 +103,7 @@
       "domestic": "Domestic",
       "tourist": "Tourist",
       "visa": "Visa",
+      "foreignTravel": "Foreign Travel",
       "contact": "Contact Us"
     },
     "common": {
@@ -221,6 +222,7 @@
     "contactButton": "Contact Us"
   },
   "Testimonials": {
+    "eyebrow": "Yaada imaltootaa",
     "title": "What Our Travelers Say",
     "seeMore": "See More",
     "noMore": "No more reviews"
@@ -235,6 +237,7 @@
     "iataBadge": "Accredited Agency",
     "iataFooterNote": "IATA Accredited Agency \u00b7 Addis Ababa, Ethiopia",
     "flightTicketing": "Flight Ticketing",
+    "foreignTravel": "Foreign Travel",
     "travelConsulting": "Travel Consulting",
     "whyTogt": "Why TOGT",
     "gallery": "Gallery",

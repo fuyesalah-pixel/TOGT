@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/gallery_item.dart';
 import '../services/api_service.dart';
 import '../services/content_service.dart';
@@ -45,10 +46,11 @@ class _GallerySectionState extends State<GallerySection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionTitle(title: 'Gallery', subtitle: 'Moments from TOGT journeys'),
+        _SectionTitle(title: l10n.gallery, subtitle: l10n.galleryMoments),
         const SizedBox(height: 14),
         if (_items == null && _error == null)
           const _GallerySkeleton()
@@ -102,6 +104,7 @@ class _GalleryError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -111,11 +114,11 @@ class _GalleryError extends StatelessWidget {
       child: Column(children: [
         const Icon(Icons.photo_library_outlined, color: TOGTColors.grey, size: 32),
         const SizedBox(height: 8),
-        Text('Gallery unavailable', style: TOGTTypography.h3),
+        Text(l10n.galleryUnavailable, style: TOGTTypography.h3),
         const SizedBox(height: 4),
         Text(message, style: TOGTTypography.small, textAlign: TextAlign.center),
         const SizedBox(height: 10),
-        TextButton(onPressed: onRetry, child: const Text('Retry')),
+        TextButton(onPressed: onRetry, child: Text(l10n.retry)),
       ]),
     );
   }
@@ -150,6 +153,7 @@ class _GalleryCardState extends State<_GalleryCard>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final item = widget.item;
     final color = _categoryColor(item.category);
     return FadeTransition(
@@ -310,10 +314,11 @@ class _GalleryDetail extends StatefulWidget {
 class _GalleryDetailState extends State<_GalleryDetail> {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final item = widget.item;
     final videos = item.videos.where((v) => v.url.isNotEmpty).toList();
     return Scaffold(
-      appBar: AppBar(title: const Text('Gallery')),
+      appBar: AppBar(title: Text(l10n.gallery)),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -350,7 +355,7 @@ class _GalleryDetailState extends State<_GalleryDetail> {
             const SizedBox(height: 14),
           ],
           if (item.images.isNotEmpty) ...[
-            Text('More Photos', style: TOGTTypography.h3),
+            Text(l10n.morePhotos, style: TOGTTypography.h3),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
@@ -376,7 +381,7 @@ class _GalleryDetailState extends State<_GalleryDetail> {
           ],
           if (videos.isNotEmpty) ...[
             const SizedBox(height: 18),
-            Text('Videos', style: TOGTTypography.h3),
+            Text(l10n.videos, style: TOGTTypography.h3),
             const SizedBox(height: 10),
             for (final v in videos)
               ListTile(
@@ -389,7 +394,7 @@ class _GalleryDetailState extends State<_GalleryDetail> {
                   ),
                   child: const Icon(Icons.play_arrow_rounded, color: TOGTColors.blue),
                 ),
-                title: Text(v.title.isEmpty ? 'Watch video' : v.title,
+                title: Text(v.title.isEmpty ? l10n.watchVideo : v.title,
                     style: TOGTTypography.h3),
                 trailing:
                     const Icon(Icons.open_in_new_rounded, color: TOGTColors.grey),

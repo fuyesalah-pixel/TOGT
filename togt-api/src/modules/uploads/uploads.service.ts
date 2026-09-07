@@ -4,7 +4,8 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -79,5 +80,26 @@ export class UploadsService {
     );
 
     return `${this.publicUrl}/${key}`;
+  }
+
+  async uploadPrivate(file: Express.Multer.File, folder: string): Promise<string> {
+    if (!this.client) throw new ServiceUnavailableException('File storage is not configured (missing R2 credentials)');
+    this.validate(file);
+    const safeName = file.originalname.replace(/^.*[\\/]/, '').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80);
+    const safeFolder = folder.replace(/[^a-zA-Z0-9_-]/g, '') || 'private';
+    const key = `${safeFolder}/${Date.now()}-${randomUUID()}-${safeName}`;
+    await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: file.buffer, ContentType: file.mimetype }));
+    return key;
+  }
+
+  async signedUrl(key: string): Promise<string> {
+    if (!this.client) throw new ServiceUnavailableException('File storage is not configured');
+    return getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: key }), { expiresIn: 300 });
+  }
+
+  private validate(file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('No file provided');
+    if (file.size > MAX_FILE_SIZE) throw new BadRequestException('File exceeds the 10MB limit');
+    if (!ALLOWED_MIME_TYPES.has(file.mimetype)) throw new BadRequestException('Unsupported file type. Allowed: jpg, jpeg, png, gif, webp, pdf');
   }
 }

@@ -3,16 +3,17 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Check, Download, Smartphone, Hand } from "lucide-react";
-
-const features = ["Book packages from your phone", "Track service requests in real time", "Chat with TOGT support", "GPS parent tracking for Umrah", "Qibla locator and Azan alarm", "Instant multilingual notifications"];
+import { useTranslations } from "next-intl";
 
 export function DownloadAppSection() {
+  const t = useTranslations("DownloadApp");
+  const features = [t("featureBook"), t("featureTrack"), t("featureChat"), t("featureGps"), t("featureQibla"), t("featureNotifications")];
   const [slide, setSlide] = useState(0);
   const guide = [
-    { title: "TOGT Home", detail: "Find flights, tours, and Umrah packages.", color: "bg-togt-navy", kind: "home" },
-    { title: "Choose a package", detail: "Tap a package card to see the details.", color: "bg-togt-blue", kind: "package" },
-    { title: "Fill your form", detail: "Send your travel details securely.", color: "bg-togt-orange", kind: "form" },
-    { title: "Request submitted", detail: "Success! TOGT will keep you updated.", color: "bg-emerald-600", kind: "success" },
+    { title: t("guideHome"), detail: t("guideHomeDetail"), color: "bg-togt-navy", kind: "home" },
+    { title: t("guidePackage"), detail: t("guidePackageDetail"), color: "bg-togt-blue", kind: "package" },
+    { title: t("guideForm"), detail: t("guideFormDetail"), color: "bg-togt-orange", kind: "form" },
+    { title: t("guideSuccess"), detail: t("guideSuccessDetail"), color: "bg-emerald-600", kind: "success" },
   ];
   useEffect(() => { const timer = window.setInterval(() => setSlide((current) => (current + 1) % guide.length), 3200); return () => window.clearInterval(timer); }, [guide.length]);
   const currentGuide = guide[slide];
@@ -37,12 +38,12 @@ export function DownloadAppSection() {
           </div>
         </motion.div>
         <motion.div initial={{ opacity: 0, x: 40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
-          <p className="text-xs font-bold uppercase tracking-[0.25em] text-togt-orange">Mobile App</p>
-          <h2 className="mt-3 text-3xl font-extrabold md:text-5xl">Download Our <span className="text-togt-orange">App</span></h2>
-          <p className="mt-4 max-w-xl text-white/75">Take TOGT everywhere. Book packages, track requests, chat with support, and stay connected during your journey.</p>
-          <ul className="mt-7 grid gap-3 sm:grid-cols-2">{features.map((feature, index) => <motion.li key={feature} initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.06 }} className="flex items-center gap-2 text-sm text-white/85"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-togt-orange/20 text-togt-orange"><Check className="h-4 w-4" /></span>{feature}</motion.li>)}</ul>
-           <div className="mt-8 flex flex-col gap-3 sm:flex-row"><a href="/downloads/TOGT-Android.apk" download className="inline-flex items-center justify-center gap-3 rounded-xl bg-togt-orange px-5 py-3 font-bold text-white shadow-lg transition hover:scale-105 hover:bg-orange-600"><Download className="h-5 w-5" /><span><small className="block text-left text-xs text-white/75">Download for</small>Android APK</span></a><a href="https://apps.apple.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-3 rounded-xl bg-white px-5 py-3 font-bold text-togt-navy shadow-lg transition hover:scale-105"><span className="text-xl">🍎</span><span><small className="block text-left text-xs text-gray-500">Coming soon on</small>App Store</span></a></div>
-          <p className="mt-4 text-xs text-white/45">Version 1.0.0 · Android 8+ · iOS 13+</p>
+           <p className="text-xs font-bold uppercase tracking-[0.25em] text-togt-orange">{t("eyebrow")}</p>
+           <h2 className="mt-3 text-3xl font-extrabold md:text-5xl">{t("title")}</h2>
+           <p className="mt-4 max-w-xl text-white/75">{t("description")}</p>
+           <ul className="mt-7 grid gap-3 sm:grid-cols-2">{features.map((feature, index) => <motion.li key={feature} initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.06 }} className="flex items-center gap-2 text-sm text-white/85"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-togt-orange/20 text-togt-orange"><Check className="h-4 w-4" /></span>{feature}</motion.li>)}</ul>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row"><a href="/downloads/TOGT-Android.apk" download className="inline-flex items-center justify-center gap-3 rounded-xl bg-togt-orange px-5 py-3 font-bold text-white shadow-lg transition hover:scale-105 hover:bg-orange-600"><Download className="h-5 w-5" /><span><small className="block text-left text-xs text-white/75">{t("downloadFor")}</small>{t("android")}</span></a><a href="https://apps.apple.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-3 rounded-xl bg-white px-5 py-3 font-bold text-togt-navy shadow-lg transition hover:scale-105"><span className="text-xl">🍎</span><span><small className="block text-left text-xs text-gray-500">{t("comingSoon")}</small>{t("appStore")}</span></a></div>
+           <p className="mt-4 text-xs text-white/45">{t("version")}</p>
         </motion.div>
       </div>
     </section>

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 import '../models/package_model.dart';
 import '../services/package_service.dart';
@@ -31,22 +32,22 @@ class _HomeScreenState extends State<HomeScreen> {
   List<TPackage>? packages;
   String? error;
 
-  static const heroSlides = [
+  List<HeroSlide> _heroSlides(AppLocalizations l10n) => [
     HeroSlide(
         imageUrl: '/images/hero/hero-benuna-image-domesetic-1st.jpg',
-        title: 'Discover Ethiopia',
-        subtitle: 'Domestic tours across the north & south'),
+        title: l10n.domesticTours,
+        subtitle: 'Domestic tours across Ethiopia'),
     HeroSlide(
         imageUrl: '/images/hero/hero-umra-2nd.jpg',
-        title: 'Umrah 2026',
+        title: l10n.umrah,
         subtitle: 'Economy · VIP · Honeymoon packages'),
     HeroSlide(
         imageUrl: '/images/hero/hero-tecketing-3rd.jpg',
-        title: 'IATA Ticketing',
+        title: l10n.flightTicketing,
         subtitle: 'Best fares on all major airlines'),
     HeroSlide(
         imageUrl: '/images/hero/hero-visa-proccess-5th.jpg',
-        title: 'Visa Processing',
+        title: l10n.visaProcessing,
         subtitle: 'Visit, medical & family visas made easy'),
   ];
 
@@ -98,6 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final featured = (packages ?? []).take(6).toList();
     return SafeArea(
       bottom: false,
@@ -133,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('TOGT Tour & Travel', style: TOGTTypography.h3),
-                            Text('Where would you like to go?', style: TOGTTypography.small),
+                             Text(l10n.whereGo, style: TOGTTypography.small),
                           ],
                         ),
                       ],
@@ -148,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const AllPackagesScreen())),
                         decoration: InputDecoration(
-                          hintText: 'Search destinations, packages…',
+                           hintText: l10n.searchDestinations,
                           prefixIcon: Icon(Icons.search_rounded, color: TOGTColors.orange),
                           suffixIcon: Container(
                             margin: const EdgeInsets.all(6),
@@ -170,12 +172,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SliverToBoxAdapter(child: SizedBox(height: 22)),
                 SliverToBoxAdapter(
                   child: RepaintBoundary(
-                    child: HeroCarousel(items: heroSlides),
+                     child: HeroCarousel(items: _heroSlides(l10n)),
                   ),
                 ),
                 const SliverToBoxAdapter(child: SizedBox(height: 26)),
-                const SliverToBoxAdapter(
-                  child: _SectionHeader(title: 'Services', onSeeAll: null),
+                 SliverToBoxAdapter(
+                   child: _SectionHeader(title: l10n.services, onSeeAll: null),
                 ),
                 const SliverToBoxAdapter(child: SizedBox(height: 12)),
                 SliverToBoxAdapter(
@@ -186,22 +188,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     mainAxisSpacing: 16,
                     crossAxisSpacing: 8,
                     childAspectRatio: .76,
-                    children: const [
-                      _Service(icon: Icons.flight_takeoff_rounded, label: 'Tickets', type: 'FLIGHT'),
-                      _Service(icon: Icons.mosque_rounded, label: 'Umrah', type: 'UMRAH'),
-                      _Service(icon: Icons.landscape_rounded, label: 'Domestic', type: 'DOMESTIC'),
-                      _Service(icon: Icons.public_rounded, label: 'Foreign', type: 'FOREIGN'),
-                      _Service(icon: Icons.badge_outlined, label: 'Visa', type: 'VISA'),
-                      _Service(icon: Icons.business_center_outlined, label: 'Consult', type: 'CONSULTING'),
-                      _Service(icon: Icons.phone_in_talk_outlined, label: 'Contact', type: 'CONTACT'),
-                      _Service(icon: Icons.card_giftcard_rounded, label: 'Gift', type: 'UMRAH_GIFT'),
+                     children: [
+                       _Service(icon: Icons.flight_takeoff_rounded, label: l10n.ticket, type: 'FLIGHT'),
+                       _Service(icon: Icons.mosque_rounded, label: l10n.umrah, type: 'UMRAH'),
+                       _Service(icon: Icons.landscape_rounded, label: l10n.domesticTours, type: 'DOMESTIC'),
+                       _Service(icon: Icons.public_rounded, label: l10n.foreignTravel, type: 'FOREIGN'),
+                       _Service(icon: Icons.badge_outlined, label: l10n.visa, type: 'VISA'),
+                       _Service(icon: Icons.business_center_outlined, label: l10n.services, type: 'CONSULTING'),
+                       _Service(icon: Icons.phone_in_talk_outlined, label: l10n.contact, type: 'CONTACT'),
+                       _Service(icon: Icons.card_giftcard_rounded, label: l10n.umrah, type: 'UMRAH_GIFT'),
                     ],
                   ),
                 ),
                 const SliverToBoxAdapter(child: SizedBox(height: 26)),
                 SliverToBoxAdapter(
                   child: _SectionHeader(
-                      title: 'Featured Packages',
+                       title: l10n.featuredPackages,
                       onSeeAll: () {
                         Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const AllPackagesScreen()));
@@ -248,7 +250,7 @@ class _SectionHeader extends StatelessWidget {
           GestureDetector(
             onTap: onSeeAll,
             child: Row(children: [
-              Text('See all',
+               Text(l10n.seeAllPackages,
                   style: TOGTTypography.button
                       .copyWith(color: TOGTColors.orange, fontSize: 13)),
               Icon(Icons.chevron_right_rounded, size: 18, color: TOGTColors.orange),
@@ -352,12 +354,12 @@ class _ErrorPanel extends StatelessWidget {
         children: [
           const Icon(Icons.wifi_off_rounded, color: TOGTColors.grey, size: 36),
           const SizedBox(height: 10),
-          Text('Cannot reach the API',
+           Text(AppLocalizations.of(context).cannotReachApi,
               style: TOGTTypography.h3),
           const SizedBox(height: 4),
           Text(message, style: TOGTTypography.small, textAlign: TextAlign.center),
           const SizedBox(height: 12),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
+           TextButton(onPressed: onRetry, child: Text(AppLocalizations.of(context).retry)),
         ],
       ),
     );

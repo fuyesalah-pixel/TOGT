@@ -13,21 +13,25 @@ export class ServiceRequestsController {
   constructor(private readonly serviceRequests: ServiceRequestsService) {}
 
   @Get()
+  @Roles(Role.CUSTOMER, Role.WORKER, Role.ADMIN)
   findAll(@Query() query: QueryServiceRequestsDto, @CurrentUser() user: User) {
     return this.serviceRequests.findAll(query, user);
   }
 
   @Post()
+  @Roles(Role.CUSTOMER)
   create(@Body() dto: CreateServiceRequestDto, @CurrentUser() user: User) {
     return this.serviceRequests.create(dto, user);
   }
 
   @Get(':id')
+  @Roles(Role.CUSTOMER, Role.WORKER, Role.ADMIN)
   findOne(@Param('id') id: string, @CurrentUser() user: User) {
     return this.serviceRequests.findOne(id, user);
   }
 
   @Patch(':id/amount')
+  @Roles(Role.CUSTOMER, Role.WORKER, Role.ADMIN)
   setAmount(@Param('id') id: string, @Body('amount') amount: number, @CurrentUser() user: User) {
     return this.serviceRequests.setAmount(id, amount, user);
   }
@@ -45,13 +49,21 @@ export class ServiceRequestsController {
   }
 
   @Get(':id/history')
+  @Roles(Role.CUSTOMER, Role.WORKER, Role.ADMIN)
   getHistory(@Param('id') id: string, @CurrentUser() user: User) {
     return this.serviceRequests.getHistory(id, user);
   }
 
   @Post(':id/documents')
+  @Roles(Role.CUSTOMER, Role.WORKER, Role.ADMIN)
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   addDocument(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @CurrentUser() user: User) {
     return this.serviceRequests.addDocument(id, file, user);
+  }
+
+  @Get(':id/documents/:index')
+  @Roles(Role.CUSTOMER, Role.WORKER, Role.ADMIN)
+  getDocument(@Param('id') id: string, @Param('index') index: string, @CurrentUser() user: User) {
+    return this.serviceRequests.getDocumentUrl(id, Number(index), user);
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../services/document_service.dart';
 import '../../theme/colors.dart';
@@ -31,8 +32,9 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
     if (_rating == 0 || _text.text.trim().length < 5) {
-      setState(() => _message = 'Choose a rating and write at least 5 characters.');
+      setState(() => _message = l10n.required);
       return;
     }
     setState(() { _busy = true; _message = null; });
@@ -48,29 +50,29 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
         'reviewText': _text.text.trim(),
         'imageUrls': urls,
       });
-      if (mounted) setState(() => _message = 'Thank you. Your review was submitted for approval.');
+       if (mounted) setState(() => _message = l10n.requestSubmitted);
     } catch (e) {
-      if (mounted) setState(() => _message = 'Could not submit review: $e');
+       if (mounted) setState(() => _message = l10n.submissionFailed(e.toString()));
     } finally { if (mounted) setState(() => _busy = false); }
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Reviews')),
+  Widget build(BuildContext context) { final l10n = AppLocalizations.of(context); return Scaffold(
+    appBar: AppBar(title: Text(l10n.reviews)),
     body: ListView(padding: const EdgeInsets.all(22), children: [
-      Text('Share your experience', style: TOGTTypography.h1),
+      Text(l10n.shareExperience, style: TOGTTypography.h1),
       const SizedBox(height: 8),
-      Text('Your feedback helps other travelers choose with confidence.', style: TOGTTypography.body),
+      Text(l10n.feedbackHelps, style: TOGTTypography.body),
       const SizedBox(height: 26),
       Center(child: Row(mainAxisSize: MainAxisSize.min, children: List.generate(5, (i) => IconButton(onPressed: () => setState(() => _rating = i + 1), icon: Icon(i < _rating ? Icons.star_rounded : Icons.star_border_rounded, color: TOGTColors.orange, size: 38))))),
       const SizedBox(height: 12),
-      TextField(controller: _text, maxLines: 6, decoration: const InputDecoration(labelText: 'Your review', hintText: 'Tell us about your journey...')),
+      TextField(controller: _text, maxLines: 6, decoration: InputDecoration(labelText: l10n.yourReview, hintText: l10n.tellJourney)),
       const SizedBox(height: 18),
-      Row(children: [Text('Photos (${_images.length}/3)', style: TOGTTypography.h3), const Spacer(), TextButton.icon(onPressed: _images.length < 3 ? _pickImage : null, icon: const Icon(Icons.add_photo_alternate_outlined), label: const Text('Add photo'))]),
+      Row(children: [Text(l10n.photosCount(_images.length), style: TOGTTypography.h3), const Spacer(), TextButton.icon(onPressed: _images.length < 3 ? _pickImage : null, icon: const Icon(Icons.add_photo_alternate_outlined), label: Text(l10n.addPhoto))]),
       if (_images.isNotEmpty) SizedBox(height: 92, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: _images.length, separatorBuilder: (_, __) => const SizedBox(width: 10), itemBuilder: (_, i) => Stack(children: [ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(File(_images[i].path), width: 92, height: 92, fit: BoxFit.cover)), Positioned(right: 2, top: 2, child: GestureDetector(onTap: () => setState(() => _images.removeAt(i)), child: const CircleAvatar(radius: 11, backgroundColor: Colors.black54, child: Icon(Icons.close, color: Colors.white, size: 14))))]))),
       const SizedBox(height: 24),
-      AnimatedButton(label: _busy ? 'Submitting...' : 'Submit Review', icon: Icons.send_rounded, onPressed: _busy ? null : _submit),
+      AnimatedButton(label: _busy ? l10n.sending : l10n.reviews, icon: Icons.send_rounded, onPressed: _busy ? null : _submit),
       if (_message != null) Padding(padding: const EdgeInsets.only(top: 16), child: Text(_message!, style: TOGTTypography.body.copyWith(color: _message!.startsWith('Thank') ? TOGTColors.green : TOGTColors.red))),
     ]),
-  );
+  ); }
 }

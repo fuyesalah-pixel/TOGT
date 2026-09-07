@@ -5,10 +5,10 @@ import { useSearchParams } from "next/navigation";
 import { useRoleGuard } from "@/hooks/useRoleGuard";
 import { LoadingSpinner } from "@/components/dashboard/shared/loading-spinner";
 import { SettingsTab } from "@/components/dashboard/shared/settings-tab";
-import { HealthTab } from "@/components/dashboard/tech/health-tab";
+import { SystemDashboard } from "@/components/dashboard/tech/system-dashboard";
 
-const TABS = [
-  { id: "health", label: "System Health" },
+  const TABS = [
+   { id: "health", label: "System Control" },
   { id: "settings", label: "Settings" },
 ];
 
@@ -22,7 +22,7 @@ export default function TechDashboardPage() {
 
   return (
     <div>
-      {tab === "health" && <HealthTab />}
+      {tab === "health" && <SystemDashboard />}
       {tab === "settings" && <SettingsTab />}
     </div>
   );

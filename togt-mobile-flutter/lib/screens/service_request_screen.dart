@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../services/request_service.dart';
 import '../theme/colors.dart';
@@ -56,12 +57,13 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
     final required = ['Full name', 'Email', if (widget.serviceType != 'DOMESTIC') 'Phone', if (widget.serviceType == 'CONTACT' || widget.serviceType == 'CONSULTING') 'Message'];
     if (required.any((name) => _field(name).text.trim().isEmpty)) {
-      setState(() => _message = 'Please complete all required fields.');
+      setState(() => _message = l10n.required);
       return;
     }
-    if (_field('Email').text.isNotEmpty && !_field('Email').text.contains('@')) { setState(() => _message = 'Enter a valid email address.'); return; }
+    if (_field('Email').text.isNotEmpty && !_field('Email').text.contains('@')) { setState(() => _message = l10n.profileSaveFailed('valid email required')); return; }
     setState(() { _busy = true; _message = null; });
     try {
       await RequestService.instance.createRequest(type: widget.serviceType, payload: {
@@ -76,27 +78,30 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
          },
        );
     } catch (e) {
-      setState(() => _message = 'Submission failed: $e');
+      setState(() => _message = l10n.submissionFailed(e.toString()));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
         appBar: AppBar(title: Text(widget.title)),
         body: ListView(padding: const EdgeInsets.all(22), children: [
           Text('${widget.title} request', style: TOGTTypography.h1),
           const SizedBox(height: 8),
-          Text('Tell us what you need and a TOGT specialist will follow up.', style: TOGTTypography.body),
+           Text(l10n.requestFollowup, style: TOGTTypography.body),
           const SizedBox(height: 26),
           ..._fieldNames.map((label) => _isDate(label) ? _dateField(label) : _inputField(label)),
           const SizedBox(height: 26),
-          AnimatedButton(label: _busy ? 'Sending...' : 'Send Request', icon: Icons.send_rounded, onPressed: _busy ? null : _submit),
+           AnimatedButton(label: _busy ? l10n.sending : l10n.sendRequest, icon: Icons.send_rounded, onPressed: _busy ? null : _submit),
           if (_message != null) Padding(padding: const EdgeInsets.only(top: 18), child: Text(_message!, style: TOGTTypography.body.copyWith(color: _message!.startsWith('Request') ? TOGTColors.green : TOGTColors.red))),
-          if (_message?.startsWith('Request') == true) Row(children: [Expanded(child: OutlinedButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment checkout will open when a payment reference is issued.'))), child: const Text('Pay Now'))), const SizedBox(width: 12), Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Pay Later')))]),
+           if (_message?.startsWith('Request') == true) Row(children: [Expanded(child: OutlinedButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.paymentReferencePending))), child: Text(l10n.payNow))), const SizedBox(width: 12), Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.payLater)))]),
         ]),
       );
+  }
 
   bool _isDate(String label) => label.toLowerCase().contains('date');
   bool _isSearchable(String label) => ['From', 'To', 'Destination', 'Destination country', 'Nationality', 'Airline', 'Airline preference', 'Package type', 'Cabin class', 'Tour type', 'Visa type', 'Hotel preference', 'Room type', 'Accommodation type'].contains(label);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/colors.dart';
 
 class TogtNavBar extends StatelessWidget {
@@ -11,16 +12,16 @@ class TogtNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
-  static const items = [
-    (icon: Icons.home_rounded, activeIcon: Icons.home_filled, label: 'Home'),
-    (icon: Icons.grid_view_outlined, activeIcon: Icons.grid_view_rounded, label: 'Packages'),
-    (icon: Icons.mosque_outlined, activeIcon: Icons.mosque_rounded, label: 'Personal'),
-    (icon: Icons.chat_bubble_outline_rounded, activeIcon: Icons.chat_bubble_rounded, label: 'Chat'),
-    (icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profile'),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final items = [
+      (icon: Icons.home_rounded, activeIcon: Icons.home_filled, label: l10n.home),
+      (icon: Icons.grid_view_outlined, activeIcon: Icons.grid_view_rounded, label: l10n.packages),
+      (icon: Icons.mosque_outlined, activeIcon: Icons.mosque_rounded, label: l10n.personal),
+      (icon: Icons.chat_bubble_outline_rounded, activeIcon: Icons.chat_bubble_rounded, label: l10n.chat),
+      (icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: l10n.profile),
+    ];
     return Theme(
       data: Theme.of(context).copyWith(splashColor: Colors.transparent),
       child: Container(

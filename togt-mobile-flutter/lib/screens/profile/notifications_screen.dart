@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../theme/colors.dart';
 import '../../theme/typography.dart';
@@ -33,12 +34,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Notifications'), actions: [TextButton(onPressed: _items.isEmpty ? null : () async { await ApiService.instance.patch('/notifications/read-all'); _load(); }, child: const Text('Read all'))]),
+  Widget build(BuildContext context) { final l10n = AppLocalizations.of(context); return Scaffold(
+    appBar: AppBar(title: Text(l10n.notifications), actions: [TextButton(onPressed: _items.isEmpty ? null : () async { await ApiService.instance.patch('/notifications/read-all'); _load(); }, child: Text(l10n.readAll))]),
     body: RefreshIndicator(
       color: TOGTColors.orange,
       onRefresh: _load,
-      child: _loading ? const Center(child: CircularProgressIndicator()) : _error != null ? ListView(children: [Padding(padding: const EdgeInsets.all(28), child: Text('Unable to load notifications\n$_error', textAlign: TextAlign.center))]) : _items.isEmpty ? ListView(children: [Padding(padding: const EdgeInsets.all(40), child: Center(child: Text('No notifications yet.', style: TOGTTypography.body)))]) : ListView.separated(
+       child: _loading ? const Center(child: CircularProgressIndicator()) : _error != null ? ListView(children: [Padding(padding: const EdgeInsets.all(28), child: Text(l10n.failedLoad(l10n.notifications, _error!), textAlign: TextAlign.center))]) : _items.isEmpty ? ListView(children: [Padding(padding: const EdgeInsets.all(40), child: Center(child: Text(l10n.noNotifications, style: TOGTTypography.body)))]) : ListView.separated(
         padding: const EdgeInsets.all(18),
         itemCount: _items.length,
         separatorBuilder: (_, index) => const SizedBox(height: 8),
@@ -49,5 +50,5 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         },
       ),
     ),
-  );
+   ); }
 }

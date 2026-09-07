@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../theme/typography.dart';
 import '../theme/colors.dart';
 import 'chat_screen.dart';
@@ -9,18 +10,19 @@ class ChatHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return ColoredBox(
       color: const Color(0xFFF9FAFB),
       child: SafeArea(
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Text('TOGT Support', style: TOGTTypography.h1.copyWith(color: const Color(0xFF12394F))),
+          Text(l10n.chat, style: TOGTTypography.h1.copyWith(color: const Color(0xFF12394F))),
           const SizedBox(height: 8),
-          Text('Choose how you want to talk', style: TOGTTypography.body),
+          Text(l10n.services, style: TOGTTypography.body),
           const SizedBox(height: 22),
-          _ChoiceCard(title: 'AI Assistant', subtitle: 'Common travel answers and requests.', icon: Icons.smart_toy_outlined, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatScreen(human: false)))),
-          _ChoiceCard(title: 'Human Support', subtitle: 'Chat with the TOGT team.', icon: Icons.support_agent_outlined, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatScreen(human: true)))),
+          _ChoiceCard(title: l10n.aiAssistant, subtitle: l10n.commonTravelAnswers, icon: Icons.smart_toy_outlined, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatScreen(human: false)))),
+          _ChoiceCard(title: l10n.humanSupport, subtitle: l10n.chatTeam, icon: Icons.support_agent_outlined, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatScreen(human: true)))),
         ],
       ),
     ));

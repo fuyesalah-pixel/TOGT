@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../navigation/app_navigator.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
@@ -15,15 +16,17 @@ class SuccessDialog {
   static Future<void> show({
     required BuildContext context,
     required VoidCallback onGoHome,
-    String title = 'Request Submitted Successfully!',
-    String message = 'Your request has been sent to the TOGT team.',
+    String? title,
+    String? message,
   }) {
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => PopScope(
-        canPop: false,
-        child: Dialog(
+      builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx);
+        return PopScope(
+          canPop: false,
+          child: Dialog(
           backgroundColor: TOGTColors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           child: Padding(
@@ -33,16 +36,16 @@ class SuccessDialog {
               children: [
                 const _AnimatedSuccessIcon(),
                 const SizedBox(height: 20),
-                Text(title,
+                Text(title ?? l10n.requestSubmitted,
                     textAlign: TextAlign.center,
                     style: TOGTTypography.h2),
                 const SizedBox(height: 8),
-                Text(message,
+                Text(message ?? l10n.requestSent,
                     textAlign: TextAlign.center,
                     style: TOGTTypography.body),
                 const SizedBox(height: 24),
                 AnimatedButton(
-                  label: 'Go to Home',
+                  label: l10n.goHome,
                   icon: Icons.home_rounded,
                   gradient: TOGTColors.blueGradient,
                   onPressed: () {
@@ -54,8 +57,9 @@ class SuccessDialog {
               ],
             ),
           ),
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:adhan/adhan.dart';
+import '../l10n/app_localizations.dart';
 import '../services/prayer_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
@@ -25,7 +26,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
   String? _locationError;
   StreamSubscription<CompassEvent>? _compass;
 
-  static const _sections = ['Prayer times', 'Qibla', 'Azkar', 'Tasbih'];
+  AppLocalizations get l10n => AppLocalizations.of(context);
 
   @override
   void initState() {
@@ -75,11 +76,11 @@ class _PersonalScreenState extends State<PersonalScreen> {
   Widget build(BuildContext context) => SafeArea(
         bottom: false,
         child: ListView(padding: const EdgeInsets.fromLTRB(20, 14, 20, 32), children: [
-          Text('Personal', style: TOGTTypography.h1),
+          Text(l10n.personalTitle, style: TOGTTypography.h1),
           const SizedBox(height: 5),
-          Text('Tools for your daily journey', style: TOGTTypography.body),
+          Text(l10n.personalTools, style: TOGTTypography.body),
           const SizedBox(height: 20),
-          SizedBox(height: 42, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: _sections.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (_, i) => ChoiceChip(label: Text(_sections[i]), selected: _section == i, selectedColor: TOGTColors.orange, labelStyle: TextStyle(color: _section == i ? TOGTColors.white : TOGTColors.navy, fontWeight: FontWeight.w700), onSelected: (_) => setState(() => _section = i)))),
+           SizedBox(height: 42, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: 4, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (_, i) => ChoiceChip(label: Text([l10n.prayerTimes, l10n.qibla, l10n.azkar, l10n.personalTitle][i]), selected: _section == i, selectedColor: TOGTColors.orange, labelStyle: TextStyle(color: _section == i ? TOGTColors.white : TOGTColors.navy, fontWeight: FontWeight.w700), onSelected: (_) => setState(() => _section = i)))),
           const SizedBox(height: 18),
           AnimatedSwitcher(duration: const Duration(milliseconds: 350), child: _content()),
         ]),
@@ -95,14 +96,14 @@ class _PersonalScreenState extends State<PersonalScreen> {
   }
 
   Widget _prayerTimes() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _hero(Icons.access_time_rounded, 'Next prayer', 'Asr in 2h 14m'),
+        _hero(Icons.access_time_rounded, l10n.prayerTimes, l10n.azanAlarm),
         const SizedBox(height: 18),
         ..._prayerRows(),
-        SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Azan alarm'), subtitle: const Text('Notify me before prayer time'), value: _azan, activeThumbColor: TOGTColors.orange, onChanged: (v) async { setState(() => _azan = v); if (_times != null) await PrayerService.instance.schedule(_times!, enabled: v); }),
+         SwitchListTile(contentPadding: EdgeInsets.zero, title: Text(l10n.azanAlarm), subtitle: Text(l10n.notifyBeforePrayer), value: _azan, activeThumbColor: TOGTColors.orange, onChanged: (v) async { setState(() => _azan = v); if (_times != null) await PrayerService.instance.schedule(_times!, enabled: v); }),
       ]);
 
   List<Widget> _prayerRows() {
-    if (_times == null) return [const Padding(padding: EdgeInsets.all(20), child: Text('Allow location to load today\'s prayer times.'))];
+    if (_times == null) return [Padding(padding: const EdgeInsets.all(20), child: Text(l10n.allowLocationPrayer))];
     final values = [('Fajr', _format(_times!.fajr)), ('Dhuhr', _format(_times!.dhuhr)), ('Asr', _format(_times!.asr)), ('Maghrib', _format(_times!.maghrib)), ('Isha', _format(_times!.isha))];
     return values.map((p) => Card(child: ListTile(leading: Icon(Icons.circle, size: 10, color: p.$1 == 'Dhuhr' ? TOGTColors.orange : TOGTColors.blue), title: Text(p.$1, style: TOGTTypography.h3), trailing: Text(p.$2, style: TOGTTypography.h3.copyWith(color: TOGTColors.blue))))).toList();
   }
@@ -110,26 +111,26 @@ class _PersonalScreenState extends State<PersonalScreen> {
   String _format(DateTime time) => TimeOfDay.fromDateTime(time).format(context);
 
   Widget _qibla() => Column(children: [
-        _hero(Icons.explore_rounded, 'Qibla direction', 'Point your phone toward the Kaaba'),
+         _hero(Icons.explore_rounded, l10n.qibla, l10n.findingQibla),
         const SizedBox(height: 24),
         Container(width: 230, height: 230, decoration: BoxDecoration(shape: BoxShape.circle, color: TOGTColors.white, border: Border.all(color: TOGTColors.blue.withOpacity(.18), width: 8), boxShadow: [BoxShadow(color: TOGTColors.blue.withOpacity(.12), blurRadius: 24)]), child: _qiblaBearing == null ? const Center(child: CircularProgressIndicator(color: TOGTColors.orange)) : Transform.rotate(angle: (((_qiblaBearing! - (_heading ?? 0)) * math.pi / 180)), child: const Icon(Icons.navigation_rounded, size: 130, color: TOGTColors.orange))),
-        const SizedBox(height: 18), Text(_qiblaBearing == null ? 'Finding Qibla...' : 'Direction: ${_qiblaBearing!.toStringAsFixed(0)}°', style: TOGTTypography.h3),
-        Text(_distance == null ? (_locationError ?? 'Enable location for live direction') : 'Distance to Makkah: ${_distance!.toStringAsFixed(0)} km${_heading == null ? ' · Compass unavailable on this device' : ''}', style: TOGTTypography.small),
-        TextButton.icon(onPressed: _loadLocation, icon: const Icon(Icons.refresh_rounded), label: const Text('Refresh location')),
+         const SizedBox(height: 18), Text(_qiblaBearing == null ? l10n.findingQibla : l10n.direction(_qiblaBearing!.toStringAsFixed(0)), style: TOGTTypography.h3),
+         Text(_distance == null ? (_locationError ?? l10n.compassUnavailable) : l10n.distanceMakkah(_distance!.toStringAsFixed(0)), style: TOGTTypography.small),
+         TextButton.icon(onPressed: _loadLocation, icon: const Icon(Icons.refresh_rounded), label: Text(l10n.refreshLocation)),
       ]);
 
   Widget _azkar() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _hero(Icons.auto_awesome_rounded, 'Azkar & duas', 'Arabic remembrance with translation'),
+         _hero(Icons.auto_awesome_rounded, l10n.azkar, l10n.commonDuas),
         const SizedBox(height: 18),
-        ...['Morning Azkar', 'Evening Azkar', 'Before travel', 'Common duas'].map((title) => Card(child: ExpansionTile(title: Text(title, style: TOGTTypography.h3), children: const [Padding(padding: EdgeInsets.fromLTRB(18, 0, 18, 18), child: Text('سُبْحَانَ اللهِ وَبِحَمْدِهِ\nGlory is to Allah and praise is His.'))]))),
+         ...[l10n.azkarMorning, l10n.azkarEvening, l10n.beforeTravel, l10n.commonDuas].map((title) => Card(child: ExpansionTile(title: Text(title, style: TOGTTypography.h3), children: [Padding(padding: const EdgeInsets.fromLTRB(18, 0, 18, 18), child: Text(l10n.gloryAllah))]))),
       ]);
 
   Widget _tasbihView() => Column(children: [
-        _hero(Icons.fingerprint_rounded, 'Digital Tasbih', 'Tap the counter after each remembrance'),
+         _hero(Icons.fingerprint_rounded, l10n.azkar, l10n.tapToCount),
         const SizedBox(height: 30),
         GestureDetector(onTap: () => setState(() => _tasbih++), child: Container(width: 210, height: 210, alignment: Alignment.center, decoration: BoxDecoration(shape: BoxShape.circle, gradient: TOGTColors.blueGradient, boxShadow: [BoxShadow(color: TOGTColors.blue.withOpacity(.3), blurRadius: 24)]), child: Text('$_tasbih', style: const TextStyle(fontSize: 52, color: TOGTColors.white, fontWeight: FontWeight.w800)))),
-        const SizedBox(height: 20), Text('Tap to count', style: TOGTTypography.h3),
-        TextButton(onPressed: () => setState(() => _tasbih = 0), child: const Text('Reset')),
+         const SizedBox(height: 20), Text(l10n.tapToCount, style: TOGTTypography.h3),
+         TextButton(onPressed: () => setState(() => _tasbih = 0), child: Text(l10n.reset)),
       ]);
 
   Widget _hero(IconData icon, String title, String subtitle) => Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(gradient: TOGTColors.blueGradient, borderRadius: BorderRadius.circular(24)), child: Row(children: [Icon(icon, color: TOGTColors.orange, size: 38), const SizedBox(width: 15), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: TOGTTypography.h2.copyWith(color: TOGTColors.white)), const SizedBox(height: 4), Text(subtitle, style: TextStyle(color: TOGTColors.white.withOpacity(.75)))]))]));

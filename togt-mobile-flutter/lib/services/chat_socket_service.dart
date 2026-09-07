@@ -9,7 +9,7 @@ class ChatSocketService {
   void connect({required void Function(Map<String, dynamic>) onMessage, void Function()? onTyping, void Function(String role)? onRoleChanged}) {
     if (!ApiService.instance.hasToken) return;
     _socket?.dispose();
-    _socket = io.io(ApiConfig.webProductionOrigin, io.OptionBuilder().setTransports(['websocket']).setAuth({'token': ApiService.instance.accessToken}).disableAutoConnect().build());
+    _socket = io.io(ApiConfig.webOrigin, io.OptionBuilder().setPath('/api/socket.io').setTransports(['websocket']).setAuth({'token': ApiService.instance.accessToken}).disableAutoConnect().build());
     _socket!..on('newMessage', (data) => onMessage(Map<String, dynamic>.from(data as Map)))..on('message:new', (data) => onMessage(Map<String, dynamic>.from(data as Map)))..on('newCustomerMessage', (data) => onMessage(Map<String, dynamic>.from(data as Map)))..on('newWorkerReply', (data) => onMessage(Map<String, dynamic>.from(data as Map)))..on('roleChanged', (data) => onRoleChanged?.call((data as Map)['newRole'].toString()))..on('typing', (_) => onTyping?.call())..connect();
   }
 

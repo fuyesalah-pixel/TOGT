@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/chat_service.dart';
@@ -107,6 +108,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFFF9FAFB),
@@ -127,7 +129,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               const SizedBox(width: 12),
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                 Text(_human ? 'Human Support' : 'AI Assistant', style: TOGTTypography.h3),
+                  Text(_human ? l10n.humanSupport : l10n.aiAssistant, style: TOGTTypography.h3),
                 Row(children: [
                   Container(
                     width: 8,
@@ -136,7 +138,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         const BoxDecoration(color: TOGTColors.green, shape: BoxShape.circle),
                   ),
                   const SizedBox(width: 5),
-                   Text(_human ? 'TOGT specialist on duty' : 'Online · AI powered', style: TOGTTypography.small),
+                    Text(_human ? l10n.specialistOnDuty : l10n.onlineAi, style: TOGTTypography.small),
                 ]),
               ]),
              ]),
@@ -167,7 +169,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: SafeArea(
               top: false,
                child: Row(children: [
-                if (_human) IconButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Attachments can be added from the support chat.'))), icon: const Icon(Icons.attach_file_rounded, color: TOGTColors.blue)),
+                 if (_human) IconButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.attachmentsHint))), icon: const Icon(Icons.attach_file_rounded, color: TOGTColors.blue)),
                 Expanded(
                   child: TextField(
                     controller: _controller,
@@ -176,7 +178,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     enableSuggestions: false,
                     onSubmitted: (_) => _send(),
                     decoration: InputDecoration(
-                      hintText: 'Ask anything…',
+                       hintText: l10n.askAnything,
                       suffixIcon: Icon(Icons.emoji_emotions_outlined, color: TOGTColors.grey.withOpacity(.6)),
                     ),
                   ),

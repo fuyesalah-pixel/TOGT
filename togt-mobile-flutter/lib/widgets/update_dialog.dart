@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 import '../services/update_service.dart';
 import '../theme/colors.dart';
@@ -33,6 +34,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       _total != null && _total! > 0 ? (_received / _total!).clamp(0.0, 1.0) : 0;
 
   Future<void> _startUpdate() async {
+    final l10n = AppLocalizations.of(context);
     setState(() => _stage = _UpdateStage.downloading);
     try {
       final path = await UpdateService.instance.downloadApk(
@@ -49,14 +51,14 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       } else {
         setState(() {
           _stage = _UpdateStage.error;
-          _error = 'Could not open the installer. Allow installs from this app in Settings and try again.';
+           _error = l10n.updateInstallerError;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _stage = _UpdateStage.error;
-          _error = 'Download failed. Check your connection and try again.';
+           _error = l10n.downloadFailed;
         });
       }
     }
@@ -71,6 +73,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final downloading = _stage == _UpdateStage.downloading;
     return PopScope(
       canPop: !widget.update.forceUpdate && !downloading,
@@ -96,21 +99,21 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                     color: TOGTColors.white, size: 34),
               ),
               const SizedBox(height: 18),
-              Text('New Features Added!',
+               Text(l10n.newFeatures,
                   textAlign: TextAlign.center,
                   style: TOGTTypography.h2.copyWith(fontSize: 21)),
               const SizedBox(height: 8),
               Text(
                 _stage == _UpdateStage.error
-                    ? (_error ?? 'Update failed.')
-                    : 'Please update the app to enjoy new features and improvements.',
+                     ? (_error ?? l10n.updateFailed)
+                     : l10n.updateDescription,
                 textAlign: TextAlign.center,
                 style: TOGTTypography.body
                     .copyWith(color: TOGTColors.grey, height: 1.45),
               ),
               if (widget.update.versionName.isNotEmpty) ...[
                 const SizedBox(height: 6),
-                Text('Version ${widget.update.versionName}',
+                 Text(l10n.versionLabel(widget.update.versionName),
                     style: TOGTTypography.small.copyWith(
                         color: TOGTColors.orange, fontWeight: FontWeight.w700)),
               ],
@@ -154,7 +157,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                       ),
                       onPressed: _startUpdate,
                       child: Text(
-                          _stage == _UpdateStage.error ? 'Try Again' : 'Update Now',
+                           _stage == _UpdateStage.error ? l10n.tryAgain : l10n.updateNow,
                           style: TOGTTypography.button),
                     ),
                   ),
@@ -163,7 +166,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                   const SizedBox(height: 10),
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: Text('Later',
+                     child: Text(l10n.later,
                         style: TOGTTypography.button
                             .copyWith(color: TOGTColors.grey)),
                   ),

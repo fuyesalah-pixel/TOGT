@@ -18,7 +18,11 @@ export class PaymentService {
     const request = await this.prisma.serviceRequest.findUnique({ where: { id: dto.requestId }, include: { user: true } });
     if (!request || request.userId !== actor.id) throw new ForbiddenException('Request not found');
     if (request.paymentStatus === PaymentStatus.PAID) throw new BadRequestException('Request is already paid');
+    if (request.paymentId) throw new BadRequestException('A payment is already in progress for this request. Verify it or contact support.');
     if (!Number.isFinite(dto.amount) || dto.amount <= 0) throw new BadRequestException('Payment amount must be greater than zero');
+    if (request.amount == null) throw new BadRequestException('This request does not have an approved amount yet');
+    if (Math.abs(request.amount - dto.amount) > 0.01) throw new BadRequestException('Payment amount does not match the approved amount');
+    if (dto.currency && dto.currency.toUpperCase() !== request.currency.toUpperCase()) throw new BadRequestException('Payment currency does not match the approved currency');
     if (request.packageId) {
       const pkg = await this.prisma.package.findUnique({ where: { id: request.packageId }, select: { price: true } });
       if (pkg?.price != null && Math.abs(pkg.price - dto.amount) > 0.01) throw new BadRequestException('Payment amount does not match the package price');
@@ -57,7 +61,7 @@ export class PaymentService {
     if (!transactionId) throw new BadRequestException('Missing transaction reference');
     if (transactionId.startsWith(FLIGHT_REF_PREFIX)) {
       const verification = await this.duffel.verifyChapa(transactionId);
-      if (payload.status === 'success' && verification.status === 'success') await this.duffel.onChapaPaymentSucceeded(transactionId, payload.ref_id ?? payload.transaction_id ?? transactionId);
+      if (payload.status === 'success' && verification.status === 'success') await this.duffel.onChapaPaymentSucceeded(transactionId, payload.ref_id ?? payload.transaction_id ?? transactionId, verification.amount, verification.currency);
       return { received: true, status: verification.status };
     }
     const request = await this.prisma.serviceRequest.findFirst({ where: { paymentId: transactionId } });
@@ -98,10 +102,25 @@ export class PaymentService {
 
   private async markPaidByReference(reference: string, paymentId: string, amount?: number, currency?: string) {
     if (reference.startsWith(FLIGHT_REF_PREFIX)) {
-      await this.duffel.onChapaPaymentSucceeded(reference, paymentId);
+      await this.duffel.onChapaPaymentSucceeded(reference, paymentId, amount, currency);
       return;
     }
     const request = await this.prisma.serviceRequest.findFirst({ where: { paymentId: reference } }); if (request) await this.markPaid(request.id, paymentId, amount, currency); }
   private async verifyByReference(transactionId: string) { const secret = this.config.get<string>('CHAPA_SECRET_KEY'); if (!secret) throw new ServiceUnavailableException('Chapa is not configured'); const chapaUrl = this.config.get<string>('CHAPA_API_URL') ?? 'https://api.chapa.co/v1'; const response = await fetch(`${chapaUrl}/transaction/verify/${encodeURIComponent(transactionId)}`, { headers: { Authorization: `Bearer ${secret}` } }); const payload = await response.json() as { status?: string; data?: { status?: string; amount?: number; currency?: string }; amount?: number; currency?: string }; return { status: payload.data?.status ?? payload.status ?? 'pending', amount: payload.data?.amount ?? payload.amount, currency: payload.data?.currency ?? payload.currency }; }
-  private async markPaid(requestId: string, paymentId: string, amount?: number, currency?: string) { const request = await this.prisma.serviceRequest.update({ where: { id: requestId }, data: { paymentStatus: PaymentStatus.PAID, paymentId, paidAt: new Date(), ...(amount !== undefined && { amount }), ...(currency && { currency }) } }); await this.notifications.notifyUser(request.userId, { type: 'STATUS_UPDATE', title: 'Payment successful', message: `Payment for your ${request.serviceType} request has been received.`, channel: 'IN_APP' }); }
+  private async markPaid(requestId: string, paymentId: string, amount?: number, currency?: string) {
+    const request = await this.prisma.serviceRequest.findUnique({ where: { id: requestId } });
+    if (!request) throw new BadRequestException('Payment request not found');
+    if (request.amount == null || amount == null || Math.abs(request.amount - amount) > 0.01) {
+      this.logger.error(`Payment amount mismatch for request ${requestId}`);
+      throw new BadRequestException('Payment amount does not match the approved amount');
+    }
+    if (currency && currency.toUpperCase() !== request.currency.toUpperCase()) {
+      this.logger.error(`Payment currency mismatch for request ${requestId}`);
+      throw new BadRequestException('Payment currency does not match the approved currency');
+    }
+    if (request.paymentStatus === PaymentStatus.PAID) return request;
+    const updated = await this.prisma.serviceRequest.update({ where: { id: requestId }, data: { paymentStatus: PaymentStatus.PAID, paidAt: new Date() } });
+    await this.notifications.notifyUser(updated.userId, { type: 'STATUS_UPDATE', title: 'Payment successful', message: `Payment for your ${updated.serviceType} request has been received.`, channel: 'IN_APP' });
+    return updated;
+  }
 }
