@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ForbiddenException,
   Injectable,
@@ -15,6 +15,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { CurrencyService } from '../currency/currency.service';
 import { CreateFlightOrderDto } from './dto/create-flight-order.dto';
 import { SearchFlightsDto } from './dto/search-flights.dto';
+import { CredentialService } from '../system/credential.service';
 
 const FLIGHT_REF_PREFIX = 'TOGT-FL-';
 
@@ -68,21 +69,24 @@ interface DuffelOrder {
 export class DuffelService {
   private readonly logger = new Logger(DuffelService.name);
   private duffel: Duffel | null = null;
+  private duffelToken = '';
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly notifications: NotificationsService,
     private readonly currency: CurrencyService,
+    private readonly credentials: CredentialService,
   ) {}
 
-  private client(): Duffel {
-    if (this.duffel) return this.duffel;
-    const token = this.config.get<string>('duffel.accessToken');
+  private async client(): Promise<Duffel> {
+    const token = await this.credentials.get('DUFFEL');
+    if (this.duffel && token === this.duffelToken) return this.duffel;
     if (!token) throw new ServiceUnavailableException('Duffel is not configured. Add DUFFEL_ACCESS_TOKEN on the backend.');
     const apiUrl = this.config.get<string>('duffel.apiUrl') ?? 'https://api.duffel.com';
     const basePath = apiUrl.replace(/\/+$/, '');
     this.duffel = new Duffel({ token, basePath });
+    this.duffelToken = token;
     return this.duffel;
   }
 
@@ -121,7 +125,7 @@ export class DuffelService {
       slices.push({ origin: dto.destination, destination: dto.origin, departure_date: dto.returnDate });
     }
 
-    const response = await this.client().offerRequests.create({
+    const response = await (await this.client()).offerRequests.create({
       slices,
       passengers,
       cabin_class: (dto.cabinClass ?? 'economy') as never,
@@ -245,13 +249,13 @@ export class DuffelService {
   }
 
   async getOffer(offerId: string) {
-    const response = await this.client().offers.get(offerId, { return_available_services: true });
+    const response = await (await this.client()).offers.get(offerId, { return_available_services: true });
     return this.normalize(response.data as unknown as DuffelOffer);
   }
 
   async getSeatMap(offerId: string) {
     try {
-      const response = await this.client().seatMaps.get({ offer_id: offerId });
+      const response = await (await this.client()).seatMaps.get({ offer_id: offerId });
       return response.data;
     } catch (error) {
       this.logger.warn(`Seat map unavailable for ${offerId}: ${this.providerErrorMessage(error)}`);
@@ -261,7 +265,7 @@ export class DuffelService {
 
   async getOfferServices(offerId: string) {
     try {
-      const response = await this.client().offers.get(offerId, { return_available_services: true });
+      const response = await (await this.client()).offers.get(offerId, { return_available_services: true });
       const offer = response.data as unknown as DuffelOffer;
       return {
         offerId,
@@ -287,7 +291,7 @@ export class DuffelService {
     // 1. Re-fetch the offer so we use fresh pricing, expiry and available services.
     let offerResponse;
     try {
-      offerResponse = await this.client().offers.get(dto.offerId, { return_available_services: true });
+      offerResponse = await (await this.client()).offers.get(dto.offerId, { return_available_services: true });
     } catch (error) {
       const message = this.providerErrorMessage(error);
       this.logger.error(`Duffel offer refresh failed for ${dto.offerId}: ${message}`);
@@ -330,7 +334,7 @@ export class DuffelService {
     //    cannot block the booking. Extras are attached afterwards if still available.
     let orderResponse;
     try {
-      orderResponse = await this.client().orders.create({
+      orderResponse = await (await this.client()).orders.create({
         type: 'hold',
         selected_offers: [dto.offerId],
         passengers,
@@ -351,7 +355,7 @@ export class DuffelService {
     const validServices = requestedServices.filter((service) => availableIds.has(service.id));
     if (validServices.length) {
       try {
-        await this.client().orders.addServices(order.id, { add_services: validServices } as never);
+        (await this.client()).orders.addServices(order.id, { add_services: validServices } as never);
       } catch (error) {
         const message = this.providerErrorMessage(error);
         this.logger.warn(`Duffel extras failed for order ${order.id}, continuing without them: ${message}`);
@@ -360,7 +364,7 @@ export class DuffelService {
 
     // 5. Refresh the order so totals/booking reference reflect the final state.
     try {
-      const refreshed = await this.client().orders.get(order.id);
+      const refreshed = await (await this.client()).orders.get(order.id);
       const data = refreshed.data as unknown as DuffelOrder;
       if (data?.total_amount) {
         order.total_amount = data.total_amount;
@@ -524,7 +528,7 @@ export class DuffelService {
     if (order.status === FlightOrderStatus.CONFIRMED) return this.orderView(order);
     if (!order.duffelOrderId) throw new BadRequestException('Order has not been held with Duffel yet.');
 
-    const client = this.client();
+    const client = await this.client();
     // Pay the Duffel balance owed on the held order.
     await client.payments.create({
       order_id: order.duffelOrderId,
@@ -566,7 +570,7 @@ export class DuffelService {
     await this.notifications.notifyUser(order.userId, {
       type: 'STATUS_UPDATE',
       title: 'Flight booking confirmed',
-      message: `Your flight ${order.origin} → ${order.destination} has been ticketed. Reference: ${updated.duffelBookingRef ?? 'n/a'}.`,
+      message: `Your flight ${order.origin} â†’ ${order.destination} has been ticketed. Reference: ${updated.duffelBookingRef ?? 'n/a'}.`,
       channel: 'IN_APP',
     });
 
@@ -597,7 +601,7 @@ export class DuffelService {
       });
       await this.notifications.notifyUser(order.userId, {
         type: 'STATUS_UPDATE',
-        title: 'Payment received — issuing ticket',
+        title: 'Payment received â€” issuing ticket',
         message: 'Your flight payment was received. Your ticket will be issued shortly.',
         channel: 'IN_APP',
       });
@@ -612,7 +616,7 @@ export class DuffelService {
     if (order.status === FlightOrderStatus.CANCELLED) throw new BadRequestException('Order is already cancelled');
     if (!order.duffelOrderId) throw new BadRequestException('Order has not been created yet');
 
-    const client = this.client();
+    const client = await this.client();
     const quoteResponse = await client.orderCancellations.create({
       order_id: order.duffelOrderId,
     } as never);
@@ -788,3 +792,6 @@ export class DuffelService {
     return 'provider rejected the order';
   }
 }
+
+
+

@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+﻿import { BadRequestException, ForbiddenException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { PaymentStatus, Role, User } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -6,13 +6,14 @@ import { ConfigService } from '@nestjs/config';
 import { NotificationsService } from '../notifications/notifications.service';
 import { DuffelService } from '../duffel/duffel.service';
 import { InitializePaymentDto } from './dto/initialize-payment.dto';
+import { CredentialService } from '../system/credential.service';
 
 const FLIGHT_REF_PREFIX = 'TOGT-FL-';
 
 @Injectable()
 export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
-  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, private readonly notifications: NotificationsService, private readonly duffel: DuffelService) {}
+  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, private readonly notifications: NotificationsService, private readonly duffel: DuffelService, private readonly credentials: CredentialService) {}
 
   async initialize(dto: InitializePaymentDto, actor: User) {
     const request = await this.prisma.serviceRequest.findUnique({ where: { id: dto.requestId }, include: { user: true } });
@@ -27,7 +28,7 @@ export class PaymentService {
       const pkg = await this.prisma.package.findUnique({ where: { id: request.packageId }, select: { price: true } });
       if (pkg?.price != null && Math.abs(pkg.price - dto.amount) > 0.01) throw new BadRequestException('Payment amount does not match the package price');
     }
-    const secret = this.config.get<string>('CHAPA_SECRET_KEY');
+    const secret = await this.credentials.get('CHAPA');
     if (!secret) throw new ServiceUnavailableException('Chapa is not configured. Add CHAPA_SECRET_KEY on the backend.');
     const txRef = `TOGT-${Date.now()}-${randomUUID().slice(0, 8)}`;
     await this.prisma.serviceRequest.update({ where: { id: request.id }, data: { amount: dto.amount, currency: dto.currency ?? request.currency, paymentId: txRef } });
@@ -46,7 +47,7 @@ export class PaymentService {
     if (transactionId.startsWith(FLIGHT_REF_PREFIX)) return this.duffel.verifyChapa(transactionId);
     const request = await this.prisma.serviceRequest.findFirst({ where: { paymentId: transactionId }, include: { user: true } });
     if (!request || (actor.role === Role.CUSTOMER && request.userId !== actor.id)) throw new ForbiddenException('Payment not found');
-    const secret = this.config.get<string>('CHAPA_SECRET_KEY');
+    const secret = await this.credentials.get('CHAPA');
     if (!secret) throw new ServiceUnavailableException('Chapa is not configured');
     const chapaUrl = this.config.get<string>('CHAPA_API_URL') ?? 'https://api.chapa.co/v1';
     const response = await fetch(`${chapaUrl}/transaction/verify/${encodeURIComponent(transactionId)}`, { headers: { Authorization: `Bearer ${secret}` } });
@@ -74,7 +75,7 @@ export class PaymentService {
   async cancel(transactionId: string, actor: User) {
     const request = await this.prisma.serviceRequest.findFirst({ where: { paymentId: transactionId } });
     if (!request || request.userId !== actor.id) throw new ForbiddenException('Payment not found');
-    const secret = this.config.get<string>('CHAPA_SECRET_KEY');
+    const secret = await this.credentials.get('CHAPA');
     if (!secret) throw new ServiceUnavailableException('Chapa is not configured');
     const chapaUrl = this.config.get<string>('CHAPA_API_URL') ?? 'https://api.chapa.co/v1';
     const response = await fetch(`${chapaUrl}/transaction/cancel/${encodeURIComponent(transactionId)}`, { method: 'PUT', headers: { Authorization: `Bearer ${secret}` } });
@@ -106,7 +107,7 @@ export class PaymentService {
       return;
     }
     const request = await this.prisma.serviceRequest.findFirst({ where: { paymentId: reference } }); if (request) await this.markPaid(request.id, paymentId, amount, currency); }
-  private async verifyByReference(transactionId: string) { const secret = this.config.get<string>('CHAPA_SECRET_KEY'); if (!secret) throw new ServiceUnavailableException('Chapa is not configured'); const chapaUrl = this.config.get<string>('CHAPA_API_URL') ?? 'https://api.chapa.co/v1'; const response = await fetch(`${chapaUrl}/transaction/verify/${encodeURIComponent(transactionId)}`, { headers: { Authorization: `Bearer ${secret}` } }); const payload = await response.json() as { status?: string; data?: { status?: string; amount?: number; currency?: string }; amount?: number; currency?: string }; return { status: payload.data?.status ?? payload.status ?? 'pending', amount: payload.data?.amount ?? payload.amount, currency: payload.data?.currency ?? payload.currency }; }
+  private async verifyByReference(transactionId: string) { const secret = await this.credentials.get('CHAPA'); if (!secret) throw new ServiceUnavailableException('Chapa is not configured'); const chapaUrl = this.config.get<string>('CHAPA_API_URL') ?? 'https://api.chapa.co/v1'; const response = await fetch(`${chapaUrl}/transaction/verify/${encodeURIComponent(transactionId)}`, { headers: { Authorization: `Bearer ${secret}` } }); const payload = await response.json() as { status?: string; data?: { status?: string; amount?: number; currency?: string }; amount?: number; currency?: string }; return { status: payload.data?.status ?? payload.status ?? 'pending', amount: payload.data?.amount ?? payload.amount, currency: payload.data?.currency ?? payload.currency }; }
   private async markPaid(requestId: string, paymentId: string, amount?: number, currency?: string) {
     const request = await this.prisma.serviceRequest.findUnique({ where: { id: requestId } });
     if (!request) throw new BadRequestException('Payment request not found');
@@ -124,3 +125,4 @@ export class PaymentService {
     return updated;
   }
 }
+

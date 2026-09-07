@@ -6,20 +6,19 @@ import { createTransport, Transporter } from 'nodemailer';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BulkNotificationDto } from './dto/bulk-notification.dto';
 import { NotificationsGateway } from './notifications.gateway';
+import { CredentialService } from '../system/credential.service';
 
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
-  private readonly resend: Resend | null;
   private readonly hostinger: Transporter | null;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly gateway: NotificationsGateway,
+    private readonly credentials: CredentialService,
   ) {
-    const apiKey = this.config.get<string>('resend.apiKey');
-    this.resend = apiKey ? new Resend(apiKey) : null;
     const smtpUser = this.config.get<string>('hostingerSmtp.user');
     const smtpPassword = this.config.get<string>('hostingerSmtp.password');
     this.hostinger = smtpUser && smtpPassword ? createTransport({ host: this.config.get<string>('hostingerSmtp.host'), port: this.config.get<number>('hostingerSmtp.port') ?? 465, secure: (this.config.get<number>('hostingerSmtp.port') ?? 465) === 465, auth: { user: smtpUser, pass: smtpPassword } }) : null;
@@ -144,12 +143,13 @@ export class NotificationsService {
 
   /** Resend email — no-op (logged) when RESEND_API_KEY is not configured. */
   async sendEmail(to: string, subject: string, html: string) {
-    if (!this.resend) {
+    const apiKey = await this.credentials.get('RESEND');
+    if (!apiKey) {
       this.logger.log(`[email:skipped] to=${to} subject="${subject}"`);
       return;
     }
     try {
-      await this.resend.emails.send({
+      await new Resend(apiKey).emails.send({
         from: this.config.get<string>('resend.from') ?? 'TOGT <noreply@togt.com>',
         to,
         subject,
@@ -169,7 +169,7 @@ export class NotificationsService {
 
   /** SMSEthiopia SMS — no-op (logged) when SMS_ETHIOPIA_TOKEN is not configured. */
   async sendSms(phone: string, message: string) {
-    const token = this.config.get<string>('sms.token');
+    const token = await this.credentials.get('SMS_ETHIOPIA');
     if (!token) {
       this.logger.log(`[sms:skipped] to=${phone} message="${message}"`);
       return;

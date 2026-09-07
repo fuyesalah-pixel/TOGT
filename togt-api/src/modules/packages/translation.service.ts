@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CredentialService } from '../system/credential.service';
 
 type Language = 'ar' | 'am';
 type PackageSource = { title: string; description: string; includes: string[]; excludes: string[] };
@@ -9,7 +10,7 @@ type PackageSource = { title: string; description: string; includes: string[]; e
 export class TranslationService {
   private readonly logger = new Logger(TranslationService.name);
 
-  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {}
+  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, private readonly credentials: CredentialService) {}
 
   async translatePackage(id: string) {
     const pkg = await this.prisma.package.findUnique({ where: { id }, select: { title: true, description: true, includes: true, excludes: true } });
@@ -57,7 +58,7 @@ export class TranslationService {
   }
 
   private async translateFields(source: Record<string, unknown>, language: Language): Promise<Record<string, any>> {
-    const apiKey = this.config.get<string>('openRouter.apiKey');
+    const apiKey = await this.credentials.get('OPENROUTER');
     if (!apiKey) throw new Error('OPENROUTER_API_KEY is not configured');
     const target = language === 'ar' ? 'Modern Standard Arabic' : 'natural professional Amharic using Ethiopic script';
     const model = this.config.get<string>(language === 'ar' ? 'openRouter.arabicModel' : 'openRouter.amharicModel');

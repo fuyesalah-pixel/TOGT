@@ -45,6 +45,7 @@ export default () => ({
     from: process.env.HOSTINGER_SMTP_FROM ?? '',
   },
   cookieSecure: process.env.COOKIE_SECURE === 'true',
+  systemEncryptionKey: process.env.SYSTEM_CONFIG_ENCRYPTION_KEY ?? '',
   openRouter: {
     apiKey: process.env.OPENROUTER_API_KEY ?? process.env.OPENAI_API_KEY ?? '',
     baseUrl: process.env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai/api/v1',

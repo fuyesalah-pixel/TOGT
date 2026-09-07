@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
+import { CredentialService } from '../system/credential.service';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_MIME_TYPES = new Set([
@@ -20,26 +21,26 @@ const ALLOWED_MIME_TYPES = new Set([
 /** Cloudflare R2 (S3-compatible) upload service. */
 @Injectable()
 export class UploadsService {
-  private readonly client: S3Client | null;
+  private client: S3Client | null = null;
+  private clientSecret = '';
   private readonly bucket: string;
   private readonly publicUrl: string;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(private readonly config: ConfigService, private readonly credentials: CredentialService) {
+    this.bucket = this.config.get<string>('r2.bucket') ?? 'togt-uploads';
+    this.publicUrl = (this.config.get<string>('r2.publicUrl') ?? '').replace(/\/$/, '');
+  }
+
+  private async getClient() {
     const accountId = this.config.get<string>('r2.accountId');
     const endpoint = this.config.get<string>('r2.endpoint');
     const accessKeyId = this.config.get<string>('r2.accessKeyId');
-    const secretAccessKey = this.config.get<string>('r2.secretAccessKey');
-    this.bucket = this.config.get<string>('r2.bucket') ?? 'togt-uploads';
-    this.publicUrl = (this.config.get<string>('r2.publicUrl') ?? '').replace(/\/$/, '');
-
-    this.client =
-      (endpoint || accountId) && accessKeyId && secretAccessKey
-        ? new S3Client({
-            region: 'auto',
-            endpoint: endpoint || `https://${accountId}.r2.cloudflarestorage.com`,
-            credentials: { accessKeyId, secretAccessKey },
-          })
-        : null;
+    const secretAccessKey = await this.credentials.get('R2');
+    if ((endpoint || accountId) && accessKeyId && secretAccessKey && (!this.client || this.clientSecret !== secretAccessKey)) {
+      this.client = new S3Client({ region: 'auto', endpoint: endpoint || `https://${accountId}.r2.cloudflarestorage.com`, credentials: { accessKeyId, secretAccessKey } });
+      this.clientSecret = secretAccessKey;
+    }
+    return this.client;
   }
 
   get isConfigured() {
@@ -47,7 +48,8 @@ export class UploadsService {
   }
 
   async upload(file: Express.Multer.File, folder: string): Promise<string> {
-    if (!this.client) {
+    const client = await this.getClient();
+    if (!client) {
       throw new ServiceUnavailableException(
         'File storage is not configured (missing R2 credentials)',
       );
@@ -70,7 +72,7 @@ export class UploadsService {
     const safeFolder = folder.replace(/[^a-zA-Z0-9_-]/g, '') || 'misc';
     const key = `${safeFolder}/${Date.now()}-${randomUUID()}-${safeName}`;
 
-    await this.client.send(
+    await client.send(
       new PutObjectCommand({
         Bucket: this.bucket,
         Key: key,
@@ -83,18 +85,20 @@ export class UploadsService {
   }
 
   async uploadPrivate(file: Express.Multer.File, folder: string): Promise<string> {
-    if (!this.client) throw new ServiceUnavailableException('File storage is not configured (missing R2 credentials)');
+    const client = await this.getClient();
+    if (!client) throw new ServiceUnavailableException('File storage is not configured (missing R2 credentials)');
     this.validate(file);
     const safeName = file.originalname.replace(/^.*[\\/]/, '').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80);
     const safeFolder = folder.replace(/[^a-zA-Z0-9_-]/g, '') || 'private';
     const key = `${safeFolder}/${Date.now()}-${randomUUID()}-${safeName}`;
-    await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: file.buffer, ContentType: file.mimetype }));
+    await client.send(new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: file.buffer, ContentType: file.mimetype }));
     return key;
   }
 
   async signedUrl(key: string): Promise<string> {
-    if (!this.client) throw new ServiceUnavailableException('File storage is not configured');
-    return getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: key }), { expiresIn: 300 });
+    const client = await this.getClient();
+    if (!client) throw new ServiceUnavailableException('File storage is not configured');
+    return getSignedUrl(client, new GetObjectCommand({ Bucket: this.bucket, Key: key }), { expiresIn: 300 });
   }
 
   private validate(file: Express.Multer.File) {

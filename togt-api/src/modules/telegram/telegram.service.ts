@@ -4,28 +4,28 @@ import { Bot, InlineKeyboard, Keyboard } from 'grammy';
 import type { Update } from 'grammy/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ChatbotService } from '../chatbot/chatbot.service';
+import { CredentialService } from '../system/credential.service';
 
 const menu = new Keyboard().text('🕋 Umrah Packages').text('✈️ Tickets').row().text('🛂 Visa').text('🏔️ Tours').row().text('📞 Contact').text('ℹ️ Help').resized();
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TelegramService.name);
-  private readonly bot: Bot;
+  private bot: Bot;
+  private botToken = '';
   private polling = false;
-  constructor(private readonly config: ConfigService, private readonly prisma: PrismaService, private readonly chatbot: ChatbotService) {
-    const token = this.config.get<string>('TELEGRAM_BOT_TOKEN');
-    this.bot = new Bot(token || 'disabled-token');
-    this.registerHandlers();
-  }
+  constructor(private readonly config: ConfigService, private readonly prisma: PrismaService, private readonly chatbot: ChatbotService, private readonly credentials: CredentialService) { this.bot = new Bot('disabled-token'); }
 
   async onModuleInit() {
-    if (!this.config.get<string>('TELEGRAM_BOT_TOKEN')) { this.logger.warn('Telegram bot disabled: TELEGRAM_BOT_TOKEN is not configured'); return; }
+    const token = await this.credentials.get('TELEGRAM');
+    if (token) { this.bot = new Bot(token); this.botToken = token; this.registerHandlers(); }
+    if (!token) { this.logger.warn('Telegram bot disabled: TELEGRAM_BOT_TOKEN is not configured'); return; }
     if (this.config.get<string>('NODE_ENV') !== 'production') { this.polling = true; this.bot.start().catch((error) => this.logger.error(`Telegram polling failed: ${(error as Error).message}`)); }
     else { const webhook = this.config.get<string>('TELEGRAM_WEBHOOK_URL'); if (webhook) await this.bot.api.setWebhook(webhook); }
   }
 
   async onModuleDestroy() { if (this.polling) await this.bot.stop(); }
-  async handleUpdate(update: Update) { if (this.config.get<string>('TELEGRAM_BOT_TOKEN')) await this.bot.handleUpdate(update); }
+  async handleUpdate(update: Update) { const token = await this.credentials.get('TELEGRAM'); if (token && token !== this.botToken) { this.bot = new Bot(token); this.botToken = token; this.registerHandlers(); } if (token) await this.bot.handleUpdate(update); }
 
   private registerHandlers() {
     this.bot.command('start', (ctx) => ctx.reply('Welcome to TOGT Tour & Travel! 🎉\n\nI can help with:\n🕋 Umrah packages\n✈️ Flight tickets\n🛂 Visa processing\n🏔️ Tours\n💼 Travel consulting\n\nType your question in English, Arabic, or Amharic.', { reply_markup: menu }));
