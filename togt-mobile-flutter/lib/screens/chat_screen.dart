@@ -82,7 +82,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _humanWorkerId = workerId;
         await ChatSocketService.instance.sendMessage(receiverId: workerId, message: text);
       } catch (e) {
-        if (mounted) { setState(() { _typing = false; _messages.add(_Msg(text: l10n.chatSendFailed(e), fromUser: false)); }); await _saveHistory(); }
+        if (mounted) { setState(() { _typing = false; _messages.add(_Msg(text: l10n.chatSendFailed(e.toString()), fromUser: false)); }); await _saveHistory(); }
       } finally {
         if (mounted) setState(() => _typing = false);
       }

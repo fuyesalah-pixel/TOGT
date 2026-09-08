@@ -95,7 +95,8 @@ class ChatService {
         if (chunk.isNotEmpty) yield ChatReplyEvent(text: chunk);
       }
       if (!gotAny) yield ChatReplyEvent(text: offlineText);
-      if (packages != null && packages.isNotEmpty) yield ChatReplyEvent(packages: packages);
+      final finalPackages = packages;
+      if (finalPackages != null && finalPackages.isNotEmpty) yield ChatReplyEvent(packages: finalPackages);
     } catch (_) {
       yield ChatReplyEvent(text: offlineText);
     }

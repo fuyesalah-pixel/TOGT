@@ -48,6 +48,7 @@
   "hotelPreference": "የሆቴል ምርጫ",
   "roomType": "የክፍል አይነት",
   "continueAction": "ቀጥል",
+  "required": "አስፈላጊ",
   "aiAssistant": "AI ረዳት",
   "humanSupport": "የሰው ድጋፍ",
   "commonTravelAnswers": "የተለመዱ የጉዞ መልሶችና ጥያቄዎች።",

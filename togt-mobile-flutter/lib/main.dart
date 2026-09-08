@@ -32,7 +32,7 @@ Future<void> _runStartupUpdateFlow() async {
   if (context == null) return;
   final l10n = AppLocalizations.of(context);
   if (updated) {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
       content: Text(l10n.appUpdated),
       behavior: SnackBarBehavior.floating,
       duration: Duration(seconds: 3),

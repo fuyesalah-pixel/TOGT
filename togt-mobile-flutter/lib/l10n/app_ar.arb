@@ -48,6 +48,7 @@
   "hotelPreference": "تفضيل الفندق",
   "roomType": "نوع الغرفة",
   "continueAction": "متابعة",
+  "required": "مطلوب",
   "aiAssistant": "المساعد الذكي",
   "humanSupport": "دعم بشري",
   "commonTravelAnswers": "إجابات وطلبات السفر الشائعة.",

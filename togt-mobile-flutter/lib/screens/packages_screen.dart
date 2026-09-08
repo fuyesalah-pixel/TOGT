@@ -174,8 +174,8 @@ class _AllPackagesScreenState extends State<AllPackagesScreen>
                     textAlign: TextAlign.center, style: TOGTTypography.body),
               ),
             )
-          else if (_filtered.isEmpty)
-            const SliverFillRemaining(
+else if (_filtered.isEmpty)
+            SliverFillRemaining(
               hasScrollBody: false,
               child: Center(child: Text(l10n.noPackagesFound, style: TOGTTypography.body)),
             )

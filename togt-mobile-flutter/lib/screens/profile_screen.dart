@@ -171,7 +171,7 @@ class _WebOnlyProfile extends StatelessWidget {
     Text(l10n.webRoleMessage(role.name.toUpperCase()), textAlign: TextAlign.center, style: TOGTTypography.body),
     const SizedBox(height: 24),
     FilledButton.icon(onPressed: () => launchUrl(Uri.parse('https://travel.togttrading.com'), mode: LaunchMode.externalApplication), icon: const Icon(Icons.open_in_new_rounded), label: Text(l10n.openWebVersion)),
-    TextButton.icon(onPressed: onLogout, icon: const Icon(Icons.logout_rounded), label: Text(l10n.logout)),
+    TextButton.icon(onPressed: onLogout, icon: const Icon(Icons.logout_rounded), label: Text(l10n.logOut)),
   ])))); }
 }
 

@@ -48,6 +48,7 @@
   "hotelPreference": "Hotel preference",
   "roomType": "Room type",
   "continueAction": "Continue",
+  "required": "Required",
   "aiAssistant": "AI Assistant",
   "humanSupport": "Human Support",
   "commonTravelAnswers": "Common travel answers and requests.",
