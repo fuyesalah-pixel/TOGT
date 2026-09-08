@@ -197,7 +197,7 @@ class ApiService {
     return '${ApiConfig.webOrigin}$pathOrUrl';
   }
 
-  Stream<String> sseStream(String path, Map<String, dynamic> body) async* {
+  Stream<String> sseStream(String path, Map<String, dynamic> body, {void Function(Map<String, dynamic> meta)? onMeta}) async* {
     final client = http.Client();
     try {
       final req = http.Request('POST', _uri(path))
@@ -215,7 +215,16 @@ class ApiService {
             if (data == '[DONE]') return;
             try {
               final j = jsonDecode(data);
-              data = (j is Map ? (j['content'] ?? j['delta'] ?? j['text'] ?? '') : j).toString();
+              if (j is Map) {
+                final meta = j['meta'];
+                if (meta is Map) {
+                  if (onMeta != null) onMeta(meta.cast<String, dynamic>());
+                  continue;
+                }
+                data = (j['chunk'] ?? j['content'] ?? j['delta'] ?? j['text'] ?? '').toString();
+              } else {
+                data = '$j';
+              }
             } catch (_) {}
             if (data.isNotEmpty) yield data;
           }

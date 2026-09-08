@@ -6,7 +6,7 @@ import { ApiError } from "@/lib/api/client";
 import { deleteSystemProvider, getSystemAuditLogs, getSystemBackups, getSystemHealth, getSystemLogs, getSystemMaintenance, getSystemMetrics, getSystemMigrations, getSystemProviders, getSystemVersion, requestSystemBackup, saveSystemProvider, setSystemMaintenance, testSystemProvider, type ProviderStatus, type SystemHealth } from "@/lib/api/system";
 
 const tabs = ["Overview", "Providers", "Database", "Backups", "Logs", "Security", "Maintenance"] as const;
-const providerLabels: Record<string, string> = { OPENROUTER: "OpenRouter", OPENAI: "OpenAI", GEMINI: "Google Gemini", DUFFEL: "Duffel", CHAPA: "Chapa", RESEND: "Resend", SMS_ETHIOPIA: "SMSEthiopia", MAPBOX: "Mapbox", R2: "Cloudflare R2", TELEGRAM: "Telegram", FIREBASE: "Firebase / FCM" };
+const providerLabels: Record<string, string> = { OPENROUTER: "OpenRouter", OPENAI: "OpenAI", GEMINI: "Google Gemini", DUFFEL: "Duffel", CHAPA: "Chapa", RESEND: "Resend", SMS_ETHIOPIA: "SMSEthiopia", MAPBOX: "Mapbox", R2: "Cloudflare R2", TELEGRAM: "Telegram", TELEGRAM_SUPPORT_BOT: "Telegram Support Bot", TELEGRAM_BACKUP_BOT: "Telegram Backup Bot", FIREBASE: "Firebase / FCM" };
 const fmtBytes = (n?: number) => n == null ? "—" : `${(n / 1024 / 1024 / 1024).toFixed(1)} GB`;
 const fmtUptime = (n: number) => `${Math.floor(n / 86400)}d ${Math.floor(n / 3600) % 24}h ${Math.floor(n / 60) % 60}m`;
 

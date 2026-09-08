@@ -4,11 +4,14 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/package_model.dart';
+import '../services/api_service.dart';
 import '../services/chat_service.dart';
 import '../services/chat_socket_service.dart';
 import '../services/auth_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
+import 'package_detail_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key, required this.human});
@@ -77,11 +80,11 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
     final replyBuffer = StringBuffer();
+    List<ChatPackage>? packages;
     try {
-      await for (final chunk in _human
-          ? Stream<String>.value('Your message is in the support queue. A TOGT specialist will reply shortly.')
-          : ChatService.instance.sendMessage(text)) {
-        replyBuffer.write(chunk);
+      await for (final event in ChatService.instance.sendReply(text)) {
+        if (event.text.isNotEmpty) replyBuffer.write(event.text);
+        if (event.packages != null && event.packages!.isNotEmpty) packages = event.packages;
         setState(() {});
         _scrollDown();
       }
@@ -90,7 +93,8 @@ class _ChatScreenState extends State<ChatScreen> {
         _typing = false;
         _messages.add(_Msg(
             text: replyBuffer.isEmpty ? 'Sorry, I could not answer that.' : replyBuffer.toString(),
-            fromUser: false));
+            fromUser: false,
+            packages: packages));
       });
       await _saveHistory();
       _scrollDown();
@@ -267,9 +271,10 @@ class _ChatScreenState extends State<ChatScreen> {
 }
 
 class _Msg {
-  const _Msg({required this.text, required this.fromUser});
+  const _Msg({required this.text, required this.fromUser, this.packages});
   final String text;
   final bool fromUser;
+  final List<ChatPackage>? packages;
 
   factory _Msg.fromJson(String value) {
     final parts = value.split('|');
@@ -326,10 +331,115 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
                 BoxShadow(color: TOGTColors.navy.withOpacity(.06), blurRadius: 8, offset: const Offset(0, 3)),
               ],
             ),
-            child: Text(widget.msg.text,
-                style: TOGTTypography.body.copyWith(
-                    color: user ? TOGTColors.white : const Color(0xFF12394F), fontSize: 13.8, decoration: TextDecoration.none)),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: user ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                Text(widget.msg.text,
+                    style: TOGTTypography.body.copyWith(
+                        color: user ? TOGTColors.white : const Color(0xFF12394F), fontSize: 13.8, decoration: TextDecoration.none)),
+                if (widget.msg.packages != null && widget.msg.packages!.isNotEmpty)
+                  ...widget.msg.packages!.take(4).map((pkg) => _buildPackageCard(context, pkg)),
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  String _fmt(double? value) {
+    if (value == null) return '';
+    final whole = value.truncate().toString();
+    final buffer = StringBuffer();
+    for (int i = 0; i < whole.length; i++) {
+      buffer.write(whole[i]);
+      final remaining = whole.length - i - 1;
+      if (remaining > 0 && remaining % 3 == 0) buffer.write(',');
+    }
+    return value == value.truncateToDouble() ? buffer.toString() : value.toStringAsFixed(2);
+  }
+
+  Widget _buildPackageCard(BuildContext context, ChatPackage pkg) {
+    final width = MediaQuery.of(context).size.width * .66;
+    final imageUrl = pkg.image != null && pkg.image!.isNotEmpty ? ApiService.instance.resolveImageUrl(pkg.image!) : null;
+    return GestureDetector(
+      key: ValueKey('chat-pkg-${pkg.id}'),
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => PackageDetailScreen(
+          package: TPackage.fromJson({
+            'id': pkg.id,
+            'title': pkg.title,
+            'description': pkg.description,
+            'image': pkg.image,
+            'price': pkg.price,
+            'currency': pkg.currency,
+            'duration': pkg.duration,
+            'includes': pkg.includes,
+          }),
+        ),
+      )),
+      child: Container(
+        width: width,
+        margin: const EdgeInsets.only(top: 8),
+        decoration: BoxDecoration(
+          color: TOGTColors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: TOGTColors.navy.withOpacity(.08)),
+          boxShadow: [BoxShadow(color: TOGTColors.navy.withOpacity(.06), blurRadius: 8, offset: const Offset(0, 3))],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (imageUrl != null)
+              Image.network(
+                imageUrl,
+                height: 84,
+                width: width,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  height: 84,
+                  width: width,
+                  decoration: const BoxDecoration(gradient: TOGTColors.blueGradient),
+                  child: const Center(child: Icon(Icons.flight_takeoff_rounded, size: 32, color: TOGTColors.white)),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(pkg.title, style: TOGTTypography.h3.copyWith(fontSize: 13.5, color: const Color(0xFF12394F))),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(pkg.duration ?? 'Flexible duration',
+                            style: TOGTTypography.small.copyWith(color: TOGTColors.grey), overflow: TextOverflow.ellipsis),
+                      ),
+                      if (pkg.price != null)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: Text('${_fmt(pkg.price)} ${pkg.currency ?? 'ETB'}',
+                              style: TOGTTypography.small.copyWith(color: TOGTColors.orange, fontWeight: FontWeight.bold)),
+                        )
+                      else
+                        Text('Custom pricing', style: TOGTTypography.small.copyWith(color: TOGTColors.orange, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  if (pkg.description.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(pkg.description,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TOGTTypography.small.copyWith(color: TOGTColors.grey)),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

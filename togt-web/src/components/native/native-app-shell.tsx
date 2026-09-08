@@ -38,6 +38,66 @@ function NativeUmrah({ onTab }: { onTab: (tab: Tab) => void }) {
   return <main><NativeHeader title="Umrah Center" /><div className="px-5"><div className="grid grid-cols-2 gap-3">{tools.map(({ label, icon: Icon, tone }) => <button key={label} className="group rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"><span className={`flex h-12 w-12 items-center justify-center rounded-xl ${tone}`}><Icon className="h-5 w-5" /></span><p className="mt-3 text-sm font-bold text-slate-800">{label}</p></button>)}</div><section className="mt-6 rounded-2xl bg-togt-navy p-5 text-white shadow-lg"><p className="text-xs uppercase tracking-widest text-togt-orange">Journey guide</p><h2 className="mt-2 text-xl font-bold">Prepare for Umrah</h2><p className="mt-2 text-sm text-white/70">Learn about ihram, Tawaf, Sa&apos;i, documents, health, and packing.</p><button onClick={() => onTab("packages")} className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-togt-orange transition-transform duration-200 hover:translate-x-1">View Umrah packages <ChevronRight className="h-4 w-4" /></button></section></div></main>;
 }
 
-function NativeChat() { const [draft, setDraft] = useState(""); const [messages, setMessages] = useState<Array<{ from: "bot" | "user"; text: string }>>([{ from: "bot", text: "Hi! I&apos;m Ahmed from TOGT. How can I help with your journey?" }]); const [typing, setTyping] = useState(false); const [conversationId] = useState(() => `native-${Date.now()}`); const send = async (event: React.FormEvent) => { event.preventDefault(); const text = draft.trim(); if (!text || typing) return; setDraft(""); setMessages((current) => [...current, { from: "user", text }, { from: "bot", text: "" }]); setTyping(true); try { await streamChatbot(text, conversationId, (chunk) => setMessages((current) => { const next = [...current]; next[next.length - 1].text += chunk; return next; })); } catch { setMessages((current) => [...current, { from: "bot", text: "Please call TOGT support at +251 99 797 9741." }]); } finally { setTyping(false); } }; return <main className="flex min-h-screen flex-col"><NativeHeader title="Chat" /><div className="flex-1 space-y-3 overflow-y-auto px-5">{messages.map((message, index) => <div key={index} className={`max-w-[85%] rounded-2xl p-3 text-sm ${message.from === "user" ? "ml-auto bg-togt-blue text-white" : "bg-white shadow-sm"}`}>{message.text}</div>)}{typing && <p className="text-xs text-slate-400">Ahmed is typing...</p>}</div><form onSubmit={send} className="sticky bottom-20 mx-5 mb-3 flex gap-2 rounded-2xl bg-white p-2 shadow-lg"><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Ask about travel..." className="min-w-0 flex-1 px-2 text-sm outline-none" /><button className="rounded-xl bg-togt-orange p-3 text-white"><MessageCircle className="h-4 w-4" /></button></form></main>; }
+type ChatPackageCard = { id: string; title: string; description: string; image?: string | null; price?: number | null; currency?: string | null; duration?: string | null; includes?: string[] };
+type ChatMessage = { from: "bot" | "user"; text: string; packages?: ChatPackageCard[] };
+
+function NativeChat() {
+  const [draft, setDraft] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([{ from: "bot", text: "Hi! I&apos;m Ahmed from TOGT. How can I help with your journey?" }]);
+  const [typing, setTyping] = useState(false);
+  const [conversationId] = useState(() => `native-${Date.now()}`);
+  const send = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const text = draft.trim();
+    if (!text || typing) return;
+    setDraft("");
+    setMessages((current) => [...current, { from: "user", text }, { from: "bot", text: "" }]);
+    setTyping(true);
+    try {
+      await streamChatbot(text, conversationId, (chunk, packages) =>
+        setMessages((current) => {
+          const next = [...current];
+          const last = next.length - 1;
+          next[last] = { ...next[last], text: next[last].text + chunk, ...(packages?.length ? { packages } : {}) };
+          return next;
+        }),
+      );
+    } catch {
+      setMessages((current) => [...current, { from: "bot", text: "Please call TOGT support at +251 99 797 9741." }]);
+    } finally {
+      setTyping(false);
+    }
+  };
+  return (
+    <main className="flex min-h-screen flex-col">
+      <NativeHeader title="Chat" />
+      <div className="flex-1 space-y-3 overflow-y-auto px-5">
+        {messages.map((message, index) => (
+          <div key={index} className={`max-w-[85%] rounded-2xl p-3 text-sm ${message.from === "user" ? "ml-auto bg-togt-blue text-white" : "bg-white shadow-sm"}`}>
+            {message.text}
+            {message.packages?.length ? (
+              <div className="mt-3 grid gap-3">{message.packages.slice(0, 5).map((pkg) => (
+                <article key={pkg.id} className="overflow-hidden rounded-xl border border-gray-200 bg-white text-togt-navy shadow-sm">
+                  {pkg.image && <img src={pkg.image} alt={pkg.title} className="h-24 w-full object-cover" />}
+                  <div className="p-3">
+                    <h4 className="font-bold">{pkg.title}</h4>
+                    <p className="mt-1 text-xs font-semibold text-togt-orange">{pkg.duration || "Flexible duration"} · {pkg.price ? `${pkg.price.toLocaleString()} ${pkg.currency || "ETB"}` : "Custom pricing"}</p>
+                    {pkg.description && <p className="mt-1 line-clamp-2 text-xs text-gray-500">{pkg.description}</p>}
+                  </div>
+                </article>
+              ))}
+              </div>
+            ) : null}
+          </div>
+        ))}
+        {typing && <p className="text-xs text-slate-400">Ahmed is typing...</p>}
+      </div>
+      <form onSubmit={send} className="sticky bottom-20 mx-5 mb-3 flex gap-2 rounded-2xl bg-white p-2 shadow-lg">
+        <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Ask about travel..." className="min-w-0 flex-1 px-2 text-sm outline-none" />
+        <button className="rounded-xl bg-togt-orange p-3 text-white"><MessageCircle className="h-4 w-4" /></button>
+      </form>
+    </main>
+  );
+}
 
 function NativeProfile({ user, logout, onTab }: { user: ReturnType<typeof useAuth>["user"]; logout: () => Promise<void>; onTab: (tab: Tab) => void }) { return <main><NativeHeader title="Profile" /><div className="px-5"><div className="flex items-center gap-4 rounded-2xl bg-white p-5 shadow-sm"><span className="flex h-16 w-16 items-center justify-center rounded-full bg-togt-blue text-xl font-bold text-white">{user?.fullName?.slice(0, 2).toUpperCase() ?? "?"}</span><div><h2 className="font-bold">{user?.fullName ?? "Guest"}</h2><p className="text-sm text-slate-500">{user?.email ?? "Sign in to manage your account"}</p></div></div><div className="mt-5 overflow-hidden rounded-2xl bg-white shadow-sm">{[["My Requests", "requests"], ["My Tickets", "tickets"], ["Parent Tracking", "tracking"], ["Settings", "settings"]].map(([label, target]) => <button key={label} onClick={() => target === "settings" ? window.alert("Settings are available in your dashboard.") : onTab(target === "tickets" ? "profile" : "profile")} className="flex w-full items-center justify-between border-b border-slate-100 p-4 text-left text-sm font-semibold"><span>{label}</span><ChevronRight className="h-4 w-4 text-slate-400" /></button>)}</div>{user ? <button onClick={() => void logout()} className="mt-5 w-full rounded-xl bg-red-50 py-3 text-sm font-bold text-red-600">Log out</button> : <button onClick={() => { window.location.href = "/en/login"; }} className="mt-5 w-full rounded-xl bg-togt-orange py-3 text-sm font-bold text-white">Sign in</button>}<p className="mt-6 text-center text-xs text-slate-400">TOGT Tour &amp; Travel · Version 1.0.0</p></div></main>; }
