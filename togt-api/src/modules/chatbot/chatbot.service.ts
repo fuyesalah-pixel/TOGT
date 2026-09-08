@@ -227,6 +227,22 @@ export class ChatbotService {
     response.end();
   }
 
+  async status() {
+    const [openRouter, openAi, gemini] = await Promise.all([
+      this.credentials.get('OPENROUTER'),
+      this.credentials.get('OPENAI'),
+      this.credentials.get('GEMINI'),
+    ]);
+    const source = openRouter
+      ? { name: 'OpenRouter', model: this.config.get<string>('OPENROUTER_MODEL') ?? 'google/gemini-2.5-flash' }
+      : gemini
+        ? { name: 'Gemini', model: this.config.get<string>('GEMINI_MODEL') ?? 'gemini-3.6-flash' }
+        : openAi
+          ? { name: 'OpenAI', model: this.config.get<string>('OPENAI_MODEL') ?? 'gpt-4o-mini' }
+          : null;
+    return { online: !!source, provider: source?.name ?? null, model: source?.model ?? null };
+  }
+
   async ask(dto: AskChatbotDto) {
     const conversationId = dto.conversationId ?? `guest-${Date.now()}`;
     const history = await this.history(conversationId);

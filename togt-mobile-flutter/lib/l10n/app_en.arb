@@ -57,6 +57,15 @@
   "attachmentsHint": "Attachments can be added from the support chat.",
   "onlineAi": "Online · AI powered",
   "specialistOnDuty": "TOGT specialist on duty",
+  "aiOffline": "AI offline",
+  "offlineReply": "I'm having trouble reaching the AI assistant right now. Please call +251 99 797 9741 for immediate help.",
+  "chatWelcome": "Welcome! I'm Ahmed from TOGT. Ask me about Umrah packages, flights, visas, tours, and booking.",
+  "chatSendFailed": "Unable to send message: {error}",
+  "@chatSendFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
   "retry": "Retry",
   "unavailable": "Unavailable",
   "noPackages": "No packages available.",

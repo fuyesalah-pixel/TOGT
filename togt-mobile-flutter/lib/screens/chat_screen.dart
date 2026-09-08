@@ -28,6 +28,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _typing = false;
   late bool _human = widget.human;
   String? _humanWorkerId;
+  bool? _aiOnline;
 
   String get _historyKey => _human ? 'togt_chat_human' : 'togt_chat_ai';
 
@@ -36,6 +37,12 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     _loadHistory();
     if (_human) WidgetsBinding.instance.addPostFrameCallback((_) => _setMode(true));
+    if (!_human) _checkAi();
+  }
+
+  Future<void> _checkAi() async {
+    final online = await ChatService.instance.isOnline();
+    if (mounted) setState(() => _aiOnline = online);
   }
 
   Future<void> _loadHistory() async {
@@ -44,7 +51,8 @@ class _ChatScreenState extends State<ChatScreen> {
     if (!mounted) return;
     setState(() => _messages = saved.map((item) => _Msg.fromJson(item)).toList());
     if (_messages.isEmpty) {
-      setState(() => _messages = [const _Msg(text: 'Salam! 👋 Welcome to TOGT. Ask me about Umrah packages, flights, visas or tours.', fromUser: false)]);
+      final greeting = AppLocalizations.of(context).chatWelcome;
+      setState(() => _messages = [_Msg(text: greeting, fromUser: false)]);
       await _saveHistory();
     }
   }
@@ -55,6 +63,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _send() async {
+    final l10n = AppLocalizations.of(context);
     final text = _controller.text.trim();
     if (text.isEmpty || _typing) return;
     _controller.clear();
@@ -73,7 +82,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _humanWorkerId = workerId;
         await ChatSocketService.instance.sendMessage(receiverId: workerId, message: text);
       } catch (e) {
-        if (mounted) { setState(() { _typing = false; _messages.add(_Msg(text: 'Unable to send message: $e', fromUser: false)); }); await _saveHistory(); }
+        if (mounted) { setState(() { _typing = false; _messages.add(_Msg(text: l10n.chatSendFailed(e), fromUser: false)); }); await _saveHistory(); }
       } finally {
         if (mounted) setState(() => _typing = false);
       }
@@ -82,7 +91,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final replyBuffer = StringBuffer();
     List<ChatPackage>? packages;
     try {
-      await for (final event in ChatService.instance.sendReply(text)) {
+      await for (final event in ChatService.instance.sendReply(text, fallback: l10n.offlineReply)) {
         if (event.text.isNotEmpty) replyBuffer.write(event.text);
         if (event.packages != null && event.packages!.isNotEmpty) packages = event.packages;
         setState(() {});
@@ -92,7 +101,7 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         _typing = false;
         _messages.add(_Msg(
-            text: replyBuffer.isEmpty ? 'Sorry, I could not answer that.' : replyBuffer.toString(),
+            text: replyBuffer.isEmpty ? l10n.sorryAi : replyBuffer.toString(),
             fromUser: false,
             packages: packages));
       });
@@ -132,17 +141,19 @@ class _ChatScreenState extends State<ChatScreen> {
                  child: Icon(_human ? Icons.support_agent_rounded : Icons.smart_toy_rounded, color: TOGTColors.white, size: 22),
               ),
               const SizedBox(width: 12),
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(_human ? l10n.humanSupport : l10n.aiAssistant, style: TOGTTypography.h3),
                 Row(children: [
                   Container(
                     width: 8,
                     height: 8,
-                    decoration:
-                        const BoxDecoration(color: TOGTColors.green, shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                      color: _human ? TOGTColors.green : (_aiOnline == false ? const Color(0xFFF59E0B) : TOGTColors.green),
+                      shape: BoxShape.circle,
+                    ),
                   ),
                   const SizedBox(width: 5),
-                    Text(_human ? l10n.specialistOnDuty : l10n.onlineAi, style: TOGTTypography.small),
+                    Text(_human ? l10n.specialistOnDuty : (_aiOnline == false ? l10n.aiOffline : l10n.onlineAi), style: TOGTTypography.small),
                 ]),
               ]),
              ]),

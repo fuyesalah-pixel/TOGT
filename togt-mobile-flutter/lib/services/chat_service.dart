@@ -54,8 +54,17 @@ class ChatService {
       'Welcome to TOGT Tour & Travel! I can help with Umrah packages, flight tickets, '
       'visa processing, domestic tours and more. Please contact +251 99 797 9741 for immediate help.';
 
-  Stream<ChatReplyEvent> sendReply(String message) async* {
+  Future<bool?> isOnline() async {
+    try {
+      final data = await ApiService.instance.get('/chatbot/status');
+      if (data is Map) return data['online'] == true;
+    } catch (_) {}
+    return null;
+  }
+
+  Stream<ChatReplyEvent> sendReply(String message, {String? fallback}) async* {
     List<ChatPackage>? packages;
+    final offlineText = fallback ?? _fallback;
     try {
       final data = await ApiService.instance.post('/chatbot/ask', body: {
         'message': message,
@@ -68,7 +77,7 @@ class ChatService {
         if (list is List) packages = list.map((e) => ChatPackage.fromJson(e as Map<String, dynamic>)).toList();
         if (reply.isNotEmpty) yield ChatReplyEvent(text: reply);
         if (packages != null && packages.isNotEmpty) yield ChatReplyEvent(packages: packages);
-        if (reply.isEmpty) yield ChatReplyEvent(text: _fallback);
+        if (reply.isEmpty) yield ChatReplyEvent(text: offlineText);
         return;
       }
     } catch (_) {
@@ -85,10 +94,10 @@ class ChatService {
         gotAny = true;
         if (chunk.isNotEmpty) yield ChatReplyEvent(text: chunk);
       }
-      if (!gotAny) yield ChatReplyEvent(text: _fallback);
+      if (!gotAny) yield ChatReplyEvent(text: offlineText);
       if (packages != null && packages.isNotEmpty) yield ChatReplyEvent(packages: packages);
     } catch (_) {
-      yield ChatReplyEvent(text: _fallback);
+      yield ChatReplyEvent(text: offlineText);
     }
   }
 }
