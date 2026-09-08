@@ -18,14 +18,49 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
 async onModuleInit() {
     const token = await this.credentials.get('TELEGRAM_SUPPORT_BOT');
-    if (token) { this.bot = new Bot(token); this.botToken = token; this.registerHandlers(); }
-    if (!token) { this.logger.warn('Telegram support bot disabled: TELEGRAM_SUPPORT_BOT_TOKEN is not configured'); return; }
-    if (this.config.get<string>('NODE_ENV') !== 'production') { this.polling = true; this.bot.start().catch((error) => this.logger.error(`Telegram polling failed: ${(error as Error).message}`)); }
-    else { const webhook = this.config.get<string>('TELEGRAM_WEBHOOK_URL'); if (webhook) await this.bot.api.setWebhook(webhook); }
+    if (!token) { this.logger.warn('Telegram support bot disabled: no TELEGRAM_SUPPORT_BOT token configured in the Tech Dashboard'); return; }
+    this.bot = new Bot(token);
+    this.botToken = token;
+    this.bot.catch((error) => this.logger.error(`Telegram bot handling error: ${String(error?.error ?? error)}`));
+    this.registerHandlers();
+    try {
+      const me = await this.bot.api.getMe();
+      this.logger.log(`Telegram support bot ready as @${me.username}`);
+    } catch (error) {
+      this.logger.error(`Telegram support bot token invalid or network failure: ${(error as Error).message}`);
+      return;
+    }
+    if (this.config.get<string>('NODE_ENV') !== 'production') {
+      this.polling = true;
+      this.bot.start().catch((error) => this.logger.error(`Telegram polling failed: ${(error as Error).message}`));
+      this.logger.log('Telegram support bot polling started (dev mode).');
+      return;
+    }
+    const webhook = this.config.get<string>('TELEGRAM_WEBHOOK_URL');
+    if (webhook) {
+      try {
+        await this.bot.api.setWebhook(webhook);
+        this.logger.log(`Telegram webhook set: ${webhook}`);
+      } catch (error) {
+        this.logger.error(`Telegram webhook set failed: ${(error as Error).message}`);
+        this.polling = true;
+        this.bot.start().catch((err) => this.logger.error(`Telegram polling fallback failed: ${(err as Error).message}`));
+        this.logger.warn('Fell back to Telegram long polling because webhook setup failed.');
+      }
+      return;
+    }
+    this.polling = true;
+    this.bot.start().catch((error) => this.logger.error(`Telegram polling failed: ${(error as Error).message}`));
+    this.logger.warn('TELEGRAM_WEBHOOK_URL not configured; Telegram support bot is using long polling.');
   }
 
-  async onModuleDestroy() { if (this.polling) await this.bot.stop(); }
-  async handleUpdate(update: Update) { const token = await this.credentials.get('TELEGRAM_SUPPORT_BOT'); if (token && token !== this.botToken) { this.bot = new Bot(token); this.botToken = token; this.registerHandlers(); } if (token) await this.bot.handleUpdate(update); }
+  async onModuleDestroy() { if (this.polling) { await this.bot.stop().catch(() => undefined); } }
+  async handleUpdate(update: Update) {
+    const token = await this.credentials.get('TELEGRAM_SUPPORT_BOT');
+    if (!token) { this.logger.warn('Telegram webhook update ignored: no support bot token configured.'); return; }
+    if (token !== this.botToken) { this.bot = new Bot(token); this.botToken = token; this.registerHandlers(); }
+    try { await this.bot.handleUpdate(update); } catch (error) { this.logger.error(`Telegram webhook handling failed: ${(error as Error).message}`); }
+  }
 
   private registerHandlers() {
     this.bot.command('start', (ctx) => ctx.reply('Welcome to TOGT Tour & Travel! 🎉\n\nI can help with:\n🕋 Umrah packages\n✈️ Flight tickets\n🛂 Visa processing\n🏔️ Tours\n💼 Travel consulting\n\nType your question in English, Arabic, or Amharic.', { reply_markup: menu }));
@@ -43,7 +78,33 @@ async onModuleInit() {
     this.bot.hears('ℹ️ Help', (ctx) => ctx.reply('Ask me about packages, prices, visas, tickets, tours, booking, or refunds.'));
     this.bot.callbackQuery(/^package:(.+)$/, async (ctx) => { const pkg = await this.prisma.package.findUnique({ where: { id: ctx.match[1] } }); await ctx.answerCallbackQuery(); if (!pkg) return ctx.reply('Package not found.'); const text = `${pkg.title}\n💰 ${pkg.price ? `${pkg.price.toLocaleString()} ${pkg.currency ?? 'ETB'}` : 'Custom pricing'}\n📅 ${pkg.duration ?? 'Flexible duration'}\n\n${pkg.description}`; return ctx.reply(text, { reply_markup: new InlineKeyboard().url('📦 Book Now', 'https://travel.togttrading.com/en#smart-form').text('📞 Contact', 'contact:call') }); });
     this.bot.callbackQuery('contact:call', async (ctx) => { await ctx.answerCallbackQuery(); await ctx.reply('Call TOGT: +251 99 797 9741'); });
-    this.bot.on('message:text', async (ctx) => { if (ctx.message.text.startsWith('/')) return; await ctx.replyWithChatAction('typing'); try { const result = await this.chatbot.ask({ message: ctx.message.text, conversationId: `telegram:${ctx.from.id}` }); const text = result.packages && result.packages.length ? `${result.reply}\n\n${this.chatbot.formatPackagesText(result.packages)}` : result.reply; await ctx.reply(text, { reply_markup: menu }); } catch { await ctx.reply('I could not reach the assistant. Please contact +251 99 797 9741.'); } });
+    this.bot.on('message:text', async (ctx) => {
+      if (ctx.message.text.startsWith('/')) return;
+      await ctx.replyWithChatAction('typing');
+      try {
+        const result = await this.chatbot.ask({ message: ctx.message.text, conversationId: `telegram:${ctx.from.id}`, userInfo: { name: ctx.from.first_name } });
+        let text = result.reply;
+        if (result.packages && result.packages.length) text = `${result.reply}\n\n${this.chatbot.formatPackagesText(result.packages)}`;
+        try { await ctx.reply(this.formatTelegramText(text).html, { parse_mode: 'HTML', reply_markup: menu }); }
+        catch (error) { this.logger.warn(`Telegram HTML reply rejected (${(error as Error).message}); sending plain text.`); await ctx.reply(this.formatTelegramText(text).plain, { reply_markup: menu }); }
+      } catch (error) {
+        this.logger.error(`Telegram assistant failed: ${(error as Error).message}`);
+        await ctx.reply('Sorry, I could not reach the assistant right now. Please call +251 99 797 9741.').catch(() => undefined);
+      }
+    });
+  }
+
+  private formatTelegramText(text: string) {
+    const esc = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const html = esc
+      .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+      .replace(/^\s*(#{1,3})\s+(.+)$/gm, '<b>$2</b>')
+      .replace(/^\s*(?:[-•])\s+/gm, '• ')
+      .replace(/^\s*(\d+)[.)]\s+/gm, '$1. ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+    const plain = text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/^#{1,3}\s+/gm, '').trim();
+    return { html, plain };
   }
 
   private async sendPackages(ctx: { reply: (text: string, options?: Record<string, unknown>) => Promise<unknown> }, type?: string) {

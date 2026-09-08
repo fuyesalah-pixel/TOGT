@@ -335,8 +335,8 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: user ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
-                Text(widget.msg.text,
-                    style: TOGTTypography.body.copyWith(
+                _rich(widget.msg.text,
+                    TOGTTypography.body.copyWith(
                         color: user ? TOGTColors.white : const Color(0xFF12394F), fontSize: 13.8, decoration: TextDecoration.none)),
                 if (widget.msg.packages != null && widget.msg.packages!.isNotEmpty)
                   ...widget.msg.packages!.take(4).map((pkg) => _buildPackageCard(context, pkg)),
@@ -344,6 +344,22 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _rich(String text, TextStyle base) {
+    if (!text.contains('**')) return Text(text, style: base);
+    final pieces = text.split(RegExp(r'(\*\*[^*]+\*\*)'));
+    return Text.rich(
+      TextSpan(
+        style: base,
+        children: pieces.where((part) => part.isNotEmpty).map((part) {
+          if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+            return TextSpan(text: part.substring(2, part.length - 2), style: base.copyWith(fontWeight: FontWeight.w700));
+          }
+          return TextSpan(text: part.replaceFirst(RegExp(r'^#{1,3}\s+'), ''));
+        }).toList(),
       ),
     );
   }

@@ -59,7 +59,7 @@ export class ChatbotService {
 
   private async geminiProvider(): Promise<{ key: string; model: string } | undefined> {
     const key = await this.credentials.get('GEMINI');
-    if (key) return { key, model: this.config.get<string>('GEMINI_MODEL') ?? 'gemini-2.5-flash' };
+    if (key) return { key, model: this.config.get<string>('GEMINI_MODEL') ?? 'gemini-3.6-flash' };
     return undefined;
   }
 
@@ -131,14 +131,20 @@ export class ChatbotService {
     return [`Services: ${services}`, `Policies: ${policy}`, `Contact: +251 99 797 9741 / +251 99 797 9740, info@togttrading.com, Jemo 1, Addis Ababa.`, packageContext, faqContext, galleryContext].filter(Boolean).join('\n');
   }
 
-  private systemPrompt(language: string, context: string, history: Array<{ role: 'user' | 'assistant'; content: string }>): string {
+  private systemPrompt(language: string, context: string, history: Array<{ role: 'user' | 'assistant'; content: string }>, userName?: string): string {
     const languageRules = language === 'Amharic' ? 'Use proper Amharic script (አማርኛ), formal but friendly Ethiopian travel language, and write ETB as ብር where natural. Avoid unnecessary English words.' : language === 'Arabic' ? 'Use clear, polite Modern Standard Arabic.' : 'Use natural professional English.';
     const previous = history.length ? `\nPrevious conversation:\n${history.map((item) => `${item.role}: ${item.content}`).join('\n')}` : '';
-    return `You are Ahmed, a warm senior TOGT travel consultant. ${languageRules} Use only the supplied live context; never invent prices. Ask a follow-up when useful.\n${context}${previous}\n\nCONSULTATION STYLE: Answer conversationally, like a helpful travel agent. Recommend or list specific packages ONLY when the user asks about packages, tours, trips, prices, budgets, or refers to a package already shown in this conversation — never otherwise. Never output JSON, code blocks, or raw metadata in your reply.\n\nFINAL INSTRUCTION: The user wrote in ${language}. Reply entirely in ${language}${language === 'Amharic' ? ' using proper Amharic script (አማርኛ)' : ''}. Do not reply in English. Do not refuse to answer in this language. If the user sends a greeting, greet back warmly in ${language} and offer help.`;
+    const greeting = userName ? `\nCustomer name: ${userName} (use it naturally to personalise short replies, without overusing it).` : '';
+    return `You are Ahmed, a warm senior TOGT travel consultant. ${languageRules} Use only the supplied live context; never invent prices. Ask a follow-up when useful.\n${context}${previous}${greeting}\n\nCONSULTATION STYLE: Answer conversationally, like a helpful travel agent. Recommend or list specific packages ONLY when the user asks about packages, tours, trips, prices, budgets, or refers to a package already shown in this conversation — never otherwise. Never output JSON, code blocks, or raw metadata in your reply.\n\nFORMATTING: Structure your reply for easy reading. Use short paragraphs separated by blank lines. For headings or titles use a line starting with "**" and "**" (for example **Umrah Packages**). For lists use lines that start with "- ". For step-by-step instructions use numbered lines that start with "1. ", "2. ", and so on. Keep the whole reply under about 180 words.\n\nFINAL INSTRUCTION: The user wrote in ${language}. Reply entirely in ${language}${language === 'Amharic' ? ' using proper Amharic script (አማርኛ)' : ''}. Do not reply in English. Do not refuse to answer in this language. If the user sends a greeting, greet back warmly in ${language} and offer help.`;
   }
 
   private async history(conversationId: string): Promise<Array<{ role: 'user' | 'assistant'; content: string }>> {
     return (await this.valkey.list(`chatbot:conversation:${conversationId}`)).reverse().map((item) => JSON.parse(item) as { role: 'user' | 'assistant'; content: string });
+  }
+
+  private userName(dto: AskChatbotDto): string | undefined {
+    const name = dto.userInfo?.name;
+    return name && typeof name === 'string' && name.trim() ? name.trim().slice(0, 60) : undefined;
   }
 
   async stream(dto: AskChatbotDto, response: Response) {
@@ -152,7 +158,7 @@ export class ChatbotService {
     const galleryResults = gallery.map((item) => ({ item, score: score(`${item.title} ${item.description} ${item.category} ${item.location}`) })).sort((a, b) => b.score - a.score).slice(0, 3).map(({ item }) => item);
     const language = this.language(dto.message);
     const context = this.buildContext(language, packageResults, faqResults, galleryResults);
-    const system = this.systemPrompt(language, context, history);
+    const system = this.systemPrompt(language, context, history, this.userName(dto));
     let text = this.fallback(dto.message, packageResults, faqResults, galleryResults);
     const writeWords = () => { for (const word of text.split(/\s+/)) response.write(`data: ${JSON.stringify({ chunk: `${word} ` })}\n\n`); };
     response.status(200).set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
@@ -235,13 +241,14 @@ export class ChatbotService {
     const relevantGallery = gallery.map((item) => ({ item, score: score(`${item.title} ${item.description} ${item.category} ${item.location}`) })).sort((a, b) => b.score - a.score).slice(0, 3).map(({ item }) => item);
     const language = this.language(dto.message);
     const context = this.buildContext(language, relevantPackages, relevantFaqs, relevantGallery);
+    const system = this.systemPrompt(language, context, history, this.userName(dto));
     let reply = this.fallback(dto.message, relevantPackages, relevantFaqs, relevantGallery);
     try {
       if (language === 'Amharic') {
         const gemini = await this.geminiProvider();
         if (gemini) {
           const model = new GoogleGenerativeAI(gemini.key).getGenerativeModel({ model: gemini.model });
-          const result = await model.generateContent(`${this.systemPrompt(language, context, history)}\nUser: ${dto.message}`);
+          const result = await model.generateContent(`${system}\nUser: ${dto.message}`);
           const value = result.response.text();
           if (value) reply = value;
         }
@@ -249,7 +256,7 @@ export class ChatbotService {
       if (!reply || language !== 'Amharic') {
         const provider = await this.completionsProvider(language);
         if (provider) {
-          const res = await fetch(`${provider.baseUrl}/chat/completions`, { method: 'POST', headers: { Authorization: `Bearer ${provider.key}`, 'Content-Type': 'application/json', ...(provider.name === 'OpenRouter' ? { 'HTTP-Referer': 'https://travel.togttrading.com', 'X-Title': 'TOGT Tour and Travel' } : {}) }, body: JSON.stringify({ model: provider.model, temperature: 0.2, messages: [{ role: 'system', content: `${this.systemPrompt(language, context, history)}` }, { role: 'user', content: dto.message }] }) });
+          const res = await fetch(`${provider.baseUrl}/chat/completions`, { method: 'POST', headers: { Authorization: `Bearer ${provider.key}`, 'Content-Type': 'application/json', ...(provider.name === 'OpenRouter' ? { 'HTTP-Referer': 'https://travel.togttrading.com', 'X-Title': 'TOGT Tour and Travel' } : {}) }, body: JSON.stringify({ model: provider.model, temperature: 0.2, messages: [{ role: 'system', content: system }, { role: 'user', content: dto.message }] }) });
           const payload = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
           if (res.ok && payload.choices?.[0]?.message?.content) reply = payload.choices[0].message.content;
         }

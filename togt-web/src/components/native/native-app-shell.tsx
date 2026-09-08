@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDisplayPackages } from "@/hooks/usePackages";
 import { streamChatbot } from "@/lib/api/chatbot";
 import type { DisplayPackage } from "@/lib/api/packages";
+import { RichText } from "@/components/site/rich-text";
 
 type Tab = "home" | "packages" | "umrah" | "chat" | "profile";
 
@@ -74,7 +75,7 @@ function NativeChat() {
       <div className="flex-1 space-y-3 overflow-y-auto px-5">
         {messages.map((message, index) => (
           <div key={index} className={`max-w-[85%] rounded-2xl p-3 text-sm ${message.from === "user" ? "ml-auto bg-togt-blue text-white" : "bg-white shadow-sm"}`}>
-            {message.text}
+            {message.from === "bot" ? <RichText text={message.text} /> : <p className="whitespace-pre-line leading-relaxed">{message.text}</p>}
             {message.packages?.length ? (
               <div className="mt-3 grid gap-3">{message.packages.slice(0, 5).map((pkg) => (
                 <article key={pkg.id} className="overflow-hidden rounded-xl border border-gray-200 bg-white text-togt-navy shadow-sm">
@@ -83,6 +84,7 @@ function NativeChat() {
                     <h4 className="font-bold">{pkg.title}</h4>
                     <p className="mt-1 text-xs font-semibold text-togt-orange">{pkg.duration || "Flexible duration"} · {pkg.price ? `${pkg.price.toLocaleString()} ${pkg.currency || "ETB"}` : "Custom pricing"}</p>
                     {pkg.description && <p className="mt-1 line-clamp-2 text-xs text-gray-500">{pkg.description}</p>}
+                    <button onClick={() => window.alert("Open the booking form on the website to complete this request.")} className="mt-2 w-full rounded-lg bg-togt-orange py-1.5 text-xs font-bold text-white">Book Now</button>
                   </div>
                 </article>
               ))}
