@@ -47,7 +47,7 @@
   "packageType": "የፓኬጅ አይነት",
   "hotelPreference": "የሆቴል ምርጫ",
   "roomType": "የክፍል አይነት",
-  "continue": "ቀጥል",
+  "continueAction": "ቀጥል",
   "aiAssistant": "AI ረዳት",
   "humanSupport": "የሰው ድጋፍ",
   "commonTravelAnswers": "የተለመዱ የጉዞ መልሶችና ጥያቄዎች።",

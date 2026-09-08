@@ -47,7 +47,7 @@
   "packageType": "نوع الباقة",
   "hotelPreference": "تفضيل الفندق",
   "roomType": "نوع الغرفة",
-  "continue": "متابعة",
+  "continueAction": "متابعة",
   "aiAssistant": "المساعد الذكي",
   "humanSupport": "دعم بشري",
   "commonTravelAnswers": "إجابات وطلبات السفر الشائعة.",

@@ -47,7 +47,7 @@
   "packageType": "Package type",
   "hotelPreference": "Hotel preference",
   "roomType": "Room type",
-  "continue": "Continue",
+  "continueAction": "Continue",
   "aiAssistant": "AI Assistant",
   "humanSupport": "Human Support",
   "commonTravelAnswers": "Common travel answers and requests.",
