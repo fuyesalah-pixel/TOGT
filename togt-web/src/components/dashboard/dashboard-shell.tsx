@@ -46,6 +46,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const tabs = roleTabs[user.role] ?? roleTabs.CUSTOMER;
   const activeTab = searchParams.get("tab") ?? tabs[0].id;
   const tabHref = (id: string) => `${pathname}?tab=${id}`;
+  const localizedHref = (id: string) => `${pathname.replace(/^\/(en|ar|am|om)(?=\/|$)/, "")}?tab=${id}`;
 
   const initials = user.fullName
     .split(" ")
@@ -117,7 +118,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             {user.role.charAt(0) + user.role.slice(1).toLowerCase()} Dashboard
           </p></div>
           <div className="flex items-center gap-4">
-            <Link href={`${pathname}?tab=notifications`} className="relative text-gray-500" aria-label="Notifications">
+            <Link href={localizedHref("notifications")} className="relative text-gray-500" aria-label="Notifications">
               <Bell className="h-5 w-5" />
               {(unreadNotifications?.unreadCount ?? unread) > 0 && (
                 <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-togt-orange px-1 text-[10px] font-bold text-white">
