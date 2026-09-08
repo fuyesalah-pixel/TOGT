@@ -24,6 +24,7 @@ import { DuffelModule } from './modules/duffel/duffel.module';
 import { CurrencyModule } from './modules/currency/currency.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
 import { TelegramModule } from './modules/telegram/telegram.module';
+import { TelegramBackupModule } from './modules/telegram/telegram-backup.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
 import { CallRecordsModule } from './modules/callrecords/call-records.module';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -52,6 +53,7 @@ import { SystemModule } from './modules/system/system.module';
     CurrencyModule,
     ChatbotModule,
     TelegramModule,
+    TelegramBackupModule,
     TicketsModule,
     CallRecordsModule,
     ScheduleModule.forRoot(),

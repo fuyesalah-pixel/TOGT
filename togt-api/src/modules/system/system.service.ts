@@ -7,15 +7,17 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { Role, User } from '@prisma/client';
 import { SystemProvider, UpdateMaintenanceDto, UpsertSystemKeyDto } from './dto/system-key.dto';
 import { ChatGateway } from '../chat/chat.gateway';
+import { CredentialService } from './credential.service';
 
-const PROVIDERS = Object.values(SystemProvider);
+const PROVIDERS = Object.values(SystemProvider).filter((provider) => provider !== SystemProvider.TELEGRAM);
+const TELEGRAM_BOT_PROVIDERS = [SystemProvider.TELEGRAM_SUPPORT_BOT, SystemProvider.TELEGRAM_BACKUP_BOT];
 
 @Injectable()
 export class SystemService {
   private readonly logger = new Logger(SystemService.name);
   private readonly startedAt = new Date();
 
-  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, private readonly gateway: ChatGateway) {}
+  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, private readonly gateway: ChatGateway, private readonly credentials: CredentialService) {}
 
   private assertTech(actor: User) {
     if (actor.role !== Role.TECH) throw new ForbiddenException('Tech access required');
@@ -86,12 +88,26 @@ export class SystemService {
   async testProvider(provider: string, actor: User) {
     this.assertTech(actor);
     const row = await this.prisma.systemSecret.findUnique({ where: { provider } });
-    if (!row) throw new BadRequestException('Provider secret is not configured');
+    if (!row && !(TELEGRAM_BOT_PROVIDERS as string[]).includes(provider)) throw new BadRequestException('Provider secret is not configured');
     let outcome = 'PASS';
-    try { this.decrypt(row.ciphertext); } catch { outcome = 'FAIL'; }
-    await this.prisma.systemSecret.update({ where: { provider }, data: { lastTestedAt: new Date(), lastTestStatus: outcome } });
+    let username: string | undefined;
+    try {
+      if ((TELEGRAM_BOT_PROVIDERS as string[]).includes(provider)) {
+        const token = await this.credentials.get(provider);
+        if (!token) throw new Error('token missing');
+        const res = await fetch(`https://api.telegram.org/bot${token}/getMe`, { signal: AbortSignal.timeout(15000) });
+        const payload = await res.json() as { ok: boolean; result?: { username?: string; first_name?: string } };
+        if (!payload.ok || !payload.result?.username) throw new Error('getMe rejected');
+        username = `@${payload.result.username}`;
+      } else if (row) {
+        this.decrypt(row.ciphertext);
+      } else {
+        outcome = 'FAIL';
+      }
+    } catch (error) { outcome = 'FAIL'; this.logger.warn(`Provider test failed for ${provider}: ${(error as Error).message}`); }
+    if (row) await this.prisma.systemSecret.update({ where: { provider }, data: { lastTestedAt: new Date(), lastTestStatus: outcome } });
     await this.audit(actor, 'SYSTEM_SECRET_TEST', provider, outcome);
-    return { provider, status: outcome, testedAt: new Date() };
+    return { provider, status: outcome, testedAt: new Date(), ...(username ? { username } : {}) };
   }
 
   async maintenance(actor: User) {

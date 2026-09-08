@@ -13,6 +13,13 @@ const ENV_FALLBACKS: Record<string, string[]> = {
   SMS_ETHIOPIA: ['SMS_ETHIOPIA_API_KEY', 'SMS_ETHIOPIA_TOKEN'],
   R2: ['R2_SECRET_ACCESS_KEY'],
   TELEGRAM: ['TELEGRAM_BOT_TOKEN'],
+  TELEGRAM_SUPPORT_BOT: ['TELEGRAM_SUPPORT_BOT_TOKEN', 'TELEGRAM_BOT_TOKEN'],
+  TELEGRAM_BACKUP_BOT: ['TELEGRAM_BACKUP_BOT_TOKEN'],
+};
+
+const ALIASES: Record<string, string[]> = {
+  TELEGRAM_SUPPORT_BOT: ['TELEGRAM_SUPPORT_BOT', 'TELEGRAM'],
+  TELEGRAM_BACKUP_BOT: ['TELEGRAM_BACKUP_BOT'],
 };
 
 @Injectable()
@@ -20,8 +27,10 @@ export class CredentialService {
   constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {}
 
   async get(provider: string): Promise<string | undefined> {
-    const row = await this.prisma.systemSecret.findUnique({ where: { provider: provider as never } });
-    if (row?.enabled) return this.decrypt(row.ciphertext);
+    for (const key of ALIASES[provider] ?? [provider]) {
+      const row = await this.prisma.systemSecret.findUnique({ where: { provider: key as never } });
+      if (row?.enabled) return this.decrypt(row.ciphertext);
+    }
     for (const name of ENV_FALLBACKS[provider] ?? []) {
       const value = process.env[name] || this.config.get<string>(name);
       if (value) return value;
