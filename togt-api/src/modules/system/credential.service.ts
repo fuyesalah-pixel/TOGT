@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createDecipheriv, createHash } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -24,12 +24,19 @@ const ALIASES: Record<string, string[]> = {
 
 @Injectable()
 export class CredentialService {
+  private readonly logger = new Logger(CredentialService.name);
   constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {}
 
   async get(provider: string): Promise<string | undefined> {
     for (const key of ALIASES[provider] ?? [provider]) {
-      const row = await this.prisma.systemSecret.findUnique({ where: { provider: key as never } });
-      if (row?.enabled) return this.decrypt(row.ciphertext);
+      try {
+        const row = await this.prisma.systemSecret.findUnique({ where: { provider: key as never } });
+        if (row?.enabled) return this.decrypt(row.ciphertext);
+      } catch (error) {
+        // Database unreachable (or key mismatch): degrade to environment fallback
+        // instead of throwing, so features like the chatbot keep working.
+        this.logger.warn(`Credential lookup for ${provider} fell back to env: ${(error as Error).message}`);
+      }
     }
     for (const name of ENV_FALLBACKS[provider] ?? []) {
       const value = process.env[name] || this.config.get<string>(name);

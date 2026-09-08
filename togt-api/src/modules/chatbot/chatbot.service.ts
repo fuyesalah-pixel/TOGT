@@ -111,8 +111,8 @@ export class ChatbotService {
         .sort((a, b) => b.score - a.score)
         .map(({ item }) => this.toSnippet(item));
     } else if (useStored) {
-      const stored = await this.valkey.get(lastKey);
-      if (stored) {
+    const stored = await this.valkey.get(lastKey).catch(() => null);
+    if (stored) {
         const parsed = JSON.parse(stored) as PackageSnippet[];
         const refIndex = this.followUpIndex(message);
         snippets = refIndex >= 0 && parsed[refIndex] ? [parsed[refIndex]] : parsed;
@@ -120,7 +120,7 @@ export class ChatbotService {
     }
     if (budget != null && snippets.length) snippets = snippets.filter((p) => p.price != null && p.price <= budget);
     const selected = snippets.slice(0, 5);
-    if (selected.length) await this.valkey.set(lastKey, JSON.stringify(selected), 6 * 3600);
+    if (selected.length) await this.valkey.set(lastKey, JSON.stringify(selected), 6 * 3600).catch(() => undefined);
     return { packages: selected };
   }
 
@@ -139,7 +139,12 @@ export class ChatbotService {
   }
 
   private async history(conversationId: string): Promise<Array<{ role: 'user' | 'assistant'; content: string }>> {
-    return (await this.valkey.list(`chatbot:conversation:${conversationId}`)).reverse().map((item) => JSON.parse(item) as { role: 'user' | 'assistant'; content: string });
+    try {
+      return (await this.valkey.list(`chatbot:conversation:${conversationId}`)).reverse().map((item) => JSON.parse(item) as { role: 'user' | 'assistant'; content: string });
+    } catch {
+      // Cache unavailable (e.g. Valkey down): continue without history rather than failing the chat.
+      return [];
+    }
   }
 
   private userName(dto: AskChatbotDto): string | undefined {
@@ -163,7 +168,7 @@ export class ChatbotService {
     const writeWords = () => { for (const word of text.split(/\s+/)) response.write(`data: ${JSON.stringify({ chunk: `${word} ` })}\n\n`); };
     response.status(200).set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
 
-    await this.valkey.push(`chatbot:conversation:${conversationId}`, JSON.stringify({ role: 'user', content: dto.message }));
+    await this.valkey.push(`chatbot:conversation:${conversationId}`, JSON.stringify({ role: 'user', content: dto.message })).catch(() => undefined);
 
     let streamed = false;
     if (language === 'Amharic') {
@@ -220,7 +225,7 @@ export class ChatbotService {
       if (!streamed) { text = this.fallback(dto.message, packageResults, faqResults, galleryResults); writeWords(); }
     }
 
-    await this.valkey.push(`chatbot:conversation:${conversationId}`, JSON.stringify({ role: 'assistant', content: text }));
+    await this.valkey.push(`chatbot:conversation:${conversationId}`, JSON.stringify({ role: 'assistant', content: text })).catch(() => undefined);
     this.logger.log(`Chatbot stream resolved ${language === 'Amharic' ? '(Gemini path)' : ''} ${text ? 'AI reply' : 'fallback'}`);
     if (packageResults.length) response.write(`data: ${JSON.stringify({ meta: { packages: packageResults } })}\n\n`);
     response.write('data: [DONE]\n\n');
@@ -278,8 +283,8 @@ export class ChatbotService {
         }
       }
     } catch (error) { this.logger.warn(`AI request failed: ${(error as Error).message}`); }
-    await this.valkey.push(`chatbot:conversation:${conversationId}`, JSON.stringify({ role: 'user', content: dto.message }));
-    await this.valkey.push(`chatbot:conversation:${conversationId}`, JSON.stringify({ role: 'assistant', content: reply }));
+    await this.valkey.push(`chatbot:conversation:${conversationId}`, JSON.stringify({ role: 'user', content: dto.message })).catch(() => undefined);
+    await this.valkey.push(`chatbot:conversation:${conversationId}`, JSON.stringify({ role: 'assistant', content: reply })).catch(() => undefined);
     return { reply, suggestions: ['View packages', 'Umrah information', 'Book a ticket', 'Contact support'], packages: relevantPackages, links: [{ label: 'Book a service', url: '#smart-form' }, { label: 'Contact support', url: '#smart-form' }] };
   }
 

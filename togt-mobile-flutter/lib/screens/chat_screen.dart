@@ -388,6 +388,7 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
   }
 
   Widget _buildPackageCard(BuildContext context, ChatPackage pkg) {
+    final l10n = AppLocalizations.of(context);
     final width = MediaQuery.of(context).size.width * .66;
     final imageUrl = pkg.image != null && pkg.image!.isNotEmpty ? ApiService.instance.resolveImageUrl(pkg.image!) : null;
     return GestureDetector(
@@ -442,7 +443,7 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
                   Row(
                     children: [
                       Flexible(
-                        child: Text(pkg.duration ?? 'Flexible duration',
+                        child: Text(pkg.duration ?? l10n.flexibleDuration,
                             style: TOGTTypography.small.copyWith(color: TOGTColors.grey), overflow: TextOverflow.ellipsis),
                       ),
                       if (pkg.price != null)
@@ -452,7 +453,7 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
                               style: TOGTTypography.small.copyWith(color: TOGTColors.orange, fontWeight: FontWeight.bold)),
                         )
                       else
-                        Text('Custom pricing', style: TOGTTypography.small.copyWith(color: TOGTColors.orange, fontWeight: FontWeight.bold)),
+                        Text(l10n.customPricing, style: TOGTTypography.small.copyWith(color: TOGTColors.orange, fontWeight: FontWeight.bold)),
                     ],
                   ),
                   if (pkg.description.isNotEmpty)
