@@ -66,7 +66,8 @@ export default function middleware(req: NextRequest) {
 
 export const config = {
   // Match all pathnames except for:
-  // - /api, /trpc, /_next, /_vercel
+  // - /api, /trpc, /_next, /_vercel, /media-proxy (same-origin image proxy
+  //   used by the ID-card exports; must bypass locale routing)
   // - files with a dot (e.g. favicon.ico)
-  matcher: "/((?!api|trpc|_next|_vercel|.*\\..*).*)",
+  matcher: "/((?!api|trpc|_next|_vercel|media-proxy|.*\\..*).*)",
 };

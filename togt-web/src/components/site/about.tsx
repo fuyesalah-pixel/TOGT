@@ -64,13 +64,25 @@ export function About() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.1, ease: EASE }}
-            className="aspect-video overflow-hidden rounded-xl border border-togt-blue/10 bg-togt-navy/5 shadow-sm"
+            className="group/video relative aspect-video overflow-hidden rounded-2xl bg-black shadow-[0_20px_50px_-12px_rgba(18,57,79,0.35)] ring-1 ring-black/10"
           >
+            {/* YouTube-style player chrome: top gradient + red play glow */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16 bg-gradient-to-b from-black/60 to-transparent opacity-70" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-16 bg-gradient-to-t from-black/60 to-transparent opacity-70" />
+            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover/video:opacity-100">
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#FF0000] shadow-2xl transition-transform duration-300 group-hover/video:scale-110">
+                <svg viewBox="0 0 24 24" className="ml-1 h-8 w-8 fill-white" aria-hidden="true">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </span>
+            </div>
             <iframe
-              className="h-full w-full"
-              src={videoEmbed}
+              className="absolute inset-0 h-full w-full"
+              src={`${videoEmbed}?rel=0&modestbranding=1&playsinline=1`}
               title={t("videoTitle")}
               loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
             />
           </motion.div>

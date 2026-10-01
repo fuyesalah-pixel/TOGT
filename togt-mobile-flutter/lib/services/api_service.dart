@@ -211,6 +211,22 @@ class ApiService {
     return '${ApiConfig.webOrigin}$pathOrUrl';
   }
 
+  /// Signed, short-lived URLs for private documents stored as
+  /// `r2-private://<key>` (customer request documents). Public http(s) URLs
+  /// and bare paths are returned unchanged (resolved against the web origin).
+  Future<String> resolveDocumentUrl(String pathOrUrl) async {
+    if (pathOrUrl.startsWith('r2-private://')) {
+      try {
+        final data = await post('/service-requests/documents/signed-url', body: {'key': pathOrUrl});
+        final url = data is Map ? data['url']?.toString() : null;
+        return (url == null || url.isEmpty) ? pathOrUrl : url;
+      } catch (_) {
+        return pathOrUrl;
+      }
+    }
+    return resolveImageUrl(pathOrUrl);
+  }
+
   Stream<String> sseStream(String path, Map<String, dynamic> body, {void Function(Map<String, dynamic> meta)? onMeta}) async* {
     final client = http.Client();
     try {

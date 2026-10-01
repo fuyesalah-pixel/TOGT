@@ -11,6 +11,7 @@ export function GuideMapInner({ points = [], locked = false, lockMessage = "This
   const [mapError, setMapError] = useState<string | null>(null);
   const [styleLoaded, setStyleLoaded] = useState(false);
   const mapRef = useRef<MapRef>(null);
+  // Publishable token baked at build time (NEXT_PUBLIC_MAPBOX_TOKEN).
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
   const guide = points.find((point) => point.role === "GUIDE");

@@ -116,7 +116,26 @@ class _PersonalScreenState extends State<PersonalScreen> {
         ..._prayerRows(),
          SwitchListTile(contentPadding: EdgeInsets.zero, title: Text(l10n.azanAlarm), subtitle: Text(l10n.notifyBeforePrayer), value: _azan, activeThumbColor: TOGTColors.orange, onChanged: (v) async { setState(() => _azan = v); if (_times != null) await PrayerService.instance.schedule(_times!, enabled: v); }),
         if (_azan && !_exactAlarmHintShown && _times != null) _exactAlarmBanner(),
+        _permissionsCard(),
       ]);
+
+  /// Re-enable (or turn back on) the app permission flow: "don't ask again
+  /// unless the user asks for it" — this tile is that ask-again entry point.
+  Widget _permissionsCard() => Card(
+        margin: const EdgeInsets.only(top: 10),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          leading: const Icon(Icons.verified_user_rounded, color: TOGTColors.blue),
+          title: Text(l10n.permissionTitle, style: TOGTTypography.h3),
+          subtitle: Text('Location & notifications — tap to review or grant again', style: TOGTTypography.small),
+          trailing: const Icon(Icons.chevron_right_rounded, color: TOGTColors.grey),
+          onTap: () async {
+            await PermissionService.instance.resetFlow();
+            if (!mounted) return;
+            await PermissionService.instance.runAfterLogin(context);
+          },
+        ),
+      );
 
   /// Android 12+ requires the exact-alarm special access for on-time azan.
   Widget _exactAlarmBanner() {

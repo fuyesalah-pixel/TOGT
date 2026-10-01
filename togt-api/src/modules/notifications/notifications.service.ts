@@ -108,8 +108,11 @@ export class NotificationsService {
         select: { email: true, phone: true },
       });
       for (const user of users) {
-        if (channels.includes('EMAIL')) {
-          await this.sendAdminEmail(user.email, dto.title, `<p>${dto.message}</p>`);
+        if (channels.includes('EMAIL') && user.email) {
+          // Prefer Resend (when configured) so bulk email actually delivers;
+          // fall back to the Hostinger SMTP mailbox otherwise.
+          const resent = await this.sendEmail(user.email, dto.title, `<p>${dto.message}</p>`);
+          if (!resent) await this.sendAdminEmail(user.email, dto.title, `<p>${dto.message}</p>`);
         }
         if (channels.includes('SMS') && user.phone) {
           await this.sendSms(user.phone, `${dto.title}: ${dto.message}`);
@@ -141,22 +144,28 @@ export class NotificationsService {
     return this.prisma.notification.update({ where: { id }, data: { isRead: true, data: { ...(notification.data as object ?? {}), confirmed: true } } });
   }
 
-  /** Resend email — no-op (logged) when RESEND_API_KEY is not configured. */
-  async sendEmail(to: string, subject: string, html: string) {
+  /** Resend email — returns false (logged) when RESEND_API_KEY is not configured. */
+  async sendEmail(to: string, subject: string, html: string): Promise<boolean> {
     const apiKey = await this.credentials.get('RESEND');
     if (!apiKey) {
       this.logger.log(`[email:skipped] to=${to} subject="${subject}"`);
-      return;
+      return false;
     }
     try {
-      await new Resend(apiKey).emails.send({
-        from: this.config.get<string>('resend.from') ?? 'TOGT <noreply@togt.com>',
+      const result = await new Resend(apiKey).emails.send({
+        from: this.config.get<string>('resend.from') ?? 'TOGT <noreply@togttrading.com>',
         to,
         subject,
         html,
       });
+      if (result.error) {
+        this.logger.warn(`[email:failed] to=${to}: ${result.error.message}`);
+        return false;
+      }
+      return true;
     } catch (err) {
       this.logger.warn(`[email:failed] to=${to}: ${(err as Error).message}`);
+      return false;
     }
   }
 

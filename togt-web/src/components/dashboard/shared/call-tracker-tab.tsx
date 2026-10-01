@@ -207,12 +207,18 @@ function PaymentStatusDisplay({ value }: { value?: PaymentStatus | null }) {
 
 /**
  * Fetch an image client-side and convert it to a data URL so html2canvas can
- * embed it in exports. R2 serves permissive CORS headers, so a plain fetch
- * works from any origin — no server-side proxy route required.
+ * embed it in exports. Cross-origin R2 responses without CORS headers taint
+ * the canvas and silently drop the customer photo from printed/exported ID
+ * cards, so remote images are fetched through our same-origin image proxy
+ * first (which always serves permissive CORS headers).
  */
 async function toDataUrl(url: string): Promise<string> {
   try {
-    const response = await fetch(url, { mode: "cors", cache: "force-cache" });
+    const isRemote = /^https?:\/\//i.test(url);
+    const target = isRemote && !url.startsWith(window.location.origin)
+      ? `/media-proxy?url=${encodeURIComponent(url)}`
+      : url;
+    const response = await fetch(target, { cache: "force-cache" });
     if (!response.ok) return url;
     const blob = await response.blob();
     if (!blob.type.startsWith("image/")) return url;
@@ -384,8 +390,9 @@ export function CallTrackerTab({}: { staff?: boolean }) {
     const originalPhotoUrl = photo?.src;
     try {
       if (photo && originalPhotoUrl && !originalPhotoUrl.startsWith("data:")) {
-        // Same-origin images are already exportable; convert remote R2 images
-        // to a data URL so html2canvas never taints the canvas.
+        // Convert the customer photo to a data URL (via the same-origin proxy
+        // for remote R2 images) so html2canvas never taints the canvas —
+        // otherwise single print, PDF and PNG exports render WITHOUT the photo.
         const dataUrl = await toDataUrl(originalPhotoUrl);
         if (dataUrl !== originalPhotoUrl) photo.src = dataUrl;
       }
@@ -425,11 +432,18 @@ export function CallTrackerTab({}: { staff?: boolean }) {
 
   const downloadPdf = async () => {
     if (!idCardRecord) return;
-    const canvas = await captureIdCard();
-    if (!canvas) return;
-    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, 10, 60, 60 * (560 / 360));
-    pdf.save(`TOGT-ID-${idCardRecord.teamNumber}.pdf`);
+    setBulkExporting(true);
+    try {
+      const canvas = await captureIdCard();
+      if (!canvas) throw new Error("ID card was not ready for export.");
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, 10, 60, 60 * (560 / 360));
+      pdf.save(`TOGT-ID-${idCardRecord.teamNumber}.pdf`);
+    } catch (cause) {
+      showToast({ title: "Export failed", message: cause instanceof Error ? cause.message : "Please try again." });
+    } finally {
+      setBulkExporting(false);
+    }
   };
 
   const bulkPrint = async () => {
@@ -440,22 +454,31 @@ export function CallTrackerTab({}: { staff?: boolean }) {
       if (!result.data.length) { showToast({ title: "No records", message: `No records found for team ${teamFilter}.` }); return; }
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const cardWidth = 58; const cardHeight = cardWidth * (560 / 360); const gap = 5; const marginX = 10; const marginY = 3;
+      let captured = 0;
       for (let index = 0; index < result.data.length; index += 1) {
         const record = result.data[index];
-        let canvas: HTMLCanvasElement | null = null;
+        let dataUrl = "";
         try {
           setIdCardRecord(record);
           await waitForMaster(record.id);
-          canvas = await captureIdCard();
+          const canvas = await captureIdCard();
+          // toDataURL must stay inside this try: a tainted canvas throws
+          // SecurityError, and letting it escape produced blank PDF pages.
+          if (canvas && canvas.width > 1 && canvas.height > 1) dataUrl = canvas.toDataURL("image/png");
         } catch {
           continue;
         }
-        if (!canvas || canvas.width < 1 || canvas.height < 1) continue;
-        if (index > 0 && index % 9 === 0) pdf.addPage();
-        const slot = index % 9;
+        if (!dataUrl) continue;
+        if (captured > 0 && captured % 9 === 0) pdf.addPage();
+        const slot = captured % 9;
+        captured += 1;
         const x = marginX + (slot % 3) * (cardWidth + gap);
-        const y = marginY + Math.floor((slot % 9) / 3) * (cardHeight + gap);
-        pdf.addImage(canvas.toDataURL("image/png"), "PNG", x, y, cardWidth, cardHeight);
+        const y = marginY + Math.floor(slot / 3) * (cardHeight + gap);
+        pdf.addImage(dataUrl, "PNG", x, y, cardWidth, cardHeight);
+      }
+      if (captured === 0) {
+        showToast({ title: "Bulk export failed", message: "No ID cards could be captured. Reopen a record once, then try again." });
+        return;
       }
       pdf.save(`TOGT-Team-${teamFilter}.pdf`);
     } catch (cause) {

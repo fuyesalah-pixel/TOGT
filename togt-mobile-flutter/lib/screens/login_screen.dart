@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../l10n/app_localizations.dart';
 
+import '../navigation/app_navigator.dart';
 import '../services/auth_service.dart';
+import '../services/permission_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../widgets/animated_button.dart';
@@ -39,6 +41,12 @@ class _LoginScreenState extends State<LoginScreen>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(l10n.signedInAs(user.name, user.role.name))));
       Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeShell()));
+      // Ask for location/notification access once, right after the first
+      // login (never again unless the user re-enables it from Personal).
+      final navigatorContext = AppNavigator.navigatorKey.currentContext;
+      if (navigatorContext != null && navigatorContext.mounted) {
+        PermissionService.instance.runAfterLogin(navigatorContext);
+      }
     } on PlatformException catch (e) {
       debugPrint('Google sign-in error: ${e.code} ${e.message} ${e.details}');
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.googleSignInFailed)));

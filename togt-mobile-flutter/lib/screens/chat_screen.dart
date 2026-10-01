@@ -161,8 +161,25 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _attach() async {
     final l10n = AppLocalizations.of(context);
-    final workerId = _humanWorkerId;
-    if (workerId == null || _uploading) return;
+    if (_uploading) return;
+    var workerId = _humanWorkerId;
+    if (workerId == null) {
+      // The paperclip must work before any text message is sent: open the
+      // support conversation on demand instead of silently doing nothing.
+      try {
+        final conversation = await ChatSocketService.instance.start();
+        workerId = conversation is Map ? conversation['workerId']?.toString() : null;
+        _humanWorkerId = workerId;
+        if (workerId != null && mounted) setState(() {});
+      } catch (_) {}
+      if (workerId == null) {
+        if (mounted) {
+          setState(() => _messages.add(_Msg(text: l10n.chatSendFailed('No support worker is available yet — please try again in a moment.'), fromUser: false)));
+          await _saveHistory();
+        }
+        return;
+      }
+    }
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (sheetContext) => SafeArea(
@@ -271,7 +288,7 @@ Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                child: Row(children: [
                  if (_human)
                    IconButton(
-                     onPressed: _humanWorkerId == null || _uploading ? null : _attach,
+                     onPressed: _uploading ? null : _attach,
                      icon: _uploading
                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: TOGTColors.blue))
                          : const Icon(Icons.attach_file_rounded, color: TOGTColors.blue),
@@ -479,11 +496,34 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
   Widget _attachment(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (widget.msg.isImage) {
-      final src = widget.msg.localPath ?? ApiService.instance.resolveImageUrl(widget.msg.fileUrl!);
+      final raw = widget.msg.fileUrl!;
+      // Private storage keys resolve to short-lived signed URLs before display.
+      if (raw.startsWith('r2-private://')) {
+        return FutureBuilder<String>(
+          future: ApiService.instance.resolveDocumentUrl(raw),
+          builder: (context, snapshot) {
+            final signed = snapshot.data;
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const SizedBox(width: 210, height: 210, child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+            }
+            if (signed == null || signed == raw) {
+              return const SizedBox(width: 210, height: 210, child: Center(child: Icon(Icons.broken_image_rounded, color: TOGTColors.grey)));
+            }
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: GestureDetector(
+                onTap: () => _openImageViewer(context, signed, false),
+                child: SizedBox(width: 210, height: 210, child: Image.network(signed, width: 210, height: 210, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox(width: 210, height: 210, child: Center(child: Icon(Icons.broken_image_rounded, color: TOGTColors.grey))))),
+              ),
+            );
+          },
+        );
+      }
+      final src = widget.msg.localPath ?? ApiService.instance.resolveImageUrl(raw);
       final isLocal = widget.msg.localPath != null;
       final image = isLocal
           ? Image.file(File(src), width: 210, height: 210, fit: BoxFit.cover)
-          : Image.network(ApiService.instance.resolveImageUrl(widget.msg.fileUrl!), width: 210, height: 210, fit: BoxFit.cover, loadingBuilder: (_, child, progress) => progress == null ? child : const SizedBox(width: 210, height: 210, child: Center(child: CircularProgressIndicator(strokeWidth: 2))));
+          : Image.network(src, width: 210, height: 210, fit: BoxFit.cover, loadingBuilder: (_, child, progress) => progress == null ? child : const SizedBox(width: 210, height: 210, child: Center(child: CircularProgressIndicator(strokeWidth: 2))));
       return ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: GestureDetector(
@@ -493,7 +533,15 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
       );
     }
     return InkWell(
-      onTap: () => DocumentService.instance.openRemote(ApiService.instance.resolveImageUrl(widget.msg.fileUrl!)),
+      onTap: () async {
+        // Local previews open directly; remote files (including private R2
+        // keys exchanged for signed URLs) open via the system viewer.
+        final raw = widget.msg.fileUrl!;
+        final resolved = raw.startsWith('r2-private://')
+            ? await ApiService.instance.resolveDocumentUrl(raw)
+            : ApiService.instance.resolveImageUrl(raw);
+        await DocumentService.instance.openRemote(resolved);
+      },
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(widget.msg.fromUser ? Icons.insert_drive_file_rounded : Icons.picture_as_pdf_rounded, size: 18, color: widget.msg.fromUser ? TOGTColors.white : TOGTColors.blue),
         const SizedBox(width: 6),
@@ -509,7 +557,7 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
         appBar: AppBar(backgroundColor: Colors.black, iconTheme: const IconThemeData(color: Colors.white)),
         body: Center(
           child: InteractiveViewer(
-            child: isLocal ? Image.file(File(src)) : Image.network(ApiService.instance.resolveImageUrl(src)),
+            child: isLocal ? Image.file(File(src)) : Image.network(src),
           ),
         ),
       ),

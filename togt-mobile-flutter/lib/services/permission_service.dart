@@ -29,50 +29,60 @@ class PermissionService {
   final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
   bool _prompting = false;
 
-  /// Call from the home shell on every app open. Shows the intro dialog once,
-  /// then quietly re-requests anything that is still missing. Permanently
-  /// denied permissions trigger a "open settings" dialog (max once per day).
+  /// Runs ONCE, right after the FIRST successful login. Shows the intro
+  /// dialog, requests the permissions, and records completion. After that the
+  /// app never asks again (unless the user re-enables the flow from Personal →
+  /// "Permissions" which resets the flow).
+  Future<void> runAfterLogin(BuildContext context) async {
+    if (_prompting) return;
+    // Already asked once ("don't ask again unless turned off") — the user can
+    // re-enable the flow from Personal → Permissions.
+    if (await hasCompletedIntro) return;
+    _prompting = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final l10n = AppLocalizations.of(context);
+
+      final proceed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => _introDialog(context, l10n),
+      );
+      await prefs.setBool(_askedKey, true);
+      if (proceed != true) return;
+      if (!context.mounted) return;
+      await requestMissing();
+    } finally {
+      _prompting = false;
+    }
+  }
+
+  /// True once the post-login permission flow has completed. When it has, the
+  /// app must not nag again on every open ("don't ask again unless turned
+  /// off"). The user can re-enable prompts from the Personal screen.
+  Future<bool> get hasCompletedIntro async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_askedKey) ?? false;
+  }
+
+  /// Reset the stored state so the next login shows the permission flow again.
+  Future<void> resetFlow() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_askedKey);
+    await prefs.remove('togt_perm_settings_nag');
+  }
+
+  /// Quietly check + request anything still missing WITHOUT dialogs. Only
+  /// called from explicit user action (Personal → Permissions) or the one-time
+  /// post-login flow — never automatically on app open.
   Future<void> ensureAll(BuildContext context) async {
     if (_prompting) return;
     _prompting = true;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final askedBefore = prefs.getBool(_askedKey) ?? false;
-
       final missing = await missingPermissions();
       if (missing.isEmpty) return;
-
       if (!context.mounted) return;
-      final l10n = AppLocalizations.of(context);
-      if (!askedBefore) {
-        final proceed = await showDialog<bool>(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => _introDialog(context, l10n),
-        );
-        await prefs.setBool(_askedKey, true);
-        if (proceed != true) return;
-      }
-
       await requestMissing();
-
-      final stillMissing = await missingPermissions();
-      var permanentlyDenied = false;
-      for (final p in stillMissing) {
-        final denied = p == 'location' ? await _locationPermanentlyDenied() : await _notificationsPermanentlyDenied();
-        if (denied) {
-          permanentlyDenied = true;
-          break;
-        }
-      }
-      if (permanentlyDenied) {
-        final lastSettingsNag = prefs.getInt('togt_perm_settings_nag') ?? 0;
-        final now = DateTime.now().millisecondsSinceEpoch;
-        if (now - lastSettingsNag > const Duration(hours: 20).inMilliseconds && context.mounted) {
-          await prefs.setInt('togt_perm_settings_nag', now);
-          await _settingsDialog(context, AppLocalizations.of(context));
-        }
-      }
     } finally {
       _prompting = false;
     }
@@ -106,19 +116,6 @@ class PermissionService {
       try {
         await _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
       } catch (_) {}
-    }
-  }
-
-  Future<bool> _locationPermanentlyDenied() async => await Geolocator.checkPermission() == LocationPermission.deniedForever;
-
-  Future<bool> _notificationsPermanentlyDenied() async {
-    // The plugin cannot distinguish permanent denial; treat "still disabled
-    // after a request" as needing the settings page.
-    try {
-      final granted = await _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.areNotificationsEnabled();
-      return granted == false;
-    } catch (_) {
-      return false;
     }
   }
 
@@ -181,25 +178,5 @@ class PermissionService {
             child: Text(l10n.permissionGrant),
           ),
         ],
-      );
-
-  Future<void> _settingsDialog(BuildContext context, AppLocalizations l10n) => showDialog<void>(
-        context: context,
-        builder: (_) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-          title: Text(l10n.permissionTitle, style: TOGTTypography.h3),
-          content: Text(l10n.permissionBlockedBody, style: TOGTTypography.body),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.permissionLater)),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: TOGTColors.blue),
-              onPressed: () {
-                Navigator.pop(context);
-                openAppSettings();
-              },
-              child: Text(l10n.permissionOpenSettings),
-            ),
-          ],
-        ),
       );
 }

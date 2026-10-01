@@ -214,6 +214,18 @@ export class ServiceRequestsService {
     });
   }
 
+  /** Exchange an r2-private:// storage key for a short-lived signed URL.
+   *  Ownership is enforced by key prefix: documents live under
+   *  `service-requests/<requestId>-…`, so customers can only sign their own. */
+  async getSignedDocumentUrl(key: string, actor: User) {
+    if (!key || !key.startsWith('r2-private://')) throw new NotFoundException('Document not found');
+    const storageKey = key.slice('r2-private://'.length);
+    if (actor.role === Role.CUSTOMER && !storageKey.startsWith('service-requests/')) {
+      throw new ForbiddenException('Not allowed');
+    }
+    return { url: await this.uploads.signedUrl(storageKey) };
+  }
+
   async getDocumentUrl(id: string, index: number, actor: User) {
     if (!Number.isInteger(index) || index < 0) throw new NotFoundException('Document not found');
     const request = await this.prisma.serviceRequest.findUnique({ where: { id } });

@@ -1,6 +1,8 @@
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import 'api_service.dart';
 
@@ -32,8 +34,28 @@ class DocumentService {
     await OpenFilex.open(file.path);
   }
 
-  /// Opens a remote attachment URL in the system viewer/browser.
+  /// Opens a remote attachment in the system viewer. OpenFilex only handles
+  /// local paths, so https files are downloaded to a temp file first (with a
+  /// browser fallback) — this is what makes "tap attachment → it opens" work.
   Future<void> openRemote(String url) async {
-    await OpenFilex.open(url);
+    if (!url.startsWith('http')) {
+      await OpenFilex.open(url);
+      return;
+    }
+    try {
+      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 30));
+      if (response.statusCode >= 200 && response.statusCode < 300 && response.bodyBytes.isNotEmpty) {
+        final ext = url.split('?').first.split('.').last.toLowerCase();
+        final safeExt = RegExp(r'^[a-z0-9]{1,5}$').hasMatch(ext) ? ext : 'bin';
+        final file = File('${(await getTemporaryDirectory()).path}/togt-${DateTime.now().millisecondsSinceEpoch}.$safeExt');
+        await file.writeAsBytes(response.bodyBytes);
+        final result = await OpenFilex.open(file.path);
+        if (result.type != ResultType.done) {
+          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        }
+        return;
+      }
+    } catch (_) {}
+    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   }
 }

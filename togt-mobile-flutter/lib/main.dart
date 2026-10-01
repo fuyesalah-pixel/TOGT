@@ -7,7 +7,6 @@ import 'navigation/app_navigator.dart';
 import 'screens/splash_screen.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
-import 'services/permission_service.dart';
 import 'services/update_service.dart';
 import 'services/locale_service.dart';
 import 'theme/theme.dart';
@@ -21,27 +20,10 @@ Future<void> main() async {
   runApp(const TogtApp());
   WidgetsBinding.instance.addPostFrameCallback((_) async {
     NotificationService.instance.initialize().catchError((_) => false);
-    _runStartupPermissionFlow();
+    // Permissions are asked ONCE, right after the first login (see
+    // PermissionService.runAfterLogin + LoginScreen) — never on app open.
     _runStartupUpdateFlow();
   });
-}
-
-/**
- * Permission flow: runs after the app UI is up so dialogs appear over the
- * home shell. Re-checks on every app open (fix 3): missing runtime
- * permissions are re-requested, permanently denied ones offer a shortcut to
- * the system settings page.
- */
-Future<void> _runStartupPermissionFlow() async {
-  await Future<void>.delayed(const Duration(milliseconds: 1500));
-  final context = AppNavigator.navigatorKey.currentContext;
-  if (context == null || !context.mounted) return;
-  try {
-    await PermissionService.instance.ensureAll(context);
-  } catch (_) {
-    // Never let the permission flow crash the app (or tests) — the user can
-    // still grant permissions later from settings or the Personal screen.
-  }
 }
 
 Future<void> _runStartupUpdateFlow() async {

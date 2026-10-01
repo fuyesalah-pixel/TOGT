@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../services/document_service.dart';
@@ -23,7 +24,20 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   double? packageAmount;
   final amountController = TextEditingController();
 
-  @override void initState() { super.initState(); _load(); }
+  static const _uploadsKey = 'togt_request_uploads';
+
+  Future<void> _loadUploads() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList('$_uploadsKey:${widget.id}') ?? const [];
+    if (mounted && saved.isNotEmpty) setState(() => uploads = saved.toList());
+  }
+
+  Future<void> _persistUploads() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('$_uploadsKey:${widget.id}', uploads);
+  }
+
+  @override void initState() { super.initState(); _load(); _loadUploads(); }
   @override void dispose() { amountController.dispose(); super.dispose(); }
   Future<void> _load() async {
     try {
@@ -51,18 +65,55 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     } catch (e) { if (mounted) setState(() => error = e.toString()); }
   }
   Future<void> _upload() async {
-    if (uploads.length >= 5) return;
+    if (uploads.length >= 5 || request == null) return;
     final image = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
     if (image == null) return;
     if (await File(image.path).length() > 10 * 1024 * 1024) { if (mounted) setState(() => error = 'Each file must be smaller than 10MB.'); return; }
     setState(() { uploading = true; error = null; });
-    try { final url = await DocumentService.instance.uploadPath(image.path, folder: 'service-requests'); if (url != null && mounted) setState(() => uploads.add(url)); } catch (e) { if (mounted) setState(() => error = 'Upload failed: $e'); } finally { if (mounted) setState(() => uploading = false); }
+    try {
+      // Upload directly against the request — the file lands in private R2
+      // storage and is linked to THIS request, visible to staff immediately.
+      await ApiService.instance.upload('/service-requests/${widget.id}/documents', image.path);
+      await _load();
+      await _persistUploads();
+    } catch (e) { if (mounted) setState(() => error = 'Upload failed: $e'); } finally { if (mounted) setState(() => uploading = false); }
+  }
+
+  /// Open a document: private r2:// keys are exchanged for a signed URL first.
+  Future<void> _openDocument(String url) async {
+    try {
+      final resolved = await ApiService.instance.resolveDocumentUrl(url);
+      await DocumentService.instance.openRemote(resolved);
+    } catch (e) {
+      if (mounted) setState(() => error = 'Could not open document: $e');
+    }
+  }
+
+  /// Preview widget for a stored document URL (images render inline).
+  Widget _documentPreview(String url) {
+    if (url.startsWith('r2-private://')) {
+      return FutureBuilder<String>(
+        future: ApiService.instance.resolveDocumentUrl(url),
+        builder: (context, snapshot) {
+          final signed = snapshot.data;
+          if (snapshot.connectionState != ConnectionState.done) return const SizedBox(height: 90, width: 90, child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))));
+          if (signed == null || signed == url) return const Icon(Icons.insert_drive_file, size: 40);
+          return ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(signed, width: 90, height: 90, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.insert_drive_file, size: 40)));
+        },
+      );
+    }
+    final resolved = ApiService.instance.resolveImageUrl(url);
+    final isImage = RegExp(r'\.(jpe?g|png|gif|webp)(\?|$)', caseSensitive: false).hasMatch(resolved);
+    return isImage
+        ? ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(resolved, width: 90, height: 90, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.insert_drive_file, size: 40)))
+        : const Icon(Icons.insert_drive_file, size: 40);
   }
   @override Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (error != null && request == null) return Scaffold(appBar: AppBar(title: Text(l10n.requestDetails)), body: Center(child: Text(l10n.failedLoad(l10n.requestDetails, error!), textAlign: TextAlign.center)));
     if (request == null) return Scaffold(appBar: AppBar(title: Text(l10n.requestDetails)), body: const Center(child: CircularProgressIndicator()));
     final r = request!; final type = (r['serviceType'] ?? 'Request').toString(); final status = (r['status'] ?? 'PENDING').toString(); final payment = (r['paymentStatus'] ?? 'UNPAID').toString().toUpperCase(); final details = (r['formData'] is Map ? Map<String, dynamic>.from(r['formData']) : <String, dynamic>{});
+    final storedDocuments = (details['documents'] is List ? (details['documents'] as List).whereType<String>().toList() : <String>[]);
     final amount = double.tryParse((r['amount'] ?? details['amount'] ?? details['price'] ?? packageAmount ?? '').toString());
     return Scaffold(appBar: AppBar(title: Text(l10n.requestDetails)), body: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(18), children: [
       _card(Row(children: [CircleAvatar(backgroundColor: TOGTColors.blue, child: Icon(_icon(type), color: Colors.white)), const SizedBox(width: 12), Expanded(child: Text(type, style: Theme.of(context).textTheme.headlineSmall)), _badge(status)])),
@@ -76,11 +127,17 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       _card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Documents', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         const SizedBox(height: 8),
+        ...storedDocuments.map((url) => ListTile(
+          contentPadding: EdgeInsets.zero,
+          onTap: () => _openDocument(url),
+          leading: _documentPreview(url),
+          title: Text(Uri.parse(url.startsWith('r2-private://') ? url.substring(13) : url).pathSegments.lastOrNull ?? 'Document', maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: const Text('Tap to open'),
+        )),
         ...uploads.map((url) => ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.insert_drive_file),
-          title: Text(url.split('/').last, maxLines: 1, overflow: TextOverflow.ellipsis),
-          trailing: IconButton(onPressed: () => setState(() => uploads.remove(url)), icon: const Icon(Icons.delete_outline)),
+          leading: _documentPreview(url),
+          title: Text(Uri.parse(url.startsWith('r2-private://') ? url.substring(13) : url).pathSegments.lastOrNull ?? 'Document', maxLines: 1, overflow: TextOverflow.ellipsis),
         )),
         OutlinedButton.icon(onPressed: uploading ? null : _upload, icon: const Icon(Icons.upload_file), label: Text(uploading ? 'Uploading...' : 'Upload document')),
       ])),

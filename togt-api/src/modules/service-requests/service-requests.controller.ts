@@ -66,4 +66,11 @@ export class ServiceRequestsController {
   getDocument(@Param('id') id: string, @Param('index') index: string, @CurrentUser() user: User) {
     return this.serviceRequests.getDocumentUrl(id, Number(index), user);
   }
+
+  /** Mobile helper: exchange an r2-private:// key for a short-lived signed URL. */
+  @Post('documents/signed-url')
+  @Roles(Role.CUSTOMER, Role.WORKER, Role.ADMIN)
+  getSignedDocument(@Body('key') key: string, @CurrentUser() user: User) {
+    return this.serviceRequests.getSignedDocumentUrl(key, user);
+  }
 }
