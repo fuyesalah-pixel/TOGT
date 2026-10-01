@@ -21,5 +21,10 @@
 -keep class io.socket.** { *; }
 -dontwarn io.socket.**
 
+# The Flutter embedding references Play Core (deferred components) classes
+# that are only needed for Play-Store-delivered feature modules; we ship a
+# single APK, so the references are never exercised.
+-dontwarn com.google.android.play.core.**
+
 # Removes reflective-access warnings that R8 cannot resolve (harmless).
 -dontwarn java.lang.invoke.StringConcatFactory
