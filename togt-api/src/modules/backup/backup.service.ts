@@ -7,6 +7,7 @@ import { join } from 'path';
 import { Role, User } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TelegramBackupService } from '../telegram/telegram-backup.service';
+import { CredentialService } from '../system/credential.service';
 import { CreateBackupDto } from './dto/create-backup.dto';
 import { UpdateScheduleDto } from './dto/schedule.dto';
 
@@ -34,6 +35,7 @@ export class BackupService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly telegram: TelegramBackupService,
+    private readonly credentials: CredentialService,
   ) {
     this.backupDir = this.config.get<string>('backupDir') ?? process.env.BACKUP_DIR ?? '/tmp/togt-backups';
     try {
@@ -247,14 +249,20 @@ export class BackupService {
   private async notify(backupId: string, type: string, sizeBytes: number, error: string | null) {
     const baseUrl = this.config.get<string>('frontendUrl') ?? 'https://travel.togttrading.com';
     const sizeFormatted = `${(sizeBytes / 1024 / 1024).toFixed(2)} MB`;
+    // Chat ID comes from the encrypted provider store (Tech Dashboard →
+    // Providers → Telegram Backup Chat) or the TELEGRAM_BACKUP_CHAT_ID env.
+    const chatId = await this.credentials.get('TELEGRAM_BACKUP_CHAT');
+    const overrides = chatId ? { chatId } : undefined;
     if (error) {
       await this.telegram.sendNotification(
         `❌ TOGT Backup Failed\n📅 Date: ${new Date().toISOString()}\n📦 Type: ${type}\n⚠️ Error: ${error.slice(0, 300)}\nID: ${backupId}`,
+        overrides,
       );
       return;
     }
     await this.telegram.sendNotification(
       `✅ TOGT Backup Completed\n📅 Date: ${new Date().toISOString()}\n📦 Type: ${type}\n💾 Size: ${sizeFormatted}\n🔗 Download: ${baseUrl}/dashboard/tech?tab=backups\nID: ${backupId}`,
+      overrides,
     );
   }
 

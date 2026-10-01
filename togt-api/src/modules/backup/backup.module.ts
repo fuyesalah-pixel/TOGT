@@ -3,9 +3,10 @@ import { BackupController } from './backup.controller';
 import { BackupService } from './backup.service';
 import { BackupScheduler } from './backup.scheduler';
 import { TelegramBackupModule } from '../telegram/telegram-backup.module';
+import { SystemModule } from '../system/system.module';
 
 @Module({
-  imports: [TelegramBackupModule],
+  imports: [TelegramBackupModule, SystemModule],
   controllers: [BackupController],
   providers: [BackupService, BackupScheduler],
   exports: [BackupService],
