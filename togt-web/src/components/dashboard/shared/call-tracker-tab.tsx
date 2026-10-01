@@ -216,7 +216,7 @@ async function toDataUrl(url: string): Promise<string> {
     if (!response.ok) return url;
     const blob = await response.blob();
     if (!blob.type.startsWith("image/")) return url;
-    return await new Promise<string>((resolve, reject) => {
+    return await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : url);
       reader.onerror = () => resolve(url);
