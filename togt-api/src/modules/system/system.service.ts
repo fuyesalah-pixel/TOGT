@@ -88,9 +88,10 @@ export class SystemService {
   async testProvider(provider: string, actor: User) {
     this.assertTech(actor);
     const row = await this.prisma.systemSecret.findUnique({ where: { provider } });
-    if (!row && !(TELEGRAM_BOT_PROVIDERS as string[]).includes(provider)) throw new BadRequestException('Provider secret is not configured');
+    if (!row && (TELEGRAM_BOT_PROVIDERS as string[]).includes(provider)) throw new BadRequestException('Provider secret is not configured');
     let outcome = 'PASS';
     let username: string | undefined;
+    let detail: string | undefined;
     try {
       if ((TELEGRAM_BOT_PROVIDERS as string[]).includes(provider)) {
         const token = await this.credentials.get(provider);
@@ -99,15 +100,34 @@ export class SystemService {
         const payload = await res.json() as { ok: boolean; result?: { username?: string; first_name?: string } };
         if (!payload.ok || !payload.result?.username) throw new Error('getMe rejected');
         username = `@${payload.result.username}`;
-      } else if (row) {
-        this.decrypt(row.ciphertext);
       } else {
-        outcome = 'FAIL';
+        // Resolve from the encrypted store first, then env fallbacks — so a
+        // provider configured only via environment can still be verified.
+        const secret = await this.credentials.get(provider);
+        if (!secret) throw new Error('Secret is not configured (save it first or set the environment variable)');
+        if (provider === SystemProvider.CHAPA) {
+          // Chapa dashboard issues three keys. Only the Secret key (CHASECK-…)
+          // authenticates server API calls; the Public key (CHAPUBK-…) and the
+          // Encryption key are rejected as Bearer tokens.
+          if (!secret.startsWith('CHASECK-')) {
+            throw new Error('Paste the Chapa Secret key (starts with CHASECK-). Public (CHAPUBK-) and Encryption keys will be rejected here.');
+          }
+          const base = this.config.get<string>('CHAPA_API_URL') ?? 'https://api.chapa.co/v1';
+          const res = await fetch(`${base}/banks`, { headers: { Authorization: `Bearer ${secret}` }, signal: AbortSignal.timeout(15000) });
+          if (!res.ok) throw new Error(`Chapa rejected the secret key (HTTP ${res.status})`);
+          detail = 'Chapa accepted the secret key (live API check passed).';
+        } else if (row) {
+          this.decrypt(row.ciphertext);
+        }
       }
-    } catch (error) { outcome = 'FAIL'; this.logger.warn(`Provider test failed for ${provider}: ${(error as Error).message}`); }
+    } catch (error) {
+      outcome = 'FAIL';
+      detail = (error as Error).message;
+      this.logger.warn(`Provider test failed for ${provider}: ${detail}`);
+    }
     if (row) await this.prisma.systemSecret.update({ where: { provider }, data: { lastTestedAt: new Date(), lastTestStatus: outcome } });
-    await this.audit(actor, 'SYSTEM_SECRET_TEST', provider, outcome);
-    return { provider, status: outcome, testedAt: new Date(), ...(username ? { username } : {}) };
+    await this.audit(actor, 'SYSTEM_SECRET_TEST', provider, outcome, detail ? { detail } : undefined);
+    return { provider, status: outcome, testedAt: new Date(), ...(username ? { username } : {}), ...(detail ? { detail } : {}) };
   }
 
   async maintenance(actor: User) {

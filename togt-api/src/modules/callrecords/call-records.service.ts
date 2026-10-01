@@ -1,11 +1,14 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { Prisma, Role, User } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
+import { GroupsService } from '../groups/groups.service';
 import { CreateCallRecordDto } from './dto/create-call-record.dto';
 import { QueryCallRecordsDto } from './dto/query-call-records.dto';
 import { UpdateCallRecordDto } from './dto/update-call-record.dto';
@@ -15,11 +18,53 @@ import { UpdateCallRecordDto } from './dto/update-call-record.dto';
  * available on create (a worker can create the record once).
  */
 @Injectable()
-export class CallRecordsService {
+export class CallRecordsService implements OnModuleInit {
+  private readonly logger = new Logger(CallRecordsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly users: UsersService,
+    private readonly groups: GroupsService,
   ) {}
+
+  /**
+   * One-time (idempotent) backfill on boot: call records created BEFORE the
+   * auto user-registration feature never got a mirrored Customer account.
+   * Mirror them all so old "files" appear in the Users tab and can be linked
+   * to their team group, without touching records that already have a user.
+   */
+  onModuleInit() {
+    void this.backfillLegacyCallRecordUsers();
+  }
+
+  private async backfillLegacyCallRecordUsers() {
+    try {
+      const records = await this.prisma.callRecord.findMany({
+        select: { name: true, phone: true, fatherName: true, idImageUrl: true },
+      });
+      let created = 0;
+      for (const record of records) {
+        const digits = (record.phone ?? '').replace(/[^0-9]/g, '');
+        const trackerEmail = `tracker-${digits || 'unknown'}@call-tracker.local`;
+        const existing = await this.prisma.user.findFirst({
+          where: { OR: [{ phone: record.phone }, { email: trackerEmail }] },
+          select: { id: true },
+        });
+        if (existing) continue;
+        await this.users.mirrorCustomerFromCallRecord({
+          name: record.name,
+          phone: record.phone,
+          fatherName: record.fatherName,
+          idImageUrl: record.idImageUrl,
+          source: 'call-tracker-backfill',
+        });
+        created += 1;
+      }
+      if (created) this.logger.log(`Backfilled ${created} legacy call-record caller(s) into Users`);
+    } catch (error) {
+      this.logger.warn(`Legacy call-record user backfill failed: ${(error as Error).message}`);
+    }
+  }
 
   async findAll(query: QueryCallRecordsDto, actor: User) {
     const where: Prisma.CallRecordWhereInput = {};
@@ -73,19 +118,21 @@ export class CallRecordsService {
 
     // Mirror the caller into a real Customer so they appear in the Users tab.
     // Awaited + wrapped: the record creation below must never fail silently.
+    let mirroredUserId: string | undefined;
     try {
-      await this.users.mirrorCustomerFromCallRecord({
+      const mirrored = await this.users.mirrorCustomerFromCallRecord({
         name: dto.name,
         phone: dto.phone,
         fatherName: dto.fatherName,
         idImageUrl: dto.idImageUrl,
         source: 'call-tracker',
       });
+      mirroredUserId = mirrored.id;
     } catch (mirrorError) {
       console.error('Failed to mirror call record into users:', mirrorError);
     }
 
-    return this.prisma.callRecord.create({
+    const record = await this.prisma.callRecord.create({
       data: {
         teamNumber,
         name: dto.name,
@@ -129,6 +176,16 @@ export class CallRecordsService {
         updatedBy: { select: { id: true, email: true, fullName: true } },
       },
     });
+
+    // Every team works as a group: make sure the team's Group exists and the
+    // caller is enrolled as a member. Never fail the record creation.
+    try {
+      await this.groups.ensureTeamGroup(teamNumber, actor.id, mirroredUserId ? [mirroredUserId] : []);
+    } catch (groupError) {
+      this.logger.warn(`Could not sync team group ${teamNumber}: ${(groupError as Error).message}`);
+    }
+
+    return record;
   }
 
   async update(id: string, dto: UpdateCallRecordDto, actor: User) {
@@ -189,8 +246,8 @@ export class CallRecordsService {
 
     if (changes.length === 0) return record;
 
-    return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.callRecord.update({
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.callRecord.update({
         where: { id },
         data: { ...data, updatedById: actor.id },
         include: {
@@ -210,8 +267,19 @@ export class CallRecordsService {
           toValue: c.to,
         })),
       });
-      return updated;
+      return result;
     });
+
+    // Moving a record to a different team: ensure the new team's group exists.
+    if (typeof data.teamNumber === 'string' && data.teamNumber !== record.teamNumber) {
+      try {
+        await this.groups.ensureTeamGroup(data.teamNumber, actor.id);
+      } catch (groupError) {
+        this.logger.warn(`Could not sync team group ${data.teamNumber}: ${(groupError as Error).message}`);
+      }
+    }
+
+    return updated;
   }
 
   async remove(id: string, actor: User) {

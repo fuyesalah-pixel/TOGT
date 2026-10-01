@@ -4,6 +4,8 @@ export type SiteSettings = {
   OKRA_LINK: string;
   OKRA_IMAGE: string;
   TICKETING_ENABLED: string;
+  ABOUT_VIDEO_URL: string;
+  ABOUT_TEXT: string;
 };
 
 export type SiteSettingRow = { key: string; value: string; updatedAt: string | null; updatedBy: string | null };

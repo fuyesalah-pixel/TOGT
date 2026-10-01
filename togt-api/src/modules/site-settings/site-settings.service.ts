@@ -3,16 +3,18 @@ import { Role, User } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateSiteSettingsDto } from './dto/site-settings.dto';
 
-const ALLOWED_KEYS = ['OKRA_LINK', 'OKRA_IMAGE', 'TICKETING_ENABLED'] as const;
+const ALLOWED_KEYS = ['OKRA_LINK', 'OKRA_IMAGE', 'TICKETING_ENABLED', 'ABOUT_VIDEO_URL', 'ABOUT_TEXT'] as const;
 export type SiteSettingKey = (typeof ALLOWED_KEYS)[number];
 
 const DEFAULTS: Record<SiteSettingKey, string> = {
   OKRA_LINK: 'https://okratech.et',
   OKRA_IMAGE: '',
   TICKETING_ENABLED: 'true',
+  ABOUT_VIDEO_URL: '',
+  ABOUT_TEXT: '',
 };
 
-const PUBLIC_KEYS: SiteSettingKey[] = ['OKRA_LINK', 'OKRA_IMAGE', 'TICKETING_ENABLED'];
+const PUBLIC_KEYS: SiteSettingKey[] = ['OKRA_LINK', 'OKRA_IMAGE', 'TICKETING_ENABLED', 'ABOUT_VIDEO_URL', 'ABOUT_TEXT'];
 
 @Injectable()
 export class SiteSettingsService {

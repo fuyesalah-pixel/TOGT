@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { Prisma, Role, User } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { safeUserSelect } from '../users/users.service';
@@ -15,8 +15,18 @@ const groupInclude = {
 } satisfies Prisma.GroupInclude;
 
 @Injectable()
-export class GroupsService {
+export class GroupsService implements OnModuleInit {
+  private readonly logger = new Logger(GroupsService.name);
   constructor(private readonly prisma: PrismaService, private readonly notifications: NotificationsService, private readonly gateway: ChatGateway) {}
+
+  /**
+   * On boot, make sure every call-tracker team (A1..A100) that has records is
+   * represented as a real Group so it shows up in the Groups tab and works
+   * like any other group (members, alerts, plans). Idempotent.
+   */
+  onModuleInit() {
+    void this.syncTeamGroups().catch((error) => this.logger.warn(`Team group sync failed: ${(error as Error).message}`));
+  }
 
   findAll(actor: User) {
     const where: Prisma.GroupWhereInput = {};
@@ -247,5 +257,83 @@ export class GroupsService {
     const group = await this.prisma.group.findUnique({ where: { id } });
     if (!group) throw new NotFoundException('Group not found');
     return group;
+  }
+
+  /**
+   * Idempotently ensure a Group exists for a call-tracker team number
+   * (A1..A100), optionally adding members. Called when call records are
+   * created/updated and during the boot sync, so every used team appears in
+   * the Groups tab and behaves like any other group.
+   */
+  async ensureTeamGroup(teamNumber: string, creatorId: string, memberUserIds: string[] = []) {
+    const group = await this.prisma.group.upsert({
+      where: { teamNumber },
+      create: {
+        name: `Team ${teamNumber}`,
+        teamNumber,
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        createdById: creatorId,
+      },
+      update: {},
+    });
+    if (memberUserIds.length) {
+      await this.prisma.groupMember.createMany({
+        data: memberUserIds.map((userId) => ({ groupId: group.id, userId, role: 'MEMBER' as const })),
+        skipDuplicates: true,
+      });
+    }
+    return group;
+  }
+
+  /**
+   * Backfill: create a Group for every team number that has call records and
+   * enroll the callers (matched by phone / tracker email) as members.
+   */
+  async syncTeamGroups() {
+    const records = await this.prisma.callRecord.findMany({
+      orderBy: { createdAt: 'asc' },
+      select: { teamNumber: true, createdById: true, phone: true, departureDate: true, tripDuration: true, createdAt: true },
+    });
+    if (!records.length) return { teams: 0 };
+
+    const byTeam = new Map<string, typeof records>();
+    for (const record of records) {
+      const list = byTeam.get(record.teamNumber) ?? [];
+      list.push(record);
+      byTeam.set(record.teamNumber, list);
+    }
+
+    let created = 0;
+    for (const [teamNumber, teamRecords] of byTeam) {
+      const before = await this.prisma.group.findUnique({ where: { teamNumber }, select: { id: true } });
+      const start = teamRecords.find((item) => item.departureDate)?.departureDate ?? teamRecords[0].createdAt;
+      const days = Number.parseInt(teamRecords.find((item) => item.tripDuration)?.tripDuration ?? '', 10);
+      const end = new Date(start.getTime() + (Number.isFinite(days) && days > 0 ? days : 7) * 24 * 60 * 60 * 1000);
+      const group = await this.prisma.group.upsert({
+        where: { teamNumber },
+        create: { name: `Team ${teamNumber}`, teamNumber, startDate: start, endDate: end, createdById: teamRecords[0].createdById },
+        update: {},
+      });
+      if (!before) created += 1;
+
+      for (const record of teamRecords) {
+        const digits = record.phone.replace(/[^0-9]/g, '');
+        const trackerEmail = `tracker-${digits || 'unknown'}@call-tracker.local`;
+        const user = await this.prisma.user.findFirst({
+          where: { OR: [{ phone: record.phone }, { email: trackerEmail }] },
+          select: { id: true },
+        });
+        if (user) {
+          await this.prisma.groupMember.upsert({
+            where: { groupId_userId: { groupId: group.id, userId: user.id } },
+            create: { groupId: group.id, userId: user.id, role: 'MEMBER' },
+            update: {},
+          });
+        }
+      }
+    }
+    if (created) this.logger.log(`Team group sync created ${created} group(s) from call-tracker teams`);
+    return { teams: byTeam.size, created };
   }
 }

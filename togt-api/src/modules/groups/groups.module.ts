@@ -7,5 +7,6 @@ import { ChatModule } from '../chat/chat.module';
   imports: [ChatModule],
   controllers: [GroupsController],
   providers: [GroupsService],
+  exports: [GroupsService],
 })
 export class GroupsModule {}

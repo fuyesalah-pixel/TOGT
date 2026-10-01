@@ -293,6 +293,8 @@ model Group {
   locationUpdates LocationTracking[]
   geofenceAlerts  GeofenceAlert[]
   createdAt       DateTime           @default(now())
+  // Call-tracker team number (A1..A100) when auto-created for a team
+  teamNumber      String?            @unique
 }
 
 model GroupMember {

@@ -7,7 +7,7 @@ let cache: SiteSettings | null = null;
 const listeners = new Set<(settings: SiteSettings) => void>();
 let inflight: Promise<SiteSettings> | null = null;
 
-const DEFAULTS: SiteSettings = { OKRA_LINK: "https://okratech.et", OKRA_IMAGE: "", TICKETING_ENABLED: "true" };
+const DEFAULTS: SiteSettings = { OKRA_LINK: "https://okratech.et", OKRA_IMAGE: "", TICKETING_ENABLED: "true", ABOUT_VIDEO_URL: "", ABOUT_TEXT: "" };
 
 async function load(): Promise<SiteSettings> {
   if (cache) return cache;
