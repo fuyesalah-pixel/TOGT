@@ -18,6 +18,7 @@ import { TicketsTab } from "@/components/dashboard/shared/tickets-tab";
 import { AdminTrackingTab } from "@/components/dashboard/admin/tracking-tab";
 import { ReportsTab } from "@/components/dashboard/admin/reports-tab";
 import { CallTrackerTab } from "@/components/dashboard/shared/call-tracker-tab";
+import { BackupsTab } from "@/components/dashboard/shared/backups-tab";
 
 const TABS = [
   { id: "overview", label: "Overview" },
@@ -30,6 +31,7 @@ const TABS = [
   { id: "groups", label: "Groups" },
   { id: "reviews", label: "Reviews" },
   { id: "notifications", label: "Notifications" },
+  { id: "backups", label: "Backups" },
   { id: "settings", label: "Settings" },
 ];
 
@@ -67,6 +69,7 @@ export default function AdminDashboardPage() {
           <NotificationsTab />
         </div>
       )}
+      {tab === "backups" && <BackupsTab />}
       {tab === "settings" && <SettingsTab />}
       <BulkNotificationDialog open={bulkOpen} onClose={() => setBulkOpen(false)} />
     </div>

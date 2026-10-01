@@ -623,3 +623,32 @@ model SystemBackup {
 
   @@index([startedAt])
 }
+
+/// One row per backup artifact produced by the backup engine (manual or
+/// scheduled). Files live on disk under BACKUP_DIR; the DB row is the catalog.
+model Backup {
+  id           String    @id @default(uuid())
+  type         String    @default("database") // "database" | "full"
+  status       String    @default("queued") // queued | running | completed | failed
+  sizeBytes    BigInt?
+  filePath     String? // server-side path of the .sql.gz / .tar.gz artifact
+  fileName     String?
+  checksum     String? // sha256 hex of the artifact
+  error        String?
+  triggeredBy  String? // "scheduler" | user id for manual runs
+  durationMs   Int?
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  @@index([createdAt])
+}
+
+/// Single-row schedule configuration for the automatic daily backup.
+model BackupSchedule {
+  id            String   @id @default(uuid())
+  enabled       Boolean  @default(true)
+  cron          String   @default("0 2 * * *") // "m h * * *" in the timezone below
+  timezone      String   @default("Africa/Addis_Ababa")
+  retentionDays Int      @default(30)
+  updatedAt     DateTime @updatedAt
+}

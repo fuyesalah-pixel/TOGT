@@ -29,6 +29,7 @@ import { TicketsModule } from './modules/tickets/tickets.module';
 import { CallRecordsModule } from './modules/callrecords/call-records.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SystemModule } from './modules/system/system.module';
+import { BackupModule } from './modules/backup/backup.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { SystemModule } from './modules/system/system.module';
     CallRecordsModule,
     ScheduleModule.forRoot(),
     SystemModule,
+    BackupModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

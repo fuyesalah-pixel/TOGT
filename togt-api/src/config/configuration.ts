@@ -47,6 +47,7 @@ export default () => ({
   cookieSecure: process.env.COOKIE_SECURE === 'true',
   systemEncryptionKey: process.env.SYSTEM_CONFIG_ENCRYPTION_KEY ?? process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET ?? '',
   telegramBackupChatId: process.env.TELEGRAM_BACKUP_CHAT_ID ?? '',
+  backupDir: process.env.BACKUP_DIR ?? '/tmp/togt-backups',
   openRouter: {
     apiKey: process.env.OPENROUTER_API_KEY ?? process.env.OPENAI_API_KEY ?? '',
     baseUrl: process.env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai/api/v1',

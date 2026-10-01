@@ -6,9 +6,11 @@ import { useRoleGuard } from "@/hooks/useRoleGuard";
 import { LoadingSpinner } from "@/components/dashboard/shared/loading-spinner";
 import { SettingsTab } from "@/components/dashboard/shared/settings-tab";
 import { SystemDashboard } from "@/components/dashboard/tech/system-dashboard";
+import { BackupsTab } from "@/components/dashboard/shared/backups-tab";
 
   const TABS = [
    { id: "health", label: "System Control" },
+  { id: "backups", label: "Backups" },
   { id: "settings", label: "Settings" },
 ];
 
@@ -23,6 +25,7 @@ export default function TechDashboardPage() {
   return (
     <div>
       {tab === "health" && <SystemDashboard />}
+      {tab === "backups" && <BackupsTab />}
       {tab === "settings" && <SettingsTab />}
     </div>
   );
