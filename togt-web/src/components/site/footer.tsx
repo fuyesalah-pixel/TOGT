@@ -6,6 +6,7 @@ import { MapPin, Phone, Mail, Clock, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 import { CONTACT } from "@/lib/contact";
 import { useLocale } from "next-intl";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 const EASE = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
@@ -57,6 +58,7 @@ export function Footer() {
   const nav = useTranslations("Nav");
   const year = new Date().getFullYear();
   const locale = useLocale();
+  const siteSettings = useSiteSettings();
 
   return (
     <footer id="footer" className="relative bg-[#0e2d3f] text-white overflow-hidden">
@@ -263,6 +265,25 @@ export function Footer() {
           <p className="text-white/40 text-xs md:text-sm">
             &copy; {year} TOGT Tour &amp; Travel. {t("rights")}
           </p>
+          {/* Developed by Okra Tech — link + logo configurable in Tech Dashboard → Okra Tech */}
+          <a
+            href={siteSettings.OKRA_LINK || "https://okratech.et"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 transition-all duration-300 hover:border-[#FF9300]/50 hover:bg-white/10"
+          >
+            <span className="text-white/40 text-xs group-hover:text-white/60 transition-colors">Developed by</span>
+            {siteSettings.OKRA_IMAGE ? (
+              <img
+                src={siteSettings.OKRA_IMAGE}
+                alt="Okra Tech"
+                className="h-5 w-auto max-w-28 object-contain opacity-70 transition-opacity group-hover:opacity-100"
+                onError={(event) => { event.currentTarget.style.display = "none"; }}
+              />
+            ) : (
+              <span className="text-xs font-bold tracking-wide text-[#FF9300]">Okra Tech</span>
+            )}
+          </a>
           <p className="text-white/25 text-xs">
             {t("iataFooterNote")}
           </p>

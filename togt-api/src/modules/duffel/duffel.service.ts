@@ -467,10 +467,13 @@ export class DuffelService {
       throw new BadRequestException('This booking opportunity has expired. Please search again.');
     }
     if (order.paymentId) throw new BadRequestException('Payment has already been initialized for this order. Verify the existing payment or contact support.');
-    const secret = this.config.get<string>('CHAPA_SECRET_KEY');
+    // Resolve the Chapa secret from the encrypted Tech Dashboard credential first,
+    // falling back to the CHAPA_SECRET_KEY env var — so switching to LIVE mode is
+    // just a credential rotation, no redeploy needed.
+    const secret = await this.credentials.get('CHAPA');
     if (!secret) {
-      this.logger.error(`Chapa flight initialization blocked for ${order.id}: CHAPA_SECRET_KEY is missing`);
-      throw new ServiceUnavailableException('Chapa is not configured. Add a Chapa TEST secret key as CHAPA_SECRET_KEY in togt-api/.env.');
+      this.logger.error(`Chapa flight initialization blocked for ${order.id}: no Chapa credential (Tech Dashboard CHAPA provider or CHAPA_SECRET_KEY env)`);
+      throw new ServiceUnavailableException('Chapa is not configured. Add the Chapa secret key in Tech Dashboard → Providers (or set CHAPA_SECRET_KEY).');
     }
 
     const txRef = `${FLIGHT_REF_PREFIX}${Date.now()}-${randomUUID().slice(0, 8)}`;
@@ -652,7 +655,7 @@ export class DuffelService {
   async verifyChapa(txRef: string) {
     const order = await this.prisma.flightOrder.findFirst({ where: { paymentId: txRef } });
     if (!order) throw new ForbiddenException('Payment not found');
-    const secret = this.config.get<string>('CHAPA_SECRET_KEY');
+    const secret = await this.credentials.get('CHAPA');
     if (!secret) throw new ServiceUnavailableException('Chapa is not configured');
     const chapaUrl = this.config.get<string>('CHAPA_API_URL') ?? 'https://api.chapa.co/v1';
     const response = await fetch(`${chapaUrl}/transaction/verify/${encodeURIComponent(txRef)}`, {

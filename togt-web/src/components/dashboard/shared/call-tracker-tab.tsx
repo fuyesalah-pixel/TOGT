@@ -389,7 +389,24 @@ export function CallTrackerTab({}: { staff?: boolean }) {
         const dataUrl = await toDataUrl(originalPhotoUrl);
         if (dataUrl !== originalPhotoUrl) photo.src = dataUrl;
       }
-      await Promise.all(Array.from(source.querySelectorAll("img")).map((image) => image.complete ? Promise.resolve() : new Promise<void>((resolve) => { image.onload = () => resolve(); image.onerror = () => resolve(); })));
+      // Wait for every <img> inside the card to be fully loaded (decode + paint
+      // ready). This is the fix for the bulk print missing photos: after the
+      // src swap above the browser may still be loading/decoding, and
+      // html2canvas draws a blank otherwise.
+      await Promise.all(
+        Array.from(source.querySelectorAll("img")).map((image) => {
+          if (image.complete && image.naturalWidth > 0) return Promise.resolve();
+          return new Promise<void>((resolve) => {
+            const done = () => resolve();
+            image.addEventListener("load", done, { once: true });
+            image.addEventListener("error", done, { once: true });
+            // Failsafe: never hang the export if an image stalls.
+            window.setTimeout(done, 4000);
+          });
+        }),
+      );
+      // Give the browser one frame to paint the swapped images before capture.
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
       if (document.fonts?.ready) await document.fonts.ready;
       return await html2canvas(source, { width: 360, height: 560, scale: 3, backgroundColor: "#ffffff", useCORS: true, allowTaint: false, logging: false });
     } finally {
@@ -455,6 +472,28 @@ export function CallTrackerTab({}: { staff?: boolean }) {
       window.print();
       window.setTimeout(() => document.body.classList.remove("print-id-mode"), 500);
     }, 50);
+  };
+
+  // Single-print button that produces the SAME card size as bulk print:
+  // a 58mm × 90.4mm card, one per A4 page, captured at print resolution.
+  const printIdCardBulkSize = async () => {
+    if (!idCardRecord) return;
+    setBulkExporting(true);
+    try {
+      await waitForMaster(idCardRecord.id);
+      const canvas = await captureIdCard();
+      if (!canvas) throw new Error("ID card was not ready for printing.");
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const cardWidth = 58; // mm — identical to bulk print grid
+      const cardHeight = cardWidth * (560 / 360); // ≈ 90.2mm
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, 10, cardWidth, cardHeight);
+      pdf.autoPrint();
+      pdf.save(`TOGT-ID-${idCardRecord.teamNumber}.pdf`);
+    } catch (cause) {
+      showToast({ title: "Print failed", message: cause instanceof Error ? cause.message : "Please try again." });
+    } finally {
+      setBulkExporting(false);
+    }
   };
 
   return (
@@ -827,7 +866,8 @@ export function CallTrackerTab({}: { staff?: boolean }) {
           <div className="space-y-4">
             <div ref={idCardRef} className="mx-auto w-fit"><CallRecordIdCard record={idCardRecord} /></div>
             <div className="flex justify-center gap-2">
-              <Button variant="outline" onClick={printIdCard}><Printer className="h-4 w-4" /> Print</Button>
+              <Button variant="outline" disabled={bulkExporting} onClick={() => void printIdCardBulkSize()}><Printer className="h-4 w-4" /> {bulkExporting ? "Preparing…" : "Print (bulk size)"}</Button>
+              <Button variant="outline" onClick={printIdCard}><Printer className="h-4 w-4" /> Print (full size)</Button>
               <Button variant="outline" onClick={() => void downloadPdf()}><Download className="h-4 w-4" /> Download PDF</Button>
               <Button onClick={async () => {
                 const canvas = await captureIdCard();

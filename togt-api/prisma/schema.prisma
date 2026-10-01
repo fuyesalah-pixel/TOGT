@@ -643,6 +643,14 @@ model Backup {
   @@index([createdAt])
 }
 
+/// Public site configuration store (footer credit, section toggles, etc.)
+model SiteSetting {
+  key         String   @id
+  value       String?
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+}
+
 /// Single-row schedule configuration for the automatic daily backup.
 model BackupSchedule {
   id            String   @id @default(uuid())

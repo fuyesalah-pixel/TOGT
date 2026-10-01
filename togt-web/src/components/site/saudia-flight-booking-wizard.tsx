@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Loader2, Plane, ShieldCheck, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useLocale } from "next-intl";
 import {
   createFlightOrder,
@@ -234,7 +235,7 @@ export function SaudiaFlightBookingWizard() {
     }
   }
 
-  return <section id="flight-booking-wizard" className="relative overflow-hidden bg-gradient-to-br from-[#12394F] via-[#1F67B1] to-[#12394F] px-4 py-14 text-white sm:px-6">
+  return <TicketingGate wizard={<section id="flight-booking-wizard" className="relative overflow-hidden bg-gradient-to-br from-[#12394F] via-[#1F67B1] to-[#12394F] px-4 py-14 text-white sm:px-6">
     <div className="mx-auto max-w-6xl">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[.25em] text-[#FF9300]">TOGT Flight Desk</p><h2 className="mt-2 text-3xl font-extrabold">Book your journey</h2></div><div className="flex rounded-full border border-white/20 bg-white/10 p-1 text-xs">{(["ETB", "USD"] as const).map((currency) => <button key={currency} type="button" onClick={() => setDisplayCurrency(currency)} className={`rounded-full px-3 py-1.5 font-bold ${displayCurrency === currency ? "bg-[#FF9300]" : "text-white/70"}`}>{currency}</button>)}</div></div>
        <div className="mb-8 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">{STEP_LABELS.map((label, index) => { const number = index + 1; return <button key={label} type="button" disabled={number > step} onClick={() => number < step && next(number as Step)} className={`flex items-center gap-2 rounded-lg p-2 text-left text-xs ${number === step ? "bg-[#FF9300] text-white" : number < step ? "bg-emerald-500/80 text-white" : "cursor-not-allowed bg-white/10 text-white/50"}`}><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black/15 font-bold">{number < step ? <Check className="h-3.5 w-3.5" /> : number}</span><span className="hidden sm:block">{label}</span></button>; })}</div>
@@ -258,7 +259,14 @@ export function SaudiaFlightBookingWizard() {
 
       {step === 8 && <div className="rounded-2xl bg-white p-8 text-center text-[#12394F] shadow-2xl"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"><ShieldCheck className="h-8 w-8" /></div><h3 className="mt-4 text-2xl font-extrabold">Booking held</h3><p className="mt-2 text-slate-500">Your booking reference is <b>{bookingReference}</b>. Complete payment before the hold expires.</p><button type="button" onClick={() => window.location.assign(`/${locale}/dashboard/customer?tab=requests`)} className="mt-6 rounded-xl bg-[#1F67B1] px-6 py-3 font-bold text-white">View my trips</button></div>}
     </div>
-  </section>;
+  </section>} />;
+}
+
+/** Admin can hide the whole "TOGT Flight Desk · Book your journey" section. */
+function TicketingGate({ wizard }: { wizard: React.ReactNode }) {
+  const siteSettings = useSiteSettings();
+  if ((siteSettings.TICKETING_ENABLED ?? "true") === "false") return null;
+  return <>{wizard}</>;
 }
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) { return <div className="rounded-2xl bg-white p-5 text-[#12394F] shadow-2xl md:p-8"><h3 className="mb-5 text-2xl font-extrabold">{title}</h3>{children}</div>; }
