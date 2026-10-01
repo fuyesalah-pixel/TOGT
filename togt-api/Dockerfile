@@ -26,4 +26,6 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
 COPY package.json ./
 EXPOSE 3001
-CMD ["node", "dist/main.js"]
+# Apply pending Prisma migrations before booting so every deploy ships its
+# schema changes (prisma migrate deploy is idempotent and safe on boot).
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
