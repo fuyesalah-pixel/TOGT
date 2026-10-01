@@ -205,6 +205,28 @@ function PaymentStatusDisplay({ value }: { value?: PaymentStatus | null }) {
   return <span className="text-gray-400">—</span>;
 }
 
+/**
+ * Fetch an image client-side and convert it to a data URL so html2canvas can
+ * embed it in exports. R2 serves permissive CORS headers, so a plain fetch
+ * works from any origin — no server-side proxy route required.
+ */
+async function toDataUrl(url: string): Promise<string> {
+  try {
+    const response = await fetch(url, { mode: "cors", cache: "force-cache" });
+    if (!response.ok) return url;
+    const blob = await response.blob();
+    if (!blob.type.startsWith("image/")) return url;
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : url);
+      reader.onerror = () => resolve(url);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return url; // fall back to the original <img> behavior
+  }
+}
+
 export function CallTrackerTab({}: { staff?: boolean }) {
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -361,14 +383,17 @@ export function CallTrackerTab({}: { staff?: boolean }) {
     const photo = source.querySelector<HTMLImageElement>("img[data-export-photo]");
     const originalPhotoUrl = photo?.src;
     try {
-      if (photo && originalPhotoUrl) {
-        photo.src = `/api/image-proxy?url=${encodeURIComponent(new URL(originalPhotoUrl, window.location.origin).toString())}`;
+      if (photo && originalPhotoUrl && !originalPhotoUrl.startsWith("data:")) {
+        // Same-origin images are already exportable; convert remote R2 images
+        // to a data URL so html2canvas never taints the canvas.
+        const dataUrl = await toDataUrl(originalPhotoUrl);
+        if (dataUrl !== originalPhotoUrl) photo.src = dataUrl;
       }
       await Promise.all(Array.from(source.querySelectorAll("img")).map((image) => image.complete ? Promise.resolve() : new Promise<void>((resolve) => { image.onload = () => resolve(); image.onerror = () => resolve(); })));
       if (document.fonts?.ready) await document.fonts.ready;
       return await html2canvas(source, { width: 360, height: 560, scale: 3, backgroundColor: "#ffffff", useCORS: true, allowTaint: false, logging: false });
     } finally {
-      if (photo && originalPhotoUrl) photo.src = originalPhotoUrl;
+      if (photo && originalPhotoUrl && photo.src !== originalPhotoUrl) photo.src = originalPhotoUrl;
     }
   };
 

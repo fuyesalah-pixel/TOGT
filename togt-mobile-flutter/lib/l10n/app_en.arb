@@ -236,5 +236,19 @@
   "visaEasy": "Visit, medical & family visas",
   "seeAllPackages": "See all",
   "flexibleDuration": "Flexible duration",
-  "customPricing": "Custom pricing"
+  "customPricing": "Custom pricing",
+  "pickFromGallery": "Choose from gallery",
+  "takePhoto": "Take a photo",
+  "connectingDots": "Connecting…",
+  "attachment": "Attachment",
+  "permissionTitle": "Allow access",
+  "permissionBody": "TOGT needs a few permissions to work fully: location for prayer times & Qibla, notifications for azan alarms and chat, and photos for sending documents to support.",
+  "permissionGrant": "Allow access",
+  "permissionLater": "Not now",
+  "permissionOpenSettings": "Open settings",
+  "permissionBlockedBody": "Some permissions were permanently denied. Enable them in Settings so prayer times, azan alarms, and file sharing work.",
+  "azkarAfterPrayer": "After prayer",
+  "azkarSleep": "Before sleeping",
+  "azkarDistress": "In distress",
+  "azanExactHint": "Allow exact alarms so the azan fires right on time. Tap to open settings."
 }

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, Role, User } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { UsersService } from '../users/users.service';
 import { CreateCallRecordDto } from './dto/create-call-record.dto';
 import { QueryCallRecordsDto } from './dto/query-call-records.dto';
 import { UpdateCallRecordDto } from './dto/update-call-record.dto';
@@ -15,7 +16,10 @@ import { UpdateCallRecordDto } from './dto/update-call-record.dto';
  */
 @Injectable()
 export class CallRecordsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly users: UsersService,
+  ) {}
 
   async findAll(query: QueryCallRecordsDto, actor: User) {
     const where: Prisma.CallRecordWhereInput = {};
@@ -66,6 +70,21 @@ export class CallRecordsService {
 
   async create(dto: CreateCallRecordDto, actor: User) {
     const teamNumber = dto.teamNumber;
+
+    // Mirror the caller into a real Customer so they appear in the Users tab.
+    // Awaited + wrapped: the record creation below must never fail silently.
+    try {
+      await this.users.mirrorCustomerFromCallRecord({
+        name: dto.name,
+        phone: dto.phone,
+        fatherName: dto.fatherName,
+        idImageUrl: dto.idImageUrl,
+        source: 'call-tracker',
+      });
+    } catch (mirrorError) {
+      console.error('Failed to mirror call record into users:', mirrorError);
+    }
+
     return this.prisma.callRecord.create({
       data: {
         teamNumber,

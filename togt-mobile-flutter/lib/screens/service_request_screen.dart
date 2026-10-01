@@ -104,30 +104,198 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
   }
 
   bool _isDate(String label) => label.toLowerCase().contains('date');
-  bool _isSearchable(String label) => ['From', 'To', 'Destination', 'Destination country', 'Nationality', 'Airline', 'Airline preference', 'Package type', 'Cabin class', 'Tour type', 'Visa type', 'Hotel preference', 'Room type', 'Accommodation type'].contains(label);
+
+  /// Fields whose options the user picks from — exactly like the web smart
+  /// form's datalists (free text allowed, suggestions while typing).
+  List<String>? _optionsFor(String label) {
+    switch (label) {
+      case 'From':
+      case 'To':
+      case 'Destination':
+        return [...EthiopianCities, ...UmrahCities, ...InternationalCities];
+      case 'Nationality':
+      case 'Destination country':
+        return Countries;
+      case 'Airline':
+      case 'Airline preference':
+        return Airlines;
+      case 'Cabin class':
+        return const ['Economy', 'Premium Economy', 'Business', 'First'];
+      case 'Package type':
+        return const ['Economy', 'VIP', 'Honeymoon', 'Custom'];
+      case 'Visa type':
+        return const ['Visit', 'Educational', 'Merchant', 'Medical', 'Family'];
+      case 'Tour type':
+        return const ['School', 'Honeymoon', 'Friends', 'Corporate', 'Custom'];
+      case 'Hotel preference':
+        return const ['3-star', '4-star', '5-star'];
+      case 'Room type':
+        return const ['Shared', 'Private'];
+      case 'Accommodation type':
+        return const ['Hotel', 'Apartment', 'Resort', 'Camping'];
+      case 'Trip type':
+        return const ['One way', 'Round trip', 'Multi-city'];
+      default:
+        return null;
+    }
+  }
+
   Widget _inputField(String label) {
     final key = label.toLowerCase();
     final numeric = ['Adults', 'Children', 'Infants', 'Passengers', 'Number of pilgrims', 'Number of people'].contains(label);
     final maxLength = numeric ? 1 : key.contains('name') ? 50 : key == 'email' ? 100 : key == 'phone' ? 13 : key.contains('passport') ? 20 : key.contains('address') ? 200 : key.contains('message') || key.contains('notes') ? 500 : 100;
-    return TextField(controller: _field(label), readOnly: _isSearchable(label), onTap: _isSearchable(label) ? () => _choose(label) : null, maxLength: maxLength, keyboardType: numeric || label == 'Phone' ? TextInputType.number : label == 'Email' ? TextInputType.emailAddress : TextInputType.text, inputFormatters: [LengthLimitingTextInputFormatter(maxLength), if (numeric || label == 'Phone') FilteringTextInputFormatter.digitsOnly], decoration: InputDecoration(labelText: label, hintText: label == 'Airline preference' ? 'Ethiopian Airlines' : null, suffixIcon: _isSearchable(label) ? const Icon(Icons.search_rounded) : null)).paddingBottom();
+    final options = _optionsFor(label);
+    if (options != null) return _SuggestionField(label: label, controller: _field(label), options: options);
+    return TextField(controller: _field(label), maxLength: maxLength, keyboardType: numeric || label == 'Phone' ? TextInputType.number : label == 'Email' ? TextInputType.emailAddress : TextInputType.text, inputFormatters: [LengthLimitingTextInputFormatter(maxLength), if (numeric || label == 'Phone') FilteringTextInputFormatter.digitsOnly], decoration: InputDecoration(labelText: label, hintText: label == 'Airline preference' ? 'Ethiopian Airlines' : null)).paddingBottom();
   }
-  Future<void> _choose(String label) async {
-    final options = label.contains('Airline') ? ['Ethiopian Airlines', 'Emirates', 'Qatar Airways', 'Turkish Airlines', 'Saudia'] : label == 'Cabin class' ? ['Economy', 'Premium Economy', 'Business', 'First'] : label == 'Package type' ? ['Economy', 'VIP', 'Honeymoon', 'Custom'] : label == 'Visa type' ? ['Visit', 'Educational', 'Merchant', 'Medical', 'Family'] : label == 'Tour type' ? ['School', 'Honeymoon', 'Friends', 'Corporate', 'Custom'] : label.contains('Hotel') ? ['3-star', '4-star', '5-star'] : label.contains('Room') ? ['Shared', 'Private'] : label.contains('Accommodation') ? ['Hotel', 'Apartment', 'Resort', 'Camping'] : ['Addis Ababa', 'Dubai', 'Jeddah', 'Istanbul', 'Nairobi', 'London', 'Makkah', 'Medina'];
-    final value = await showSearch<String?>(context: context, delegate: _ChoiceSearch(label, options));
-    if (value != null) { _field(label).text = value; setState(() {}); }
-  }
+
   Widget _dateField(String label) => TextField(controller: _field(label), readOnly: true, onTap: () => _date(label), decoration: InputDecoration(labelText: label, suffixIcon: const Icon(Icons.calendar_month_rounded))).paddingBottom();
+}
+
+/// Live autocomplete text field: type the first few letters and matching
+/// suggestions appear inline (prefix matches first, then substring matches).
+/// Free text is always allowed, mirroring the web form's datalist inputs.
+class _SuggestionField extends StatefulWidget {
+  const _SuggestionField({required this.label, required this.controller, required this.options});
+  final String label;
+  final TextEditingController controller;
+  final List<String> options;
+
+  @override
+  State<_SuggestionField> createState() => _SuggestionFieldState();
+}
+
+class _SuggestionFieldState extends State<_SuggestionField> {
+  String _query = '';
+  FocusNode? _focus;
+
+  static const _maxSuggestions = 5;
+
+  List<String> get _matches {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return const [];
+    final starts = <String>[];
+    final contains = <String>[];
+    for (final option in widget.options) {
+      final lower = option.toLowerCase();
+      if (lower.startsWith(q)) {
+        starts.add(option);
+      } else if (lower.contains(q)) {
+        contains.add(option);
+      }
+      if (starts.length >= _maxSuggestions) break;
+    }
+    return [...starts, ...contains].take(_maxSuggestions).toList();
+  }
+
+  void _onChanged(String value) {
+    setState(() => _query = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final matches = _matches;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: widget.controller,
+          onChanged: _onChanged,
+          decoration: InputDecoration(labelText: widget.label, suffixIcon: const Icon(Icons.search_rounded, size: 20)),
+        ),
+        if (matches.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 6, bottom: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: TOGTColors.navy.withOpacity(.08)),
+              boxShadow: [BoxShadow(color: TOGTColors.navy.withOpacity(.08), blurRadius: 12, offset: const Offset(0, 4))],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: matches.map((option) => InkWell(
+                onTap: () {
+                  widget.controller.text = option;
+                  setState(() => _query = option);
+                  FocusScope.of(context).unfocus();
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(border: Border(bottom: BorderSide(color: TOGTColors.navy.withOpacity(.05)))),
+                  child: Row(children: [
+                    const Icon(Icons.location_on_outlined, size: 15, color: TOGTColors.orange),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(option, style: TOGTTypography.small.copyWith(color: const Color(0xFF12394F)))),
+                  ]),
+                ),
+              )).toList(),
+            ),
+          )
+        else
+          const SizedBox(height: 14),
+      ],
+    );
+  }
 }
 
 extension on Widget { Widget paddingBottom() => Padding(padding: const EdgeInsets.only(bottom: 16), child: this); }
 
-class _ChoiceSearch extends SearchDelegate<String?> {
-  _ChoiceSearch(this.titleText, this.options);
-  final String titleText;
-  final List<String> options;
-  @override List<Widget>? buildActions(BuildContext context) => [IconButton(onPressed: () => query = '', icon: const Icon(Icons.clear))];
-  @override Widget? buildLeading(BuildContext context) => BackButton(onPressed: () => close(context, null));
-  @override Widget buildResults(BuildContext context) => _results(context);
-  @override Widget buildSuggestions(BuildContext context) => _results(context);
-  Widget _results(BuildContext context) { final matches = options.where((item) => item.toLowerCase().contains(query.toLowerCase())); return ListView(children: matches.map((item) => ListTile(title: Text(item), onTap: () => close(context, item))).toList()); }
-}
+/// Ethiopian cities — domestic tours, flight origin, and default pool.
+const EthiopianCities = [
+  'Addis Ababa', 'Dire Dawa', 'Mekelle', 'Bahir Dar', 'Gondar', 'Hawassa',
+  'Jimma', 'Dessie', 'Jijiga', 'Shashamane', 'Bishoftu', 'Arba Minch',
+  'Hosaena', 'Harar', 'Adama', 'Sodo', 'Nekemte', 'Assosa', 'Gambela',
+  'Semera', 'Axum', 'Adigrat', 'Debre Markos', 'Debre Birhan', 'Woliso',
+  'Weldiya', 'Robe', 'Butajira', 'Kombolcha', 'Ziway', 'Negele Borana',
+  'Metu', 'Dilla', 'Shire', 'Inda Selassie', 'Wukro', 'Bule Hora', 'Moyale',
+];
+
+/// Cities most relevant to Umrah packages.
+const UmrahCities = [
+  'Makkah', 'Medina', 'Jeddah', 'Riyadh', 'Dammam', 'Ta\u2019if', 'Tabuk',
+  'Yanbu', 'Buraidah', 'Abha', 'Khamis Mushait', 'Jizan',
+];
+
+/// Frequent international destinations.
+const InternationalCities = [
+  'Dubai', 'Abu Dhabi', 'Sharjah', 'Doha', 'Istanbul', 'Antalya', 'Ankara',
+  'Cairo', 'Alexandria', 'Nairobi', 'Kampala', 'Dar es Salaam', 'Kigali',
+  'Mogadishu', 'Djibouti City', 'Khartoum', 'London', 'Frankfurt', 'Rome',
+  'Milan', 'Paris', 'Amsterdam', 'Washington DC', 'New York', 'Toronto',
+  'Kuala Lumpur', 'Jakarta', 'Bangkok', 'Delhi', 'Mumbai', 'Beijing',
+  'Guangzhou', 'Tokyo', 'Sydney', 'Johannesburg', 'Casablanca',
+];
+
+/// Countries for nationality/destination-country fields (mirrors the web
+/// smart-form schema).
+const Countries = [
+  'Ethiopia', 'United Arab Emirates', 'Saudi Arabia', 'Turkey', 'India',
+  'China', 'Thailand', 'United States', 'United Kingdom', 'Canada',
+  'Germany', 'France', 'Italy', 'Qatar', 'Kuwait', 'Egypt', 'Kenya',
+  'Djibouti', 'South Africa', 'Morocco', 'Tanzania', 'Rwanda', 'Uganda',
+  'Sudan', 'Somalia', 'Eritrea', 'Yemen', 'Oman', 'Bahrain', 'Jordan',
+  'Lebanon', 'Iran', 'Iraq', 'Pakistan', 'Bangladesh', 'Sri Lanka',
+  'Nepal', 'Maldives', 'Indonesia', 'Malaysia', 'Singapore', 'Philippines',
+  'Vietnam', 'Cambodia', 'Laos', 'Myanmar', 'Mongolia', 'Japan', 'South Korea',
+  'Australia', 'New Zealand', 'Brazil', 'Argentina', 'Chile', 'Colombia',
+  'Peru', 'Mexico', 'Cuba', 'Jamaica', 'Spain', 'Portugal', 'Netherlands',
+  'Belgium', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Switzerland',
+  'Austria', 'Greece', 'Poland', 'Czech Republic', 'Hungary', 'Romania',
+  'Bulgaria', 'Croatia', 'Serbia', 'Ireland', 'Iceland', 'Russia', 'Ukraine',
+  'Belarus', 'Estonia', 'Latvia', 'Lithuania', 'Belize', 'Costa Rica',
+  'Guatemala', 'Honduras', 'Nicaragua', 'Panama', 'Dominican Republic',
+  'Puerto Rico', 'Venezuela', 'Bolivia', 'Ecuador', 'Paraguay', 'Uruguay',
+];
+
+/// Airlines (mirrors the web smart-form AIRLINES list, shortened to the
+/// carriers most relevant to our travelers).
+const Airlines = [
+  'Ethiopian Airlines', 'Emirates', 'Qatar Airways', 'Turkish Airlines',
+  'Saudia', 'SalamAir', 'Air Arabia', 'Flydubai', 'EgyptAir', 'Kenya Airways',
+  'Lufthansa', 'British Airways', 'KLM', 'Air France', 'United Airlines',
+  'Delta Air Lines', 'American Airlines', 'Singapore Airlines', 'Qantas',
+  'Air India', 'Pakistan International Airlines', 'Gulf Air', 'Kuwait Airways',
+  'Oman Air', 'RwandAir', 'Asky Airlines', 'Jubba Airways', 'SriLankan Airlines',
+];

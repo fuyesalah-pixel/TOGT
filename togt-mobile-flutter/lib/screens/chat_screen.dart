@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/package_model.dart';
@@ -9,6 +11,7 @@ import '../services/api_service.dart';
 import '../services/chat_service.dart';
 import '../services/chat_socket_service.dart';
 import '../services/auth_service.dart';
+import '../services/document_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import 'package_detail_screen.dart';
@@ -26,18 +29,34 @@ class _ChatScreenState extends State<ChatScreen> {
   final _controller = TextEditingController();
   final _scroll = ScrollController();
   bool _typing = false;
+  bool _uploading = false;
+  bool _live = false;
   late bool _human = widget.human;
   String? _humanWorkerId;
   bool? _aiOnline;
+  String? _userId;
 
   String get _historyKey => _human ? 'togt_chat_human' : 'togt_chat_ai';
 
   @override
   void initState() {
     super.initState();
+    _userId = AuthService.instance.currentUser?.id;
     _loadHistory();
-    if (_human) WidgetsBinding.instance.addPostFrameCallback((_) => _setMode(true));
-    if (!_human) _checkAi();
+    if (_human) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _setMode(true));
+    } else {
+      _checkAi();
+    }
+  }
+
+  @override
+  void dispose() {
+    // Leaving the AI chat tears down the socket; leaving the human chat keeps
+    // it alive only while this screen exists (the service is a singleton and
+    // reconnects automatically when the screen reopens).
+    if (!_human) ChatSocketService.instance.dispose();
+    super.dispose();
   }
 
   Future<void> _checkAi() async {
@@ -62,10 +81,32 @@ class _ChatScreenState extends State<ChatScreen> {
     await prefs.setStringList(_historyKey, _messages.map((message) => message.toJson()).toList());
   }
 
+  void _appendIncoming(Map<String, dynamic> data) {
+    // Ignore echoes of our own messages (they are already in the list).
+    final senderId = data['senderId']?.toString();
+    if (senderId != null && senderId == _userId) return;
+    final text = data['message']?.toString() ?? '';
+    final fileUrl = data['fileUrl']?.toString();
+    final fileType = data['fileType']?.toString();
+    if (text.isEmpty && (fileUrl == null || fileUrl.isEmpty)) return;
+    if (!_human) return; // AI chat never receives socket messages
+    var msg = _Msg(text: text, fromUser: false, fileUrl: fileUrl, fileType: fileType);
+    // Suppress duplicates (the API emits several event names per message).
+    final last = _messages.isEmpty ? null : _messages.last;
+    if (last != null && !last.fromUser && last.text == msg.text && last.fileUrl == msg.fileUrl) return;
+    if (_messages.any((m) => !m.fromUser && m.text == msg.text && m.fileUrl == msg.fileUrl && m.sentAt == msg.sentAt)) return;
+    if (mounted) {
+      setState(() => _messages.add(msg));
+      _saveHistory();
+      _scrollDown();
+    }
+  }
+
   void _send() async {
     final l10n = AppLocalizations.of(context);
     final text = _controller.text.trim();
-    if (text.isEmpty || _typing) return;
+    if ((text.isEmpty && !_uploading) || _typing) return;
+    if (text.isEmpty) return;
     _controller.clear();
     setState(() {
       _messages.add(_Msg(text: text, fromUser: true));
@@ -76,13 +117,21 @@ class _ChatScreenState extends State<ChatScreen> {
 
     if (_human) {
       try {
-        final response = _humanWorkerId == null ? await ChatSocketService.instance.start() : null;
-        final workerId = _humanWorkerId ?? (response is Map ? response['workerId']?.toString() : null);
+        if (_humanWorkerId == null) {
+          final response = await ChatSocketService.instance.start();
+          _humanWorkerId = response is Map ? response['workerId']?.toString() : null;
+        }
+        final workerId = _humanWorkerId;
         if (workerId == null) throw Exception('No support worker is available');
-        _humanWorkerId = workerId;
         await ChatSocketService.instance.sendMessage(receiverId: workerId, message: text);
       } catch (e) {
-        if (mounted) { setState(() { _typing = false; _messages.add(_Msg(text: l10n.chatSendFailed(e.toString()), fromUser: false)); }); await _saveHistory(); }
+        if (mounted) {
+          setState(() {
+            _typing = false;
+            _messages.add(_Msg(text: l10n.chatSendFailed(e.toString()), fromUser: false));
+          });
+          await _saveHistory();
+        }
       } finally {
         if (mounted) setState(() => _typing = false);
       }
@@ -107,6 +156,38 @@ class _ChatScreenState extends State<ChatScreen> {
       });
       await _saveHistory();
       _scrollDown();
+    }
+  }
+
+  Future<void> _attach() async {
+    final l10n = AppLocalizations.of(context);
+    final workerId = _humanWorkerId;
+    if (workerId == null || _uploading) return;
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Wrap(children: [
+          ListTile(leading: const Icon(Icons.photo_library_rounded), title: Text(l10n.pickFromGallery), onTap: () => Navigator.pop(sheetContext, ImageSource.gallery)),
+          ListTile(leading: const Icon(Icons.photo_camera_rounded), title: Text(l10n.takePhoto), onTap: () => Navigator.pop(sheetContext, ImageSource.camera)),
+        ]),
+      ),
+    );
+    if (source == null || !mounted) return;
+    final picked = await DocumentService.instance.pickImage(source);
+    if (picked == null || !mounted) return;
+    setState(() => _uploading = true);
+    try {
+      await ChatSocketService.instance.sendFile(receiverId: workerId, filePath: picked.path, message: '');
+      setState(() => _messages.add(_Msg(text: '', fromUser: true, fileUrl: picked.path, fileType: 'image/jpeg', localPath: picked.path)));
+      await _saveHistory();
+      _scrollDown();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _messages.add(_Msg(text: l10n.chatSendFailed(e.toString()), fromUser: false)));
+        await _saveHistory();
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
     }
   }
 
@@ -148,12 +229,16 @@ Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     width: 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: _human ? TOGTColors.green : (_aiOnline == false ? const Color(0xFFF59E0B) : TOGTColors.green),
+                      color: _human
+                          ? (_live ? TOGTColors.green : const Color(0xFFF59E0B))
+                          : (_aiOnline == false ? const Color(0xFFF59E0B) : TOGTColors.green),
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 5),
-                    Text(_human ? l10n.specialistOnDuty : (_aiOnline == false ? l10n.aiOffline : l10n.onlineAi), style: TOGTTypography.small),
+                    Text(_human
+                        ? (_live ? l10n.specialistOnDuty : l10n.connectingDots)
+                        : (_aiOnline == false ? l10n.aiOffline : l10n.onlineAi), style: TOGTTypography.small),
                 ]),
               ]),
              ]),
@@ -184,7 +269,13 @@ Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             child: SafeArea(
               top: false,
                child: Row(children: [
-                 if (_human) IconButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.attachmentsHint))), icon: const Icon(Icons.attach_file_rounded, color: TOGTColors.blue)),
+                 if (_human)
+                   IconButton(
+                     onPressed: _humanWorkerId == null || _uploading ? null : _attach,
+                     icon: _uploading
+                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: TOGTColors.blue))
+                         : const Icon(Icons.attach_file_rounded, color: TOGTColors.blue),
+                   ),
                 Expanded(
                   child: TextField(
                     controller: _controller,
@@ -234,10 +325,17 @@ Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     final items = (data is List ? data : (data is Map ? data['items'] : null) as List? ?? []) as List<dynamic>;
     if (!mounted) return;
     setState(() => _messages = items.map((item) {
-          final map = item as Map<String, dynamic>;
-          return _Msg(text: map['content']?.toString() ?? map['message']?.toString() ?? '', fromUser: AuthService.instance.currentUser?.id != null && map['senderId'] == AuthService.instance.currentUser!.id);
-        }).toList());
+          final map = Map<String, dynamic>.from(item as Map);
+          final senderId = map['senderId']?.toString();
+          return _Msg(
+            text: map['message']?.toString() ?? map['content']?.toString() ?? '',
+            fromUser: _userId != null && senderId == _userId,
+            fileUrl: map['fileUrl']?.toString(),
+            fileType: map['fileType']?.toString(),
+          );
+        }).where((m) => m.text.isNotEmpty || (m.fileUrl?.isNotEmpty ?? false)).toList());
     await _saveHistory();
+    _scrollDown();
   }
 
   Future<void> _setMode(bool human) async {
@@ -249,10 +347,8 @@ Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       final conversation = await ChatSocketService.instance.start();
       if (conversation is Map) _humanWorkerId = conversation['workerId']?.toString();
       if (_humanWorkerId != null) await _loadRemoteHistory();
-      ChatSocketService.instance.connect(onMessage: (data) {
-        final message = data['message']?.toString();
-        if (message != null && mounted) setState(() => _messages.add(_Msg(text: message, fromUser: false)));
-      }, onRoleChanged: (role) async { await AuthService.instance.applyRole(role); if (mounted) setState(() {}); }, onTyping: () { if (mounted) setState(() {}); });
+      ChatSocketService.instance.connect(onMessage: _appendIncoming, onRoleChanged: (role) async { await AuthService.instance.applyRole(role); if (mounted) setState(() {}); }, onTyping: () { if (mounted) setState(() {}); }, onConnectionChanged: (connected) { if (mounted) setState(() => _live = connected); });
+      if (mounted) setState(() => _live = ChatSocketService.instance.isConnected);
     } catch (_) {}
   }
 
@@ -282,17 +378,34 @@ Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 }
 
 class _Msg {
-  const _Msg({required this.text, required this.fromUser, this.packages});
+  _Msg({required this.text, required this.fromUser, this.packages, this.fileUrl, this.fileType, this.localPath, DateTime? sentAt})
+      : sentAt = sentAt ?? DateTime.now();
   final String text;
   final bool fromUser;
   final List<ChatPackage>? packages;
+  final String? fileUrl;
+  final String? fileType;
+  final String? localPath;
+  final DateTime sentAt;
+
+  bool get isImage => (fileType?.startsWith('image/') ?? false) || (fileUrl ?? localPath ?? '').toLowerCase().contains('.jpg') || (fileUrl ?? localPath ?? '').toLowerCase().contains('.png') || (fileUrl ?? localPath ?? '').toLowerCase().contains('.jpeg') || (fileUrl ?? localPath ?? '').toLowerCase().contains('.webp');
+
+  bool get hasAttachment => (fileUrl?.isNotEmpty ?? false) || (localPath?.isNotEmpty ?? false);
 
   factory _Msg.fromJson(String value) {
     final parts = value.split('|');
-    return _Msg(text: parts.first.replaceAll('¦', '|'), fromUser: parts.length > 1 && parts[1] == '1');
+    String text = parts.first.replaceAll('¦', '|');
+    String? fileUrl;
+    String? fileType;
+    // Extended format: text|from|fileUrl¦(escaped)|fileType
+    if (parts.length >= 3) {
+      fileUrl = parts[2] == '' ? null : parts[2].replaceAll('¦', '|');
+      fileType = parts.length >= 4 && parts[3].isNotEmpty ? parts[3].replaceAll('¦', '|') : null;
+    }
+    return _Msg(text: text, fromUser: parts.length > 1 && parts[1] == '1', fileUrl: fileUrl, fileType: fileType);
   }
 
-  String toJson() => '${text.replaceAll('|', '¦')}|${fromUser ? '1' : '0'}';
+  String toJson() => '${text.replaceAll('|', '¦')}|${fromUser ? '1' : '0'}|${(fileUrl ?? '').replaceAll('|', '¦')}|${(fileType ?? '').replaceAll('|', '¦')}';
 }
 
 class _Bubble extends StatefulWidget {
@@ -327,7 +440,7 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
           alignment: user ? Alignment.centerRight : Alignment.centerLeft,
           child: Container(
             margin: const EdgeInsets.symmetric(vertical: 5),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+            padding: widget.msg.isImage && widget.msg.hasAttachment ? const EdgeInsets.all(5) : const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
             constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .75),
             decoration: BoxDecoration(
               gradient: user ? TOGTColors.blueGradient : null,
@@ -346,9 +459,13 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: user ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
-                _rich(widget.msg.text,
-                    TOGTTypography.body.copyWith(
-                        color: user ? TOGTColors.white : const Color(0xFF12394F), fontSize: 13.8, decoration: TextDecoration.none)),
+                if (widget.msg.hasAttachment) _attachment(context),
+                if (widget.msg.text.isNotEmpty) ...[
+                  if (widget.msg.hasAttachment) const SizedBox(height: 6),
+                  _rich(widget.msg.text,
+                      TOGTTypography.body.copyWith(
+                          color: user ? TOGTColors.white : const Color(0xFF12394F), fontSize: 13.8, decoration: TextDecoration.none)),
+                ],
                 if (widget.msg.packages != null && widget.msg.packages!.isNotEmpty)
                   ...widget.msg.packages!.take(4).map((pkg) => _buildPackageCard(context, pkg)),
               ],
@@ -357,6 +474,46 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  Widget _attachment(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    if (widget.msg.isImage) {
+      final src = widget.msg.localPath ?? ApiService.instance.resolveImageUrl(widget.msg.fileUrl!);
+      final isLocal = widget.msg.localPath != null;
+      final image = isLocal
+          ? Image.file(File(src), width: 210, height: 210, fit: BoxFit.cover)
+          : Image.network(ApiService.instance.resolveImageUrl(widget.msg.fileUrl!), width: 210, height: 210, fit: BoxFit.cover, loadingBuilder: (_, child, progress) => progress == null ? child : const SizedBox(width: 210, height: 210, child: Center(child: CircularProgressIndicator(strokeWidth: 2))));
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: GestureDetector(
+          onTap: () => _openImageViewer(context, src, isLocal),
+          child: SizedBox(width: 210, height: 210, child: image),
+        ),
+      );
+    }
+    return InkWell(
+      onTap: () => DocumentService.instance.openRemote(ApiService.instance.resolveImageUrl(widget.msg.fileUrl!)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(widget.msg.fromUser ? Icons.insert_drive_file_rounded : Icons.picture_as_pdf_rounded, size: 18, color: widget.msg.fromUser ? TOGTColors.white : TOGTColors.blue),
+        const SizedBox(width: 6),
+        Text(l10n.attachment, style: TOGTTypography.small.copyWith(color: widget.msg.fromUser ? TOGTColors.white : TOGTColors.blue, decoration: TextDecoration.underline, decorationColor: widget.msg.fromUser ? TOGTColors.white : TOGTColors.blue)),
+      ]),
+    );
+  }
+
+  void _openImageViewer(BuildContext context, String src, bool isLocal) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(backgroundColor: Colors.black, iconTheme: const IconThemeData(color: Colors.white)),
+        body: Center(
+          child: InteractiveViewer(
+            child: isLocal ? Image.file(File(src)) : Image.network(ApiService.instance.resolveImageUrl(src)),
+          ),
+        ),
+      ),
+    ));
   }
 
   Widget _rich(String text, TextStyle base) {

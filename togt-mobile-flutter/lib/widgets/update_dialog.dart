@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 
+import '../services/permission_service.dart';
 import '../services/update_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
@@ -111,6 +112,14 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                 style: TOGTTypography.body
                     .copyWith(color: TOGTColors.grey, height: 1.45),
               ),
+              if (_stage == _UpdateStage.error) ...[
+                const SizedBox(height: 10),
+                TextButton.icon(
+                  onPressed: () => PermissionService.instance.openInstallPermissionSettings(),
+                  icon: const Icon(Icons.settings_rounded, size: 18),
+                  label: Text(l10n.permissionOpenSettings),
+                ),
+              ],
               if (widget.update.versionName.isNotEmpty) ...[
                 const SizedBox(height: 6),
                  Text(l10n.versionLabel(widget.update.versionName),

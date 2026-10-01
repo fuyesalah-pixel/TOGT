@@ -172,6 +172,20 @@ class ApiService {
     return _handle(response);
   }
 
+  /// multipart/form-data POST with one file plus string fields
+  /// (e.g. chat attachments: receiverId, message, file).
+  Future<dynamic> postFile(String path, Map<String, String> fields, String filePath, {String field = 'file', bool retry = true}) async {
+    final request = http.MultipartRequest('POST', _uri(path));
+    request.headers.addAll(_headers..remove('Content-Type'));
+    request.fields.addAll(fields);
+    request.files.add(await http.MultipartFile.fromPath(field, filePath));
+    final response = await http.Response.fromStream(await request.send().timeout(timeout));
+    if (response.statusCode == 401 && retry && _refreshToken != null) {
+      if (await _refresh()) return postFile(path, fields, filePath, retry: false);
+    }
+    return _handle(response);
+  }
+
   Future<List<int>> downloadBytes(String path) async {
     final response = await http.get(_uri(path), headers: _headers).timeout(timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) _handle(response);

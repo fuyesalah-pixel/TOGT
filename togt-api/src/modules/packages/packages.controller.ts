@@ -27,16 +27,17 @@ export class PackagesController {
     return this.packages.findActive({ type, destination });
   }
 
-  @Get(':id')
-  @Public()
-  findActiveOne(@Param('id') id: string) {
-    return this.packages.findActiveOne(id);
-  }
-
+  /** Static segment MUST be declared before @Get(':id') or Express matches ':id' first. */
   @Get('all')
   @Roles(Role.WORKER, Role.ADMIN)
   findAll(@Query('type') type?: string, @Query('destination') destination?: string) {
     return this.packages.findAll({ type, destination });
+  }
+
+  @Get(':id')
+  @Public()
+  findActiveOne(@Param('id') id: string) {
+    return this.packages.findActiveOne(id);
   }
 
   @Post()

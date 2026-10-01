@@ -8,8 +8,14 @@ class DocumentService {
   DocumentService._();
   static final instance = DocumentService._();
 
+  /// Picks an image (gallery or camera). Optionally downscales to keep chat
+  /// uploads small and fast.
+  Future<XFile?> pickImage(ImageSource source, {int maxDimension = 1600}) async {
+    return ImagePicker().pickImage(source: source, imageQuality: 82, maxWidth: maxDimension.toDouble(), maxHeight: maxDimension.toDouble());
+  }
+
   Future<String?> pickAndUpload({ImageSource source = ImageSource.gallery, String folder = 'documents'}) async {
-    final image = await ImagePicker().pickImage(source: source);
+    final image = await pickImage(source);
     if (image == null) return null;
     return uploadPath(image.path, folder: folder);
   }
@@ -24,5 +30,10 @@ class DocumentService {
     final file = File('${(await getApplicationDocumentsDirectory()).path}/ticket-$ticketId.pdf');
     await file.writeAsBytes(response);
     await OpenFilex.open(file.path);
+  }
+
+  /// Opens a remote attachment URL in the system viewer/browser.
+  Future<void> openRemote(String url) async {
+    await OpenFilex.open(url);
   }
 }

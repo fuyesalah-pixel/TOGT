@@ -122,6 +122,44 @@ export class UsersService {
     return created;
   }
 
+  /**
+   * Mirror a call-tracker record into a real User (Customers tab) if it does
+   * not already exist. Idempotent: matched by phone first, then email.
+   * Imported from CallRecordsService so tracker additions automatically show
+   * up in the worker/admin Users tabs.
+   */
+  async mirrorCustomerFromCallRecord(input: {
+    name: string;
+    phone: string;
+    fatherName?: string | null;
+    idImageUrl?: string | null;
+    source: string;
+  }) {
+    const email = `tracker-${input.phone.replace(/[^0-9]/g, '') || 'unknown'}@call-tracker.local`;
+    const existing =
+      (input.phone &&
+        (await this.prisma.user.findFirst({
+          where: { OR: [{ phone: input.phone }, { email }] },
+          select: { id: true },
+        }))) ||
+      null;
+    if (existing) return existing;
+
+    return this.prisma.user.create({
+      data: {
+        email,
+        fullName: input.name,
+        phone: input.phone || null,
+        avatarUrl: input.idImageUrl || null,
+        role: Role.CUSTOMER,
+        status: 'ACTIVE',
+        // Placeholder — upgraded to a real Google account on first login (email match)
+        googleId: `mirror:${randomUUID()}`,
+      },
+      select: { id: true },
+    });
+  }
+
   async update(id: string, dto: UpdateUserDto, actor: User) {
     const target = await this.prisma.user.findUnique({ where: { id } });
     if (!target) throw new NotFoundException('User not found');

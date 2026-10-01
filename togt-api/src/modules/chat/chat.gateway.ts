@@ -33,17 +33,22 @@ export class ChatGateway implements OnGatewayConnection {
 
   async handleConnection(client: Socket) {
     try {
+      // Web clients send the togt_access cookie; the Flutter app sends the same
+      // JWT via the socket.io `auth.token` handshake option.
       const cookieHeader = client.handshake.headers.cookie ?? '';
       const accessCookie = cookieHeader
         .split(';')
         .map((c) => c.trim())
         .find((c) => c.startsWith('togt_access='));
-      if (!accessCookie) {
+      const rawToken = accessCookie
+        ? decodeURIComponent(accessCookie.slice('togt_access='.length))
+        : ((client.handshake.auth?.token as string | undefined) ?? undefined);
+      if (!rawToken) {
         client.data.public = true;
         return;
       }
 
-      const token = decodeURIComponent(accessCookie.slice('togt_access='.length));
+      const token = rawToken;
       const payload = this.jwt.verify<{ sub: string; role: string }>(token, {
         secret: this.config.get<string>('jwt.accessSecret'),
       });

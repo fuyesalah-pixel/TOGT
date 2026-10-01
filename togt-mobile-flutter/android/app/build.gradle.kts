@@ -52,6 +52,9 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Ship only the locales we actually localize for; drops dozens of
+        // AndroidX/Play-services translation tables from the APK.
+        resourceConfigurations += listOf("en", "ar", "am")
     }
 
     signingConfigs {
@@ -72,7 +75,25 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("release")
+
+            // Size optimizations (R8). Enabled safely: the app has no
+            // reflection-heavy native plugins and Flutter keeps its own
+            // keep-rules automatically. Reduces the APK substantially by
+            // stripping unused code and optimizing what remains.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
+    }
+
+    packaging {
+        // Debug symbols for native libs are only useful for crash
+        // symbolication; they ship as a separate NDK-symbols artifact and
+        // simply bloat the APK for end users.
+        jniLibs.keepDebugSymbols.clear()
     }
 }
 
