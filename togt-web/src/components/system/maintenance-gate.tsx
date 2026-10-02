@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,7 +10,8 @@ import { API_URL } from "@/lib/api/client";
 type MaintenanceState = { enabled: boolean; message: string };
 
 export function MaintenanceGate({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+  const pathname = usePathname();
   const [state, setState] = useState<MaintenanceState>({ enabled: false, message: "TOGT is temporarily unavailable for maintenance." });
 
   useEffect(() => {
@@ -22,7 +24,13 @@ export function MaintenanceGate({ children }: { children: React.ReactNode }) {
     return () => { active = false; window.clearInterval(timer); socket.disconnect(); };
   }, []);
 
-  if (state.enabled && user?.role !== "TECH") {
+  // Staff sign-in must stay reachable while maintenance is on, and the gate must
+  // not render before the session resolves (user is null while loading, which
+  // would otherwise lock even TECH/ADMIN accounts out of their own dashboard).
+  const isAuthPage = /\/(login|auth)\b/.test(pathname ?? "");
+  const isStaff = user?.role === "TECH" || user?.role === "ADMIN";
+
+  if (state.enabled && !isStaff && !isAuthPage && !isLoading) {
     return <main className="flex min-h-screen items-center justify-center bg-[#12394F] px-6 text-center text-white"><div className="w-full max-w-lg rounded-3xl bg-white p-8 text-[#12394F] shadow-2xl sm:p-12"><Image src="/images/logo/TOGT_Tour_Travel_Final_Logo_For_Print.jpg" alt="TOGT Tour & Travel" width={220} height={70} className="mx-auto h-auto w-52 object-contain" /><div className="mx-auto mt-8 flex h-16 w-16 items-center justify-center rounded-full bg-[#FF9300]/15 text-3xl">&#9881;</div><h1 className="mt-6 text-3xl font-black">We&apos;re under maintenance</h1><p className="mt-3 text-slate-600">{state.message}</p><p className="mt-2 font-semibold text-[#1F67B1]">We&apos;ll be back soon.</p><div className="mt-8 border-t border-slate-100 pt-5 text-sm text-slate-500"><p>For urgent assistance</p><p className="mt-1 font-bold text-[#12394F]">+251 99 797 9741</p><p>info@togttrading.com</p></div></div></main>;
   }
   return <>{children}</>;
