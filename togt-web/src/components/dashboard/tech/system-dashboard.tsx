@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Database, KeyRound, LockKeyhole, RefreshCw, ShieldCheck, Terminal, Wrench, XCircle } from "lucide-react";
 import { ApiError } from "@/lib/api/client";
 import { deleteSystemProvider, getSystemAuditLogs, getSystemHealth, getSystemLogs, getSystemMaintenance, getSystemMetrics, getSystemMigrations, getSystemProviders, getSystemVersion, saveSystemProvider, setSystemMaintenance, testSystemProvider, type ProviderStatus, type SystemHealth } from "@/lib/api/system";
@@ -24,15 +24,102 @@ const fmtUptime = (n: number) => `${Math.floor(n / 86400)}d ${Math.floor(n / 360
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) { return <section className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>{children}</section>; }
 function Status({ ok, children }: { ok: boolean; children: React.ReactNode }) { return <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${ok ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}><span className={`h-2 w-2 rounded-full ${ok ? "bg-emerald-500" : "bg-rose-500"}`} />{children}</span>; }
 
+const DEFAULT_MAINTENANCE_MESSAGE = "TOGT is temporarily unavailable for maintenance.";
+type MaintenanceRow = { enabled: boolean; message: string; updatedAt?: string };
+
+/** Maintenance mode card. Every change saves automatically — the toggle saves
+ * instantly, the message ~1s after typing stops — so the state can never be
+ * lost by closing the tab. A failed save is kept locally and can be retried. */
+function MaintenanceCard({ onEnabledChange, refreshKey }: { onEnabledChange: (enabled: boolean) => void; refreshKey: number }) {
+  const [row, setRow] = useState<MaintenanceRow | null>(null);
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [loadError, setLoadError] = useState("");
+  const pendingRef = useRef<MaintenanceRow | null>(null);
+  const savingRef = useRef(false);
+  const debounceRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    // Skip refreshes while a local change is unsaved/in-flight so the server can
+    // never clobber the user's edits.
+    if (pendingRef.current || savingRef.current) return;
+    let active = true;
+    getSystemMaintenance().then((data) => { if (active && data) { setRow(data); onEnabledChange(data.enabled); } }).catch(() => { if (active && !row) setLoadError("Could not load the saved maintenance state."); });
+    return () => { active = false; if (debounceRef.current) window.clearTimeout(debounceRef.current); };
+  }, [onEnabledChange, refreshKey, row]);
+
+  const runSave = async () => {
+    if (savingRef.current) return; // an in-flight save drains newer edits itself
+    savingRef.current = true;
+    setStatus("saving");
+    try {
+      while (pendingRef.current) {
+        const draft = pendingRef.current;
+        pendingRef.current = null;
+        try {
+          const saved = await setSystemMaintenance(draft.enabled, draft.message);
+          if (!pendingRef.current) setRow(saved); // never clobber newer local edits
+          onEnabledChange(saved.enabled);
+        } catch (error) {
+          if (!pendingRef.current) pendingRef.current = draft; // keep the failed change for retry
+          throw error;
+        }
+      }
+      setStatus("saved");
+      window.setTimeout(() => setStatus((current) => (current === "saved" ? "idle" : current)), 2500);
+    } catch { setStatus("error"); } finally { savingRef.current = false; }
+  };
+
+  const update = (next: MaintenanceRow, immediate: boolean) => {
+    setRow(next);
+    pendingRef.current = next;
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    if (immediate) void runSave();
+    else debounceRef.current = window.setTimeout(() => { debounceRef.current = null; void runSave(); }, 900);
+  };
+
+  const flushSave = () => {
+    if (debounceRef.current) { window.clearTimeout(debounceRef.current); debounceRef.current = null; }
+    void runSave();
+  };
+
+  return (
+    <Card>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-black text-togt-navy">Maintenance mode</h2>
+          <p className="mt-1 text-sm text-slate-500">Changes save automatically and take effect immediately: while the site is under development visitors see the maintenance screen, and TECH accounts keep full access.</p>
+        </div>
+        <Wrench className="h-6 w-6 shrink-0 text-togt-orange" />
+      </div>
+      <label className="mt-4 flex items-center gap-2 text-sm font-bold">
+        <input type="checkbox" checked={row?.enabled ?? false} onChange={(event) => update({ enabled: event.target.checked, message: row?.message ?? DEFAULT_MAINTENANCE_MESSAGE }, true)} />
+        Enabled — show the maintenance screen to visitors
+      </label>
+      <textarea value={row?.message ?? DEFAULT_MAINTENANCE_MESSAGE} onChange={(event) => update({ enabled: row?.enabled ?? false, message: event.target.value }, false)} className="mt-3 min-h-24 w-full rounded-xl border p-3 text-sm" />
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button disabled={status === "saving"} onClick={flushSave} className="rounded-lg bg-togt-blue px-4 py-2 text-sm font-bold text-white">{status === "error" ? "Retry save" : "Save now"}</button>
+        <span className={`text-xs font-semibold ${status === "error" ? "text-rose-600" : status === "saved" ? "text-emerald-600" : "text-slate-500"}`}>
+          {status === "saving" ? "Saving…" : status === "saved" ? "All changes saved ✓" : status === "error" ? "Save failed — your change is kept, press Retry." : row?.updatedAt ? `Last saved ${new Date(row.updatedAt).toLocaleString()}` : "All changes save automatically."}
+        </span>
+      </div>
+      {loadError && <p className="mt-2 text-sm text-rose-600">{loadError}</p>}
+    </Card>
+  );
+}
+
 export function SystemDashboard() {
-  const [tab, setTab] = useState<(typeof tabs)[number]>("Overview");
+  const [tab, setTabState] = useState<(typeof tabs)[number]>(() => { if (typeof window === "undefined") return "Overview"; const requested = new URLSearchParams(window.location.search).get("systemTab"); return (tabs as readonly string[]).includes(requested ?? "") ? (requested as (typeof tabs)[number]) : "Overview"; });
+  // Keep the active panel in the URL (?systemTab=…) so reopening or sharing the
+  // link restores the exact tab. Uses its own param so it never clashes with the
+  // dashboard-shell ?tab= navigation.
+  const setTab = (next: (typeof tabs)[number]) => { setTabState(next); if (typeof window !== "undefined") { const url = new URL(window.location.href); url.searchParams.set("systemTab", next); window.history.replaceState(null, "", url); } };
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [metrics, setMetrics] = useState<{ activeUsers: number; users: number; activeRequests: number; pendingBackups: number; requestRate: number | null; responseTimeMs: number | null; note: string } | null>(null);
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
   const [testResults, setTestResults] = useState<Record<string, { status: string; message: string }>>({});
   const [logs, setLogs] = useState<Array<{ id: number; level: string; message: string }>>([]);
   const [audit, setAudit] = useState<Array<{ id: string; action: string; outcome: string; target?: string; createdAt: string }>>([]);
-  const [maintenance, setMaintenance] = useState<{ enabled: boolean; message: string } | null>(null);
+  const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [migrations, setMigrations] = useState<{ applied: number; runnerConfigured: boolean } | null>(null);
   const [version, setVersion] = useState<{ version: string; commit: string; node: string; environment: string } | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
@@ -41,12 +128,13 @@ export function SystemDashboard() {
   const [error, setError] = useState("");
   const [siteSettingRows, setSiteSettingRows] = useState<Record<string, string>>({});
   const [siteSettingStatus, setSiteSettingStatus] = useState<string>("");
+  const [systemRefreshKey, setSystemRefreshKey] = useState(0);
 
   const load = async () => {
     setError("");
     try {
       const [h, m, p, l, a, ma, mi, v] = await Promise.all([getSystemHealth(), getSystemMetrics(), getSystemProviders(), getSystemLogs(), getSystemAuditLogs(), getSystemMaintenance(), getSystemMigrations(), getSystemVersion()]);
-      setHealth(h); setMetrics(m); setProviders(p); setLogs(l.entries); setAudit(a); setMaintenance(ma); setMigrations(mi); setVersion(v);
+      setHealth(h); setMetrics(m); setProviders(p); setLogs(l.entries); setAudit(a); setMaintenanceEnabled(!!ma?.enabled); setMigrations(mi); setVersion(v); setSystemRefreshKey((key) => key + 1);
     } catch (e) { setError(e instanceof ApiError ? e.message : "Unable to load system data"); }
   };
   const loadSiteSettings = async () => {
@@ -57,7 +145,8 @@ export function SystemDashboard() {
   };
   useEffect(() => { void loadSiteSettings(); }, []);
   useEffect(() => { void load(); const timer = window.setInterval(() => void load(), 30000); return () => window.clearInterval(timer); }, []);
-  const alerts = useMemo(() => [health?.database !== "UP" ? "Database is unavailable" : null, health && health.memory.usedPercent > 85 ? "Memory usage is high" : null, maintenance?.enabled ? "Maintenance mode is enabled" : null].filter(Boolean) as string[], [health, maintenance]);
+  const alerts = useMemo(() => [health?.database !== "UP" ? "Database is unavailable" : null, health && health.memory.usedPercent > 85 ? "Memory usage is high" : null, maintenanceEnabled ? "Maintenance mode is enabled" : null].filter(Boolean) as string[], [health, maintenanceEnabled]);
+  const handleMaintenanceEnabled = useCallback((enabled: boolean) => setMaintenanceEnabled(enabled), []);
   const action = async (fn: () => Promise<unknown>) => { setBusy(true); setError(""); try { await fn(); await load(); } catch (e) { setError(e instanceof ApiError ? e.message : "Operation failed"); } finally { setBusy(false); } };
   const runTest = async (provider: string) => {
     setBusy(true); setError("");
@@ -84,7 +173,7 @@ export function SystemDashboard() {
     {tab === "Backups" && <BackupsTab />}
     {tab === "Logs" && <Card><div className="mb-4 flex items-center gap-2"><Terminal className="h-5 w-5 text-togt-blue" /><h2 className="font-black text-togt-navy">Redacted system logs</h2></div>{logs.length ? <div className="max-h-[32rem] overflow-auto rounded-xl bg-slate-950 p-4 font-mono text-xs text-slate-200">{logs.map((log) => <p key={log.id} className={log.level === "ERROR" ? "text-rose-300" : log.level === "WARN" ? "text-amber-300" : ""}>[{log.level}] {log.message}</p>)}</div> : <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">No allowlisted log source configured.</p>}</Card>}
     {tab === "Security" && <div className="space-y-4"><Card><ShieldCheck className="mb-3 h-6 w-6 text-emerald-600" /><h2 className="font-black text-togt-navy">Audit trail</h2><div className="mt-3 space-y-2">{audit.length ? audit.map((item) => <div key={item.id} className="flex justify-between border-b py-2 text-sm"><span>{item.action} {item.target ?? ""}</span><span className="text-slate-500">{item.outcome} · {new Date(item.createdAt).toLocaleString()}</span></div>) : <p className="text-sm text-slate-500">No operations recorded.</p>}</div></Card><Card><KeyRound className="mb-3 h-6 w-6 text-togt-orange" /><h2 className="font-black text-togt-navy">Build and runtime</h2><p className="text-sm">Version: {version?.version ?? "—"}</p><p className="text-sm">Commit: {version?.commit ?? "—"}</p><p className="text-sm">Environment: {version?.environment ?? "—"}</p></Card></div>}
-    {tab === "Maintenance" && <Card><Wrench className="mb-3 h-6 w-6 text-togt-orange" /><h2 className="font-black text-togt-navy">Maintenance mode</h2><p className="mt-1 text-sm text-slate-500">The API currently stores the state. A request gate must be enabled before this affects public traffic.</p><label className="mt-4 flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={maintenance?.enabled ?? false} onChange={(event) => setMaintenance((current) => ({ enabled: event.target.checked, message: current?.message ?? "TOGT is temporarily unavailable for maintenance." }))} />Enabled</label><textarea value={maintenance?.message ?? "TOGT is temporarily unavailable for maintenance."} onChange={(event) => setMaintenance((current) => ({ enabled: current?.enabled ?? false, message: event.target.value }))} className="mt-3 min-h-24 w-full rounded-xl border p-3 text-sm" /><button disabled={busy} onClick={() => void action(() => setSystemMaintenance(maintenance?.enabled ?? false, maintenance?.message ?? "TOGT is temporarily unavailable for maintenance."))} className="mt-3 rounded-lg bg-togt-blue px-4 py-2 text-sm font-bold text-white">Save maintenance settings</button></Card>}
+    {tab === "Maintenance" && <MaintenanceCard onEnabledChange={handleMaintenanceEnabled} refreshKey={systemRefreshKey} />}
     {tab === "Okra Tech" && <Card><div className="mb-4 flex items-center justify-between"><div><h2 className="font-black text-togt-navy">Footer credit — Developed by Okra Tech</h2><p className="text-xs text-slate-500">Shown at the bottom of the public website footer. Changes go live immediately after saving.</p></div></div><div className="grid gap-4 sm:grid-cols-2"><label className="text-sm font-bold text-togt-navy">Website link (URL)<input value={siteSettingRows.OKRA_LINK ?? ""} onChange={(event) => setSiteSettingRows((current) => ({ ...current, OKRA_LINK: event.target.value }))} placeholder="https://okratech.et" className="mt-1 w-full rounded-xl border p-3 text-sm font-normal" /></label><label className="text-sm font-bold text-togt-navy">Logo image URL<input value={siteSettingRows.OKRA_IMAGE ?? ""} onChange={(event) => setSiteSettingRows((current) => ({ ...current, OKRA_IMAGE: event.target.value }))} placeholder="https://…/okra-logo.png (leave empty to show text only)" className="mt-1 w-full rounded-xl border p-3 text-sm font-normal" /></label></div>{siteSettingRows.OKRA_IMAGE ? <div className="mt-3 flex items-center gap-3 rounded-xl bg-slate-50 p-3"><img src={siteSettingRows.OKRA_IMAGE} alt="Okra Tech logo preview" className="h-10 w-auto max-w-40 object-contain" onError={(event) => { event.currentTarget.style.display = "none"; }} /><span className="text-xs text-slate-500">Live preview (as it appears in the footer)</span></div> : null}<div className="mt-4 flex items-center gap-3"><button disabled={busy} onClick={() => void action(async () => { await updateSiteSettings([{ key: "OKRA_LINK", value: siteSettingRows.OKRA_LINK ?? "" }, { key: "OKRA_IMAGE", value: siteSettingRows.OKRA_IMAGE ?? "" }]); setSiteSettingStatus("Footer credit updated."); void loadSiteSettings(); })} className="rounded-lg bg-togt-orange px-4 py-2 text-sm font-bold text-white">Save footer credit</button>{siteSettingStatus && <span className="text-xs font-semibold text-emerald-600">{siteSettingStatus}</span>}</div></Card>}
     {selectedProvider && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"><div className="flex justify-between"><h2 className="font-black text-togt-navy">Configure {providerLabels[selectedProvider] ?? selectedProvider}</h2><button onClick={() => setSelectedProvider(null)}><XCircle className="h-5 w-5" /></button></div>            <p className="mt-2 text-xs text-slate-500">{providerSecretHints[selectedProvider] ?? "The value is encrypted at rest and cannot be viewed after saving."}</p><input autoFocus type="password" value={secret} onChange={(event) => setSecret(event.target.value)} placeholder={selectedProvider === "CHAPA" ? "CHASECK-xxxxxxxxxxxxxxxxxxxxxxxx" : "Paste secret value"} className="mt-4 w-full rounded-xl border p-3 text-sm" /><div className="mt-4 flex justify-end gap-2"><button onClick={() => setSelectedProvider(null)} className="rounded-lg border px-4 py-2 text-sm font-bold">Cancel</button><button disabled={!secret || busy} onClick={() => void action(async () => { await saveSystemProvider(selectedProvider, secret, true); setSelectedProvider(null); })} className="rounded-lg bg-togt-orange px-4 py-2 text-sm font-bold text-white">Save encrypted key</button></div></div></div>}
   </div>;

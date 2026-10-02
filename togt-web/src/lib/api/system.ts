@@ -12,8 +12,9 @@ export const testSystemProvider = (provider: string) => apiPost(`/system/api-key
 export const getSystemLogs = (level?: string, search?: string) => apiGet<{ available: boolean; entries: Array<{ id: number; level: string; message: string }>; message?: string }>(`/system/logs?${new URLSearchParams({ ...(level ? { level } : {}), ...(search ? { search } : {}) })}`);
 export const getSystemBackups = () => apiGet<Array<{ id: string; status: string; destination: string; startedAt: string; completedAt?: string }>>("/system/backups");
 export const requestSystemBackup = () => apiPost("/system/backup");
-export const getSystemMaintenance = () => apiGet<{ enabled: boolean; message: string } | null>("/system/maintenance");
-export const setSystemMaintenance = (enabled: boolean, message: string) => apiPost("/system/maintenance", { enabled, message });
+export type SystemMaintenanceRow = { id: string; enabled: boolean; message: string; startsAt?: string | null; endsAt?: string | null; updatedAt?: string };
+export const getSystemMaintenance = () => apiGet<SystemMaintenanceRow | null>("/system/maintenance");
+export const setSystemMaintenance = (enabled: boolean, message: string) => apiPost<SystemMaintenanceRow>("/system/maintenance", { enabled, message });
 export const getSystemMigrations = () => apiGet<{ applied: number; runnerConfigured: boolean }>("/system/migrations");
 export const getSystemAuditLogs = () => apiGet<Array<{ id: string; action: string; outcome: string; target?: string; createdAt: string }>>("/system/audit-logs");
 export const getSystemVersion = () => apiGet<{ version: string; commit: string; node: string; environment: string }>("/system/version");

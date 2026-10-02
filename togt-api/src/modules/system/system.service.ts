@@ -142,8 +142,13 @@ export class SystemService {
 
   async setMaintenance(dto: UpdateMaintenanceDto, actor: User) {
     this.assertTech(actor);
-    const row = await this.prisma.systemMaintenance.findFirst();
-    const result = row ? await this.prisma.systemMaintenance.update({ where: { id: row.id }, data: { enabled: dto.enabled, message: dto.message ?? row.message, startsAt: dto.startsAt ? new Date(dto.startsAt) : null, endsAt: dto.endsAt ? new Date(dto.endsAt) : null, updatedById: actor.id } }) : await this.prisma.systemMaintenance.create({ data: { enabled: dto.enabled, message: dto.message ?? 'TOGT is temporarily unavailable for maintenance.', startsAt: dto.startsAt ? new Date(dto.startsAt) : null, endsAt: dto.endsAt ? new Date(dto.endsAt) : null, updatedById: actor.id } });
+    // Always read/write the newest row (same ordering as every read path) so a
+    // duplicate row can never make saves land on a stale record, and self-heal
+    // any duplicates created by earlier racing saves.
+    const rows = await this.prisma.systemMaintenance.findMany({ orderBy: { updatedAt: 'desc' } });
+    const target = rows[0];
+    const result = target ? await this.prisma.systemMaintenance.update({ where: { id: target.id }, data: { enabled: dto.enabled, message: dto.message ?? target.message, startsAt: dto.startsAt ? new Date(dto.startsAt) : null, endsAt: dto.endsAt ? new Date(dto.endsAt) : null, updatedById: actor.id } }) : await this.prisma.systemMaintenance.create({ data: { enabled: dto.enabled, message: dto.message ?? 'TOGT is temporarily unavailable for maintenance.', startsAt: dto.startsAt ? new Date(dto.startsAt) : null, endsAt: dto.endsAt ? new Date(dto.endsAt) : null, updatedById: actor.id } });
+    if (rows.length > 1) await this.prisma.systemMaintenance.deleteMany({ where: { id: { not: result.id } } });
     await this.audit(actor, 'SYSTEM_MAINTENANCE_SET', result.id, 'SUCCESS', { enabled: dto.enabled });
     this.gateway.broadcast('maintenance_mode_changed', { enabled: result.enabled, message: result.message, startsAt: result.startsAt, endsAt: result.endsAt });
     return result;
