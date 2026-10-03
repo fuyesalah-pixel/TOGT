@@ -125,29 +125,45 @@ export class UsersService {
   /**
    * Mirror a call-tracker record into a real User (Customers tab) if it does
    * not already exist. Idempotent: matched by phone first, then email.
+   * When a real email is provided on the call record it is used for the
+   * mirrored account (instead of the placeholder tracker-…@call-tracker.local
+   * address), so the user can later sign in / be reached by email.
    * Imported from CallRecordsService so tracker additions automatically show
    * up in the worker/admin Users tabs.
    */
   async mirrorCustomerFromCallRecord(input: {
     name: string;
     phone: string;
+    email?: string | null;
     fatherName?: string | null;
     idImageUrl?: string | null;
     source: string;
   }) {
-    const email = `tracker-${input.phone.replace(/[^0-9]/g, '') || 'unknown'}@call-tracker.local`;
+    const realEmail = input.email?.trim().toLowerCase() || null;
+    const trackerEmail = `tracker-${input.phone.replace(/[^0-9]/g, '') || 'unknown'}@call-tracker.local`;
     const existing =
       (input.phone &&
         (await this.prisma.user.findFirst({
-          where: { OR: [{ phone: input.phone }, { email }] },
-          select: { id: true },
+          where: { OR: [{ phone: input.phone }, { email: { in: realEmail ? [realEmail, trackerEmail] : [trackerEmail] } }] },
+          select: { id: true, email: true },
         }))) ||
       null;
-    if (existing) return existing;
+    if (existing) {
+      // Upgrade the placeholder tracker address to the real email when one is
+      // now provided (ignore failures — e.g. the email is already taken).
+      if (realEmail && existing.email === trackerEmail) {
+        try {
+          return await this.prisma.user.update({ where: { id: existing.id }, data: { email: realEmail }, select: { id: true } });
+        } catch {
+          return existing;
+        }
+      }
+      return existing;
+    }
 
     return this.prisma.user.create({
       data: {
-        email,
+        email: realEmail ?? trackerEmail,
         fullName: input.name,
         phone: input.phone || null,
         avatarUrl: input.idImageUrl || null,
@@ -158,6 +174,26 @@ export class UsersService {
       },
       select: { id: true },
     });
+  }
+
+  /**
+   * Replace the placeholder tracker-…@call-tracker.local address of the user
+   * mirrored for a call record with a real email address (set/changed on the
+   * call tracker form). No-op when the account already uses a real address.
+   */
+  async upgradeTrackerEmail(phone: string, realEmail: string) {
+    const email = realEmail.trim().toLowerCase();
+    const trackerEmail = `tracker-${(phone ?? '').replace(/[^0-9]/g, '') || 'unknown'}@call-tracker.local`;
+    const user = await this.prisma.user.findFirst({
+      where: { OR: [{ phone }, { email: trackerEmail }] },
+      select: { id: true, email: true },
+    });
+    if (!user || !user.email.endsWith('@call-tracker.local')) return null;
+    try {
+      return await this.prisma.user.update({ where: { id: user.id }, data: { email }, select: { id: true, email: true } });
+    } catch {
+      return null; // email already taken by another account — keep the placeholder
+    }
   }
 
   async update(id: string, dto: UpdateUserDto, actor: User) {

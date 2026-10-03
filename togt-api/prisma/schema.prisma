@@ -527,6 +527,7 @@ model CallRecord {
   teamNumber          String
   name                String
   phone               String
+  email               String?
   fatherName          String?
   passportNumber      String?
   passportFileUrl     String?

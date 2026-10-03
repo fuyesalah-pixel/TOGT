@@ -123,6 +123,7 @@ export class CallRecordsService implements OnModuleInit {
       const mirrored = await this.users.mirrorCustomerFromCallRecord({
         name: dto.name,
         phone: dto.phone,
+        email: dto.email,
         fatherName: dto.fatherName,
         idImageUrl: dto.idImageUrl,
         source: 'call-tracker',
@@ -137,6 +138,7 @@ export class CallRecordsService implements OnModuleInit {
         teamNumber,
         name: dto.name,
         phone: dto.phone,
+        email: dto.email,
         fatherName: dto.fatherName,
         passportNumber: dto.passportNumber,
         passportFileUrl: dto.passportFileUrl,
@@ -218,6 +220,7 @@ export class CallRecordsService implements OnModuleInit {
       flightBookingStatus: 'flightBookingStatus',
       airline: 'airline',
       additionalInfo: 'additionalInfo',
+      email: 'email',
       name: 'name',
       phone: 'phone',
     };
@@ -276,6 +279,16 @@ export class CallRecordsService implements OnModuleInit {
         await this.groups.ensureTeamGroup(data.teamNumber, actor.id);
       } catch (groupError) {
         this.logger.warn(`Could not sync team group ${data.teamNumber}: ${(groupError as Error).message}`);
+      }
+    }
+
+    // Email changed: keep the mirrored user account in sync (upgrade the
+    // placeholder tracker address to the real email). Never fails the update.
+    if (typeof data.email === 'string' && data.email !== record.email) {
+      try {
+        await this.users.upgradeTrackerEmail(record.phone, data.email);
+      } catch (emailError) {
+        this.logger.warn(`Could not update mirrored user email: ${(emailError as Error).message}`);
       }
     }
 

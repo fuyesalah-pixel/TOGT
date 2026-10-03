@@ -1,5 +1,6 @@
 import {
   IsDateString,
+  IsEmail,
   IsEnum,
   IsInt,
   IsNumber,
@@ -13,6 +14,7 @@ import { PaymentStatus } from '@prisma/client';
 export class CreateCallRecordDto {
   @IsString() @MinLength(1) name!: string;
   @IsString() @MinLength(1) phone!: string;
+  @IsOptional() @IsEmail({}, { message: 'email must be a valid email address' }) email?: string;
   @IsString() @MinLength(1) teamNumber!: string;
   @IsOptional() @IsString() fatherName?: string;
   @IsOptional() @IsString() passportNumber?: string;
