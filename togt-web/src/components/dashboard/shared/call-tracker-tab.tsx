@@ -43,6 +43,7 @@ type FormState = {
   name: string;
   fatherName: string;
   phone: string;
+  email: string;
   paidAmount: string;
   remainingAmount: string;
   currency: string;
@@ -59,6 +60,7 @@ const EMPTY_FORM: FormState = {
   name: "",
   fatherName: "",
   phone: "",
+  email: "",
   paidAmount: "",
   remainingAmount: "",
   currency: "ETB",
@@ -284,6 +286,7 @@ export function CallTrackerTab({}: { staff?: boolean }) {
       name: record.name,
       fatherName: record.fatherName ?? "",
       phone: record.phone,
+      email: record.email ?? "",
       paidAmount: record.paidAmount != null ? String(record.paidAmount) : "",
       remainingAmount: record.remainingAmount != null ? String(record.remainingAmount) : "",
       currency: record.currency || "ETB",
@@ -306,6 +309,11 @@ export function CallTrackerTab({}: { staff?: boolean }) {
       setFormError("Name and Phone are required.");
       return null;
     }
+    const email = form.email.trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setFormError("Email must be a valid email address.");
+      return null;
+    }
     const paid = form.paidAmount ? Number(form.paidAmount) : undefined;
     const remaining = form.remainingAmount ? Number(form.remainingAmount) : undefined;
     if (paid !== undefined && (Number.isNaN(paid) || paid < 0)) {
@@ -321,6 +329,7 @@ export function CallTrackerTab({}: { staff?: boolean }) {
       teamNumber: form.teamNumber,
       fatherName: form.fatherName.trim() || undefined,
       phone: form.phone.trim(),
+      email: email || undefined,
       paidAmount: paid,
       remainingAmount: remaining,
       totalAmount: (paid ?? 0) + (remaining ?? 0),
@@ -602,7 +611,10 @@ export function CallTrackerTab({}: { staff?: boolean }) {
                       className="cursor-pointer border-b border-gray-50 transition-colors last:border-0 hover:bg-togt-blue/5"
                     >
                       <td className="px-4 py-3 font-bold text-togt-blue">{record.teamNumber}</td>
-                      <td className="px-4 py-3 font-medium text-togt-navy">{record.name}</td>
+                      <td className="px-4 py-3 font-medium text-togt-navy">
+                        {record.name}
+                        {record.email && <p className="text-xs font-normal text-gray-400">{record.email}</p>}
+                      </td>
                       <td className="px-4 py-3 text-gray-600">{record.phone}</td>
                       <td className="px-4 py-3 text-gray-600">{formatShortDate(record.flightDate)}</td>
                       <td className="px-4 py-3 text-right text-gray-600">
@@ -698,6 +710,10 @@ export function CallTrackerTab({}: { staff?: boolean }) {
               <Input inputMode="numeric" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="mt-1" />
             </div>
             <div>
+              <Label>Email</Label>
+              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="mt-1" placeholder="customer@email.com — saved as a user" />
+            </div>
+            <div>
               <Label>Paid Amount</Label>
               <Input inputMode="decimal" value={form.paidAmount} onChange={(e) => setForm({ ...form, paidAmount: e.target.value })} className="mt-1" placeholder="0" />
             </div>
@@ -787,6 +803,16 @@ export function CallTrackerTab({}: { staff?: boolean }) {
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    className="mt-1"
+                    placeholder="customer@email.com — saved as a user"
                   />
                 </div>
                 <div>
