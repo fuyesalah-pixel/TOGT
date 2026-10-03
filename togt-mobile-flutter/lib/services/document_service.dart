@@ -23,12 +23,11 @@ class DocumentService {
   /// Picks any allowed document (PDF, images, …) via the system file browser —
   /// this is what makes the chat paperclip offer real files, not just photos.
   Future<XFile?> pickDocument() async {
-    final result = await FilePicker.platform.pickFiles(
+    final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: allowedExtensions,
-      withData: false,
     );
-    final path = result?.files.single.path;
+    final path = file?.path;
     return path == null ? null : XFile(path);
   }
 
