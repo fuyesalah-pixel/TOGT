@@ -250,5 +250,34 @@
   "azkarAfterPrayer": "After prayer",
   "azkarSleep": "Before sleeping",
   "azkarDistress": "In distress",
-  "azanExactHint": "Allow exact alarms so the azan fires right on time. Tap to open settings."
+  "azanExactHint": "Allow exact alarms so the azan fires right on time. Tap to open settings.",
+  "browseFiles": "Browse files",
+  "attachmentsAllowed": "Photos & PDF up to 10MB",
+  "unsupportedFileType": "Unsupported file type. Please choose a JPG, PNG, GIF, WEBP image or a PDF under 10MB.",
+  "fieldRequired": "{field} is required",
+  "@fieldRequired": {
+    "placeholders": {
+      "field": { "type": "String" }
+    }
+  },
+  "invalidEmail": "Please enter a valid email address",
+  "invalidPhone": "Please enter a valid phone number (e.g. 0912345678)",
+  "fixErrorsBelow": "Please check the highlighted fields and try again",
+  "selectOption": "Select an option",
+  "searchList": "Type to search…",
+  "noMatches": "No matches found",
+  "clearValue": "Clear",
+  "returnAfterDeparture": "Return date must be on or after the departure date",
+  "tripDetails": "Trip details",
+  "travelersSection": "Travelers",
+  "contactSection": "Contact information",
+  "passportSection": "Passport details",
+  "messageSection": "Your message",
+  "tourSection": "Tour details",
+  "visaSection": "Visa details",
+  "updatingApp": "Downloading update…",
+  "updateReady": "Update ready",
+  "installUpdate": "Install",
+  "autoUpdateNote": "TOGT updates download automatically when you are online.",
+  "updateInstalling": "Installing the new version…"
 }

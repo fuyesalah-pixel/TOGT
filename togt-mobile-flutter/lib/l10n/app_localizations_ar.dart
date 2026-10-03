@@ -792,4 +792,81 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get azanExactHint =>
       'اسمح بالتنبيهات الدقيقة ليبدأ الأذان في وقته تماماً. اضغط لفتح الإعدادات.';
+
+  @override
+  String get browseFiles => 'استعراض الملفات';
+
+  @override
+  String get attachmentsAllowed => 'صور و PDF حتى 10 ميجابايت';
+
+  @override
+  String get unsupportedFileType =>
+      'نوع الملف غير مدعوم. اختر صورة JPG أو PNG أو GIF أو WEBP أو ملف PDF أقل من 10 ميجابايت.';
+
+  @override
+  String fieldRequired(String field) {
+    return '‏$field مطلوب';
+  }
+
+  @override
+  String get invalidEmail => 'يرجى إدخال بريد إلكتروني صحيح';
+
+  @override
+  String get invalidPhone => 'يرجى إدخال رقم هاتف صحيح (مثال 0912345678)';
+
+  @override
+  String get fixErrorsBelow => 'يرجى التحقق من الحقول المحددة والمحاولة مجدداً';
+
+  @override
+  String get selectOption => 'اختر خياراً';
+
+  @override
+  String get searchList => 'اكتب للبحث…';
+
+  @override
+  String get noMatches => 'لا توجد نتائج';
+
+  @override
+  String get clearValue => 'مسح';
+
+  @override
+  String get returnAfterDeparture =>
+      'يجب أن يكون تاريخ العودة بعد تاريخ المغادرة';
+
+  @override
+  String get tripDetails => 'تفاصيل الرحلة';
+
+  @override
+  String get travelersSection => 'المسافرون';
+
+  @override
+  String get contactSection => 'معلومات التواصل';
+
+  @override
+  String get passportSection => 'بيانات جواز السفر';
+
+  @override
+  String get messageSection => 'رسالتك';
+
+  @override
+  String get tourSection => 'تفاصيل الجولة';
+
+  @override
+  String get visaSection => 'تفاصيل التأشيرة';
+
+  @override
+  String get updatingApp => 'جارٍ تنزيل التحديث…';
+
+  @override
+  String get updateReady => 'التحديث جاهز';
+
+  @override
+  String get installUpdate => 'تثبيت';
+
+  @override
+  String get autoUpdateNote =>
+      'يتم تنزيل تحديثات TOGT تلقائياً عند الاتصال بالإنترنت.';
+
+  @override
+  String get updateInstalling => 'جارٍ تثبيت الإصدار الجديد…';
 }

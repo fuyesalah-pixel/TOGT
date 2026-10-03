@@ -180,22 +180,37 @@ class _ChatScreenState extends State<ChatScreen> {
         return;
       }
     }
-    final source = await showModalBottomSheet<ImageSource>(
+    // Three sources: photos from the gallery, the camera, or any allowed file
+    // (PDF documents included) through the system file browser.
+    final source = await showModalBottomSheet<String>(
       context: context,
       builder: (sheetContext) => SafeArea(
         child: Wrap(children: [
-          ListTile(leading: const Icon(Icons.photo_library_rounded), title: Text(l10n.pickFromGallery), onTap: () => Navigator.pop(sheetContext, ImageSource.gallery)),
-          ListTile(leading: const Icon(Icons.photo_camera_rounded), title: Text(l10n.takePhoto), onTap: () => Navigator.pop(sheetContext, ImageSource.camera)),
+          ListTile(leading: const Icon(Icons.photo_library_rounded), title: Text(l10n.pickFromGallery), onTap: () => Navigator.pop(sheetContext, 'gallery')),
+          ListTile(leading: const Icon(Icons.photo_camera_rounded), title: Text(l10n.takePhoto), onTap: () => Navigator.pop(sheetContext, 'camera')),
+          ListTile(leading: const Icon(Icons.picture_as_pdf_rounded), title: Text(l10n.browseFiles), subtitle: Text(l10n.attachmentsAllowed, style: TOGTTypography.small.copyWith(color: TOGTColors.grey)), onTap: () => Navigator.pop(sheetContext, 'file')),
         ]),
       ),
     );
     if (source == null || !mounted) return;
-    final picked = await DocumentService.instance.pickImage(source);
+    final picked = source == 'file'
+        ? await DocumentService.instance.pickDocument()
+        : await DocumentService.instance.pickImage(source == 'gallery' ? ImageSource.gallery : ImageSource.camera);
     if (picked == null || !mounted) return;
+    // Fail fast with a clear message instead of a server round trip that
+    // answers "unsupported file type" only after uploading.
+    final sizeBytes = await picked.length();
+    if (!mounted) return;
+    if (!DocumentService.isAllowed(picked.path, sizeBytes: sizeBytes)) {
+      setState(() => _messages.add(_Msg(text: l10n.chatSendFailed(l10n.unsupportedFileType), fromUser: false)));
+      await _saveHistory();
+      return;
+    }
     setState(() => _uploading = true);
     try {
-      await ChatSocketService.instance.sendFile(receiverId: workerId, filePath: picked.path, message: '');
-      setState(() => _messages.add(_Msg(text: '', fromUser: true, fileUrl: picked.path, fileType: 'image/jpeg', localPath: picked.path)));
+      final mimeType = DocumentService.mimeForPath(picked.path);
+      await ChatSocketService.instance.sendFile(receiverId: workerId, filePath: picked.path, message: '', fileType: mimeType);
+      setState(() => _messages.add(_Msg(text: '', fromUser: true, fileUrl: picked.path, fileType: mimeType, localPath: picked.path)));
       await _saveHistory();
       _scrollDown();
     } catch (e) {

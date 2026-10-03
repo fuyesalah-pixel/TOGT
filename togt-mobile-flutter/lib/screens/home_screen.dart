@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 
 import '../models/package_model.dart';
+import 'profile/notifications_screen.dart';
 import '../services/package_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
@@ -137,6 +138,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             Text('TOGT Tour & Travel', style: TOGTTypography.h3),
                              Text(l10n.whereGo, style: TOGTTypography.small),
                           ],
+                        ),
+                        const Spacer(),
+                        // Notifications entry point, always visible on the
+                        // home header.
+                        IconButton(
+                          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+                          icon: const Icon(Icons.notifications_none_rounded, color: TOGTColors.blue),
+                          tooltip: l10n.notifications,
                         ),
                       ],
                     ),

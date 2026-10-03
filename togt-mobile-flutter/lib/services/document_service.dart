@@ -1,4 +1,5 @@
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
@@ -10,10 +11,51 @@ class DocumentService {
   DocumentService._();
   static final instance = DocumentService._();
 
+  /// Extensions the backend accepts (uploads.service.ts allow-list).
+  static const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'];
+
   /// Picks an image (gallery or camera). Optionally downscales to keep chat
   /// uploads small and fast.
   Future<XFile?> pickImage(ImageSource source, {int maxDimension = 1600}) async {
     return ImagePicker().pickImage(source: source, imageQuality: 82, maxWidth: maxDimension.toDouble(), maxHeight: maxDimension.toDouble());
+  }
+
+  /// Picks any allowed document (PDF, images, …) via the system file browser —
+  /// this is what makes the chat paperclip offer real files, not just photos.
+  Future<XFile?> pickDocument() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: allowedExtensions,
+      withData: false,
+    );
+    final path = result?.files.single.path;
+    return path == null ? null : XFile(path);
+  }
+
+  /// Derives the MIME type from the file extension. Android copy streams
+  /// frequently lose the original content type, and the backend rejects the
+  /// upload when the declared MIME is missing or wrong, so the extension —
+  /// not the platform — is the source of truth here.
+  static String mimeForPath(String path) {
+    final ext = path.split('?').first.split('.').last.toLowerCase();
+    return switch (ext) {
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'gif' => 'image/gif',
+      'webp' => 'image/webp',
+      'pdf' => 'application/pdf',
+      _ => 'application/octet-stream',
+    };
+  }
+
+  /// True when the file both matches an allowed extension and fits the 10MB
+  /// backend limit — used to fail fast with a friendly message instead of a
+  /// round trip to the server.
+  static bool isAllowed(String path, {int? sizeBytes}) {
+    final ext = path.split('?').first.split('.').last.toLowerCase();
+    if (!allowedExtensions.contains(ext)) return false;
+    if (sizeBytes != null && sizeBytes > 10 * 1024 * 1024) return false;
+    return true;
   }
 
   Future<String?> pickAndUpload({ImageSource source = ImageSource.gallery, String folder = 'documents'}) async {

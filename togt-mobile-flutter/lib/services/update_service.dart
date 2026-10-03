@@ -1,12 +1,18 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:flutter/material.dart';
+
+import '../l10n/app_localizations.dart';
+import '../navigation/app_navigator.dart';
 import 'api_service.dart';
 
 class AppUpdateInfo {
@@ -44,6 +50,77 @@ class UpdateService {
   static const _pendingInstallKey = 'togt_update_installed';
 
   Uri get _versionUri => Uri.parse('$_updateBase/version.json');
+
+  // ── Auto-update ─────────────────────────────────────────────────────────
+  // As soon as the device comes online (and every 6h afterwards) the app
+  // checks the version manifest; when a newer build exists it downloads it in
+  // the background and opens the system installer by itself. The user only
+  // confirms the OS-level install prompt — no manual download or reinstall.
+  Timer? _autoTimer;
+  bool _checking = false;
+  bool _downloading = false;
+  int? _lastAutoVersion;
+
+  void startAutoUpdateMonitoring() {
+    Connectivity().onConnectivityChanged.listen((results) {
+      final connected = results.any((r) => r != ConnectivityResult.none);
+      if (connected) _autoCheck(initialDelay: const Duration(seconds: 20));
+    });
+    _autoTimer?.cancel();
+    _autoTimer = Timer.periodic(const Duration(hours: 6), (_) => _autoCheck());
+    _autoCheck(initialDelay: const Duration(seconds: 20));
+  }
+
+  void stopAutoUpdateMonitoring() {
+    _autoTimer?.cancel();
+    _autoTimer = null;
+  }
+
+  Future<void> _autoCheck({Duration initialDelay = Duration.zero}) async {
+    if (initialDelay != Duration.zero) await Future<void>.delayed(initialDelay);
+    if (_checking || _downloading) return;
+    _checking = true;
+    try {
+      final update = await checkForUpdate();
+      if (update == null || _lastAutoVersion == update.versionCode) return;
+      _lastAutoVersion = update.versionCode;
+      await downloadAndInstall(update, announce: true);
+    } catch (_) {
+      // Silent by design — a failed background update retries on the next
+      // connectivity change or timer tick.
+    } finally {
+      _checking = false;
+    }
+  }
+
+  /// Downloads the APK in the background and opens the system installer.
+  /// [announce] shows lightweight snackbars so the user knows what's happening.
+  Future<bool> downloadAndInstall(AppUpdateInfo update, {bool announce = false}) async {
+    if (_downloading) return false;
+    _downloading = true;
+    try {
+      final context = announce ? AppNavigator.navigatorKey.currentContext : null;
+      final l10n = context == null ? null : AppLocalizations.of(context);
+      if (l10n != null) _toast(l10n.updatingApp);
+      final path = await downloadApk(update, onProgress: (received, total) {});
+      await markInstallLaunched();
+      if (l10n != null) _toast(l10n.updateInstalling);
+      final opened = await installApk(path);
+      return opened;
+    } finally {
+      _downloading = false;
+    }
+  }
+
+  void _toast(String message) {
+    final context = AppNavigator.navigatorKey.currentContext;
+    if (context == null) return;
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+      content: Text(message),
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 3),
+    ));
+  }
 
   Future<int> currentVersionCode() async {
     final info = await PackageInfo.fromPlatform();

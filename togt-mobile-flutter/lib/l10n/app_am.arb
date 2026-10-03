@@ -92,5 +92,15 @@
   "pickFromGallery":"ከጋለሪው ይምረጡ","takePhoto":"ፎቶ ያንሱ","connectingDots":"በመገናኘት ላይ…","attachment":"አባሪ",
   "permissionTitle":"ፈቃድ ይስጡ","permissionBody":"TOGT ሙሉ በሙሉ ለመሥራት ጥቂት ፈቃዶች ያስፈልገዋል፦ ለጸሎት ጊዜና ቂብላ የአካባቢ፣ ለአዛን ማንቂያና ውይይት ማሳወቂያ፣ ለድጋፍ ሰነዶች ፎቶ።","permissionGrant":"ፈቃድ ስጥ","permissionLater":"አሁን አይደለም","permissionOpenSettings":"ቅንብሮችን ክፈት","permissionBlockedBody":"አንዳንድ ፈቃዶች በቋሚነት ተከልክለዋል። የጸሎት ጊዜ፣ የአዛን ማንቂያና ፋይል መላክ እንዲሰሩ በቅንብሮች ይፍቀዱ።",
   "azkarAfterPrayer":"ከጸሎት በኋላ","azkarSleep":"ከመኝታ በፊት","azkarDistress":"በስቃይ ጊዜ",
-  "azanExactHint":"አዛን በትክክል እንዲደርስ የትክክለኛ ማንቂያ ፈቃድ ይስጡ። ለመክፈት ይንኩ።"
+  "azanExactHint":"አዛን በትክክል እንዲደርስ የትክክለኛ ማንቂያ ፈቃድ ይስጡ። ለመክፈት ይንኩ።",
+  "browseFiles":"ፋይሎችን ይምረጡ","attachmentsAllowed":"ፎቶና PDF እስከ 10MB",
+  "unsupportedFileType":"የወደደው የፋይል አይነት አይደገፍም። JPG፣ PNG፣ GIF፣ WEBP ምስል ወይም ከ10MB በታች PDF ይምረጡ።",
+  "fieldRequired":"{field} ያስፈልጋል","@fieldRequired":{"placeholders":{"field":{"type":"String"}}},
+  "invalidEmail":"ትክክለኛ ኢሜይል ያስገቡ","invalidPhone":"ትክክለኛ ስልክ ቁጥር ያስገቡ (ለምሳሌ 0912345678)",
+  "fixErrorsBelow":"እባክዎ የተለዩትን መስኮች ያረጋግጡ እና እንደገና ይሞክሩ","selectOption":"አማራጭ ይምረጡ",
+  "searchList":"ለመፈለግ ይጻፉ…","noMatches":"ውጤት አልተገኘም","clearValue":"አጽዳ",
+  "returnAfterDeparture":"የመመለሻ ቀን ከመነሻ ቀን በኋላ መሆን አለበት",
+  "tripDetails":"የጉዞ ዝርዝር","travelersSection":"ተጓዞች","contactSection":"የመገናኛ መረጃ","passportSection":"የፓስፖርት ዝርዝር","messageSection":"መልእክትዎ","tourSection":"የጉዞ ዝርዝር","visaSection":"የቪዛ ዝርዝር",
+  "updatingApp":"ኢንተርኔት ማውረጃ…","updateReady":"ማውረጃ ተዘጋጅቷል","installUpdate":"ጫን",
+  "autoUpdateNote":"የTOGT ማውረጃዎች በኢንተርኔት ሲገናኙ በራስ-ሰር ይወርዳሉ።","updateInstalling":"አዲሱ ስሪት በመጫን ላይ…"
 }

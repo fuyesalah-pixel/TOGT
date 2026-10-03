@@ -1575,6 +1575,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Allow exact alarms so the azan fires right on time. Tap to open settings.'**
   String get azanExactHint;
+
+  /// No description provided for @browseFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse files'**
+  String get browseFiles;
+
+  /// No description provided for @attachmentsAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos & PDF up to 10MB'**
+  String get attachmentsAllowed;
+
+  /// No description provided for @unsupportedFileType.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported file type. Please choose a JPG, PNG, GIF, WEBP image or a PDF under 10MB.'**
+  String get unsupportedFileType;
+
+  /// No description provided for @fieldRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'{field} is required'**
+  String fieldRequired(String field);
+
+  /// No description provided for @invalidEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address'**
+  String get invalidEmail;
+
+  /// No description provided for @invalidPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid phone number (e.g. 0912345678)'**
+  String get invalidPhone;
+
+  /// No description provided for @fixErrorsBelow.
+  ///
+  /// In en, this message translates to:
+  /// **'Please check the highlighted fields and try again'**
+  String get fixErrorsBelow;
+
+  /// No description provided for @selectOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Select an option'**
+  String get selectOption;
+
+  /// No description provided for @searchList.
+  ///
+  /// In en, this message translates to:
+  /// **'Type to search…'**
+  String get searchList;
+
+  /// No description provided for @noMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches found'**
+  String get noMatches;
+
+  /// No description provided for @clearValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clearValue;
+
+  /// No description provided for @returnAfterDeparture.
+  ///
+  /// In en, this message translates to:
+  /// **'Return date must be on or after the departure date'**
+  String get returnAfterDeparture;
+
+  /// No description provided for @tripDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Trip details'**
+  String get tripDetails;
+
+  /// No description provided for @travelersSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Travelers'**
+  String get travelersSection;
+
+  /// No description provided for @contactSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact information'**
+  String get contactSection;
+
+  /// No description provided for @passportSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Passport details'**
+  String get passportSection;
+
+  /// No description provided for @messageSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Your message'**
+  String get messageSection;
+
+  /// No description provided for @tourSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Tour details'**
+  String get tourSection;
+
+  /// No description provided for @visaSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Visa details'**
+  String get visaSection;
+
+  /// No description provided for @updatingApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading update…'**
+  String get updatingApp;
+
+  /// No description provided for @updateReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Update ready'**
+  String get updateReady;
+
+  /// No description provided for @installUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Install'**
+  String get installUpdate;
+
+  /// No description provided for @autoUpdateNote.
+  ///
+  /// In en, this message translates to:
+  /// **'TOGT updates download automatically when you are online.'**
+  String get autoUpdateNote;
+
+  /// No description provided for @updateInstalling.
+  ///
+  /// In en, this message translates to:
+  /// **'Installing the new version…'**
+  String get updateInstalling;
 }
 
 class _AppLocalizationsDelegate

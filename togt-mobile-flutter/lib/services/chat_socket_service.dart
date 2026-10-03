@@ -60,7 +60,7 @@ class ChatSocketService {
   Future<dynamic> sendMessage({required String receiverId, required String message}) => ApiService.instance.postForm('/chat/send', {'receiverId': receiverId, 'message': message});
 
   /// Sends a file attachment (photo/document) plus optional caption.
-  Future<dynamic> sendFile({required String receiverId, required String filePath, String? message}) => ApiService.instance.postFile('/chat/send', {'receiverId': receiverId, if (message != null && message.isNotEmpty) 'message': message}, filePath);
+  Future<dynamic> sendFile({required String receiverId, required String filePath, String? message, String? fileType}) => ApiService.instance.postFile('/chat/send', {'receiverId': receiverId, if (message != null && message.isNotEmpty) 'message': message}, filePath, fileType: fileType);
 
   void dispose() {
     _socket?.dispose();

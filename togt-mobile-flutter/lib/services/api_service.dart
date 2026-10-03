@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -174,14 +176,23 @@ class ApiService {
 
   /// multipart/form-data POST with one file plus string fields
   /// (e.g. chat attachments: receiverId, message, file).
-  Future<dynamic> postFile(String path, Map<String, String> fields, String filePath, {String field = 'file', bool retry = true}) async {
+  Future<dynamic> postFile(String path, Map<String, String> fields, String filePath, {String field = 'file', String? fileType, bool retry = true}) async {
     final request = http.MultipartRequest('POST', _uri(path));
     request.headers.addAll(_headers..remove('Content-Type'));
     request.fields.addAll(fields);
-    request.files.add(await http.MultipartFile.fromPath(field, filePath));
+    // The backend validates the declared content type against its allow-list;
+    // Android copy streams can lose the original MIME, so callers pass the
+    // extension-derived type explicitly (fromBytes is the reliable way to
+    // attach a contentType).
+    if (fileType == null) {
+      request.files.add(await http.MultipartFile.fromPath(field, filePath));
+    } else {
+      final bytes = await File(filePath).readAsBytes();
+      request.files.add(http.MultipartFile.fromBytes(field, bytes, filename: filePath.split(Platform.pathSeparator).last, contentType: MediaType.parse(fileType)));
+    }
     final response = await http.Response.fromStream(await request.send().timeout(timeout));
     if (response.statusCode == 401 && retry && _refreshToken != null) {
-      if (await _refresh()) return postFile(path, fields, filePath, retry: false);
+      if (await _refresh()) return postFile(path, fields, filePath, field: field, fileType: fileType, retry: false);
     }
     return _handle(response);
   }

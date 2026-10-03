@@ -786,4 +786,79 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get azanExactHint =>
       'አዛን በትክክል እንዲደርስ የትክክለኛ ማንቂያ ፈቃድ ይስጡ። ለመክፈት ይንኩ።';
+
+  @override
+  String get browseFiles => 'ፋይሎችን ይምረጡ';
+
+  @override
+  String get attachmentsAllowed => 'ፎቶና PDF እስከ 10MB';
+
+  @override
+  String get unsupportedFileType =>
+      'የወደደው የፋይል አይነት አይደገፍም። JPG፣ PNG፣ GIF፣ WEBP ምስል ወይም ከ10MB በታች PDF ይምረጡ።';
+
+  @override
+  String fieldRequired(String field) {
+    return '$field ያስፈልጋል';
+  }
+
+  @override
+  String get invalidEmail => 'ትክክለኛ ኢሜይል ያስገቡ';
+
+  @override
+  String get invalidPhone => 'ትክክለኛ ስልክ ቁጥር ያስገቡ (ለምሳሌ 0912345678)';
+
+  @override
+  String get fixErrorsBelow => 'እባክዎ የተለዩትን መስኮች ያረጋግጡ እና እንደገና ይሞክሩ';
+
+  @override
+  String get selectOption => 'አማራጭ ይምረጡ';
+
+  @override
+  String get searchList => 'ለመፈለግ ይጻፉ…';
+
+  @override
+  String get noMatches => 'ውጤት አልተገኘም';
+
+  @override
+  String get clearValue => 'አጽዳ';
+
+  @override
+  String get returnAfterDeparture => 'የመመለሻ ቀን ከመነሻ ቀን በኋላ መሆን አለበት';
+
+  @override
+  String get tripDetails => 'የጉዞ ዝርዝር';
+
+  @override
+  String get travelersSection => 'ተጓዞች';
+
+  @override
+  String get contactSection => 'የመገናኛ መረጃ';
+
+  @override
+  String get passportSection => 'የፓስፖርት ዝርዝር';
+
+  @override
+  String get messageSection => 'መልእክትዎ';
+
+  @override
+  String get tourSection => 'የጉዞ ዝርዝር';
+
+  @override
+  String get visaSection => 'የቪዛ ዝርዝር';
+
+  @override
+  String get updatingApp => 'ኢንተርኔት ማውረጃ…';
+
+  @override
+  String get updateReady => 'ማውረጃ ተዘጋጅቷል';
+
+  @override
+  String get installUpdate => 'ጫን';
+
+  @override
+  String get autoUpdateNote => 'የTOGT ማውረጃዎች በኢንተርኔት ሲገናኙ በራስ-ሰር ይወርዳሉ።';
+
+  @override
+  String get updateInstalling => 'አዲሱ ስሪት በመጫን ላይ…';
 }

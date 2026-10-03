@@ -796,4 +796,83 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get azanExactHint =>
       'Allow exact alarms so the azan fires right on time. Tap to open settings.';
+
+  @override
+  String get browseFiles => 'Browse files';
+
+  @override
+  String get attachmentsAllowed => 'Photos & PDF up to 10MB';
+
+  @override
+  String get unsupportedFileType =>
+      'Unsupported file type. Please choose a JPG, PNG, GIF, WEBP image or a PDF under 10MB.';
+
+  @override
+  String fieldRequired(String field) {
+    return '$field is required';
+  }
+
+  @override
+  String get invalidEmail => 'Please enter a valid email address';
+
+  @override
+  String get invalidPhone =>
+      'Please enter a valid phone number (e.g. 0912345678)';
+
+  @override
+  String get fixErrorsBelow =>
+      'Please check the highlighted fields and try again';
+
+  @override
+  String get selectOption => 'Select an option';
+
+  @override
+  String get searchList => 'Type to search…';
+
+  @override
+  String get noMatches => 'No matches found';
+
+  @override
+  String get clearValue => 'Clear';
+
+  @override
+  String get returnAfterDeparture =>
+      'Return date must be on or after the departure date';
+
+  @override
+  String get tripDetails => 'Trip details';
+
+  @override
+  String get travelersSection => 'Travelers';
+
+  @override
+  String get contactSection => 'Contact information';
+
+  @override
+  String get passportSection => 'Passport details';
+
+  @override
+  String get messageSection => 'Your message';
+
+  @override
+  String get tourSection => 'Tour details';
+
+  @override
+  String get visaSection => 'Visa details';
+
+  @override
+  String get updatingApp => 'Downloading update…';
+
+  @override
+  String get updateReady => 'Update ready';
+
+  @override
+  String get installUpdate => 'Install';
+
+  @override
+  String get autoUpdateNote =>
+      'TOGT updates download automatically when you are online.';
+
+  @override
+  String get updateInstalling => 'Installing the new version…';
 }

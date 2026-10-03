@@ -9,13 +9,11 @@ import '../services/auth_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../widgets/animated_button.dart';
+import 'chat_screen.dart';
 import 'dashboard_list_screen.dart';
 import 'profile/reviews_screen.dart';
-import 'profile/my_tickets_screen.dart';
 import 'profile/my_requests_screen.dart';
-import 'profile/history_screen.dart';
 import 'profile/parent_tracking_screen.dart';
-import 'profile/payment_screen.dart';
 import 'profile/settings_screen.dart';
 import 'profile/notifications_screen.dart';
 import '../services/api_service.dart';
@@ -89,18 +87,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 26),
           _MenuCard(children: [
              _MenuItem(icon: Icons.receipt_long_rounded, label: l10n.myRequests, onTap: () => _push(context, const MyRequestsScreen())),
-             _MenuItem(icon: Icons.airplane_ticket_outlined, label: l10n.myTickets, onTap: () => _push(context, const MyTicketsScreen())),
-             _MenuItem(icon: Icons.history_rounded, label: l10n.history, onTap: () => _push(context, const HistoryScreen())),
             _MenuItem(icon: Icons.star_outline_rounded, label: l10n.reviews, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReviewsScreen()))),
              _MenuItem(icon: Icons.location_on_outlined, label: l10n.parentTracking, onTap: () => _push(context, const ParentTrackingScreen())),
           ]),
           const SizedBox(height: 16),
           _MenuCard(children: [
              _MenuItem(icon: Icons.notifications_none_rounded, label: l10n.notifications, onTap: () => _push(context, const NotificationsScreen())),
-              _MenuItem(icon: Icons.payments_outlined, label: l10n.payments, onTap: () => _push(context, const PaymentScreen())),
              _MenuItem(icon: Icons.settings_outlined, label: l10n.settings, onTap: () => _push(context, const SettingsScreen())),
              _MenuItem(icon: Icons.language_rounded, label: l10n.language, trailing: l10n.english, onTap: () => _language(context)),
-             _MenuItem(icon: Icons.support_agent_rounded, label: l10n.helpSupport, onTap: () {}),
+             // Help & Support goes straight to the live human support chat.
+             _MenuItem(icon: Icons.support_agent_rounded, label: l10n.helpSupport, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatScreen(human: true)))),
           ]),
           const SizedBox(height: 26),
           AnimatedButton(

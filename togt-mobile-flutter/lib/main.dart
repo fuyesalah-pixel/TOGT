@@ -23,6 +23,9 @@ Future<void> main() async {
     // Permissions are asked ONCE, right after the first login (see
     // PermissionService.runAfterLogin + LoginScreen) — never on app open.
     _runStartupUpdateFlow();
+    // Background auto-update: checks on connectivity + every 6h, downloads
+    // and opens the installer without any manual step (except the OS prompt).
+    UpdateService.instance.startAutoUpdateMonitoring();
   });
 }
 
@@ -40,7 +43,9 @@ Future<void> _runStartupUpdateFlow() async {
       duration: Duration(seconds: 3),
     ));
   }
-  if (update != null && context.mounted) {
+  // Regular updates install automatically in the background (see
+  // startAutoUpdateMonitoring); only forced updates interrupt with a dialog.
+  if (update != null && update.forceUpdate && context.mounted) {
     showUpdateDialog(context, update);
   }
 }

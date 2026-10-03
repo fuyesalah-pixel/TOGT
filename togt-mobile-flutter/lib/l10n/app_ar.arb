@@ -92,5 +92,15 @@
   "pickFromGallery":"اختر من المعرض","takePhoto":"التقط صورة","connectingDots":"جارٍ الاتصال…","attachment":"مرفق",
   "permissionTitle":"السماح بالوصول","permissionBody":"يحتاج TOGT بعض الأذونات ليعمل بالكامل: الموقع لمواقيت الصلاة والقبلة، الإشعارات للأذان والمحادثة، والصور لإرسال المستندات للدعم.","permissionGrant":"السماح","permissionLater":"ليس الآن","permissionOpenSettings":"فتح الإعدادات","permissionBlockedBody":"تم رفض بعض الأذونات نهائياً. فعّلها من الإعدادات لتعمل مواقيت الصلاة وأذان الإشعارات ومشاركة الملفات.",
   "azkarAfterPrayer":"بعد الصلاة","azkarSleep":"قبل النوم","azkarDistress":"عند الشدة",
-  "azanExactHint":"اسمح بالتنبيهات الدقيقة ليبدأ الأذان في وقته تماماً. اضغط لفتح الإعدادات."
+  "azanExactHint":"اسمح بالتنبيهات الدقيقة ليبدأ الأذان في وقته تماماً. اضغط لفتح الإعدادات.",
+  "browseFiles":"استعراض الملفات","attachmentsAllowed":"صور و PDF حتى 10 ميجابايت",
+  "unsupportedFileType":"نوع الملف غير مدعوم. اختر صورة JPG أو PNG أو GIF أو WEBP أو ملف PDF أقل من 10 ميجابايت.",
+  "fieldRequired":"‏{field} مطلوب","@fieldRequired":{"placeholders":{"field":{"type":"String"}}},
+  "invalidEmail":"يرجى إدخال بريد إلكتروني صحيح","invalidPhone":"يرجى إدخال رقم هاتف صحيح (مثال 0912345678)",
+  "fixErrorsBelow":"يرجى التحقق من الحقول المحددة والمحاولة مجدداً","selectOption":"اختر خياراً",
+  "searchList":"اكتب للبحث…","noMatches":"لا توجد نتائج","clearValue":"مسح",
+  "returnAfterDeparture":"يجب أن يكون تاريخ العودة بعد تاريخ المغادرة",
+  "tripDetails":"تفاصيل الرحلة","travelersSection":"المسافرون","contactSection":"معلومات التواصل","passportSection":"بيانات جواز السفر","messageSection":"رسالتك","tourSection":"تفاصيل الجولة","visaSection":"تفاصيل التأشيرة",
+  "updatingApp":"جارٍ تنزيل التحديث…","updateReady":"التحديث جاهز","installUpdate":"تثبيت",
+  "autoUpdateNote":"يتم تنزيل تحديثات TOGT تلقائياً عند الاتصال بالإنترنت.","updateInstalling":"جارٍ تثبيت الإصدار الجديد…"
 }
