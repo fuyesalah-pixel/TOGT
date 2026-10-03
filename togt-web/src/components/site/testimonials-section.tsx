@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, CheckCircle, ArrowDown, ChevronUp } from "lucide-react";
+import { Star, CheckCircle, ArrowDown, ChevronUp, X } from "lucide-react";
 import { useVisibleReviews } from "@/hooks/useReviews";
 
 interface TestimonialItem {
@@ -12,6 +12,7 @@ interface TestimonialItem {
   service: string;
   rating: number;
   text: string;
+  images: string[];
 }
 
 const PAGE_SIZE = 3;
@@ -48,6 +49,7 @@ function TestimonialCard({
   rev: TestimonialItem;
   index: number;
 }) {
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const getInitials = (name: string) =>
     name
       .split(" ")
@@ -76,6 +78,22 @@ function TestimonialCard({
 
         <StarRow rating={rev.rating} cardIndex={index} />
 
+        {rev.images.length > 0 && (
+          <div className="mb-4 flex gap-2">
+            {rev.images.slice(0, 3).map((url) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={url}
+                src={url}
+                alt="Customer photo"
+                loading="lazy"
+                onClick={() => setLightbox(url)}
+                className="h-20 w-20 cursor-zoom-in rounded-xl border border-gray-100 object-cover shadow-sm transition hover:scale-[1.04]"
+              />
+            ))}
+          </div>
+        )}
+
         <p className="flex-1 italic text-gray-600 leading-relaxed mb-5 text-xs md:text-sm line-clamp-5">
           &ldquo;{rev.text}&rdquo;
         </p>
@@ -102,6 +120,22 @@ function TestimonialCard({
           </div>
         </div>
       </div>
+
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-6"
+          onClick={() => setLightbox(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lightbox} alt="Customer photo" className="max-h-[85vh] max-w-full rounded-xl object-contain shadow-2xl" />
+          <button
+            className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-800"
+            aria-label="Close preview"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -114,13 +148,14 @@ export function TestimonialsSection() {
   const { data: reviews = [], isLoading } = useVisibleReviews();
 
   const testimonials: TestimonialItem[] = reviews
-    .filter((review) => review.reviewText)
+    .filter((review) => review.reviewText || review.imageUrls.length > 0)
     .map((review) => ({
       id: review.id,
       name: review.user?.fullName ?? "TOGT Customer",
       service: "Verified TOGT customer",
       rating: review.rating,
       text: review.reviewText ?? "",
+      images: (review.imageUrls ?? []).filter((url) => !url.toLowerCase().endsWith(".pdf")),
     }));
 
   const visible = testimonials.slice(0, visibleCount);

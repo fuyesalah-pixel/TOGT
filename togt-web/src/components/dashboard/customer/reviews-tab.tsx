@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ImagePlus, Star, X } from "lucide-react";
+import { FileText, ImagePlus, Star, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ServiceRequest } from "@/lib/api/types";
 import { useServiceRequests } from "@/hooks/useServiceRequests";
@@ -12,6 +12,10 @@ import { PageHeader } from "../shared/page-header";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+
+/** Matches the API uploads allow-list (jpg/png/gif/webp/heic/heif/pdf). */
+const ACCEPTED_UPLOADS = "image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,application/pdf,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.pdf";
 
 function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const [hover, setHover] = useState(0);
@@ -48,9 +52,10 @@ export function ReviewsTab({ preselected }: { preselected?: ServiceRequest | nul
   const [rating, setRating] = useState(0);
   const [text, setText] = useState("");
   const [images, setImages] = useState<string[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const [uploadTotal, setUploadTotal] = useState(0); // files remaining to upload
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -59,19 +64,28 @@ export function ReviewsTab({ preselected }: { preselected?: ServiceRequest | nul
 
   const completedRequests = completed?.data ?? [];
   const myReviews = (visibleReviews ?? []).filter((r) => r.userId === user?.id);
+  const uploading = uploadTotal > 0;
 
-  const handleImagePick = async (file: File) => {
+  const handleFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
     setError(null);
-    if (images.length >= 3) return setError("Maximum 3 images");
-    if (file.size > MAX_UPLOAD_BYTES) return setError("Each image must be under 10MB");
-    setUploading(true);
-    try {
-      const { url } = await uploadFile(file, "reviews");
-      setImages((prev) => [...prev, url]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Image upload failed");
-    } finally {
-      setUploading(false);
+    const room = 3 - images.length;
+    const picked = Array.from(files).slice(0, Math.max(room, 0));
+    if (picked.length === 0) return setError("Maximum 3 photos per review");
+    for (const file of picked) {
+      if (file.size > MAX_UPLOAD_BYTES) {
+        setError(`"${file.name}" is over the 10MB limit`);
+        continue;
+      }
+      setUploadTotal((count) => count + 1);
+      try {
+        const { url } = await uploadFile(file, "reviews");
+        setImages((prev) => (prev.length < 3 ? [...prev, url] : prev));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Upload failed — try a JPG, PNG, WEBP or PDF");
+      } finally {
+        setUploadTotal((count) => Math.max(0, count - 1));
+      }
     }
   };
 
@@ -80,6 +94,7 @@ export function ReviewsTab({ preselected }: { preselected?: ServiceRequest | nul
     setSuccess(false);
     if (!requestId) return setError("Please choose the service you are reviewing");
     if (rating < 1) return setError("Please select a star rating");
+    if (uploading) return setError("Please wait for the photos to finish uploading");
     try {
       await createReview.mutateAsync({
         serviceRequestId: requestId,
@@ -146,32 +161,63 @@ export function ReviewsTab({ preselected }: { preselected?: ServiceRequest | nul
             </div>
 
             <div>
-              <Label>Photos (up to 3, max 10MB each)</Label>
-              <div className="flex flex-wrap items-center gap-2">
+              <Label>Photos or a PDF (up to 3, max 10MB each)</Label>
+              <p className="mt-1 text-xs text-gray-400">
+                JPG, PNG, GIF, WEBP, HEIC or PDF — tap a photo to preview it.
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
                 {images.map((url) => (
-                  <span key={url} className="relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="Review" className="h-16 w-16 rounded-lg object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => setImages(images.filter((u) => u !== url))}
-                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white"
-                      aria-label="Remove image"
+                  <button
+                    key={url}
+                    type="button"
+                    onClick={() => setPreview(url)}
+                    className="group relative"
+                    aria-label="Preview attachment"
+                  >
+                    {url.toLowerCase().endsWith(".pdf") ? (
+                      <span className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg bg-red-50 text-red-600">
+                        <FileText className="h-5 w-5" />
+                        <span className="text-[9px] font-bold">PDF</span>
+                      </span>
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={url} alt="Review attachment" className="h-16 w-16 rounded-lg object-cover transition group-hover:opacity-80" />
+                    )}
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setImages((prev) => prev.filter((u) => u !== url));
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.stopPropagation();
+                          setImages((prev) => prev.filter((u) => u !== url));
+                        }
+                      }}
+                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                      aria-label="Remove attachment"
                     >
                       <X className="h-3 w-3" />
-                    </button>
-                  </span>
+                    </span>
+                  </button>
                 ))}
+                {uploading && (
+                  <span className="flex h-16 w-16 animate-pulse items-center justify-center rounded-lg border-2 border-dashed border-togt-orange/50 text-[10px] font-semibold text-togt-orange">
+                    {uploadTotal} left
+                  </span>
+                )}
                 {images.length < 3 && (
                   <>
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      accept={ACCEPTED_UPLOADS}
+                      multiple
                       className="hidden"
                       onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) handleImagePick(f);
+                        void handleFiles(e.target.files);
                         e.target.value = "";
                       }}
                     />
@@ -179,7 +225,7 @@ export function ReviewsTab({ preselected }: { preselected?: ServiceRequest | nul
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploading}
-                      className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-gray-200 text-gray-400 hover:border-togt-orange hover:text-togt-orange"
+                      className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-gray-200 text-gray-400 hover:border-togt-orange hover:text-togt-orange disabled:opacity-50"
                     >
                       <ImagePlus className="h-5 w-5" />
                       <span className="text-[10px]">{uploading ? "..." : "Add"}</span>
@@ -227,11 +273,28 @@ export function ReviewsTab({ preselected }: { preselected?: ServiceRequest | nul
                   </span>
                 </div>
                 {r.reviewText && <p className="mt-1 text-sm text-gray-600">{r.reviewText}</p>}
+                {r.imageUrls.length > 0 && (
+                  <div className="mt-2 flex gap-1.5">
+                    {r.imageUrls.slice(0, 3).map((url) => (
+                      <button key={url} type="button" onClick={() => setPreview(url)}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="" className="h-12 w-12 rounded-md object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
       )}
+
+      <Dialog open={!!preview} onClose={() => setPreview(null)} size="lg">
+        {preview && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={preview} alt="Review attachment" className="max-h-[75vh] w-full rounded-xl object-contain" />
+        )}
+      </Dialog>
     </div>
   );
 }

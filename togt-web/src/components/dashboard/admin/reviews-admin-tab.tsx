@@ -1,11 +1,13 @@
 "use client";
 
-import { Star } from "lucide-react";
+import { useState } from "react";
+import { FileText, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Review } from "@/lib/api/types";
 import { useAllReviews, useSetReviewVisibility } from "@/hooks/useReviews";
 import { DataTable } from "../shared/data-table";
 import { PageHeader } from "../shared/page-header";
+import { Dialog } from "@/components/ui/dialog";
 
 function Stars({ rating }: { rating: number }) {
   return (
@@ -23,6 +25,10 @@ function Stars({ rating }: { rating: number }) {
 export function ReviewsAdminTab() {
   const { data: reviews, isLoading } = useAllReviews();
   const setVisibility = useSetReviewVisibility();
+  const [preview, setPreview] = useState<string | null>(null);
+
+  const rows = reviews ?? [];
+  const pendingCount = rows.filter((r) => !r.isVisible).length;
 
   return (
     <div>
@@ -31,10 +37,24 @@ export function ReviewsAdminTab() {
         description="Reviews auto-publish 24h after submission — toggle visibility anytime"
       />
 
+      {rows.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full bg-gray-100 px-3 py-1 font-semibold text-gray-600">
+            {rows.length} total
+          </span>
+          <span className="rounded-full bg-emerald-50 px-3 py-1 font-semibold text-emerald-700">
+            {rows.length - pendingCount} visible
+          </span>
+          <span className="rounded-full bg-amber-50 px-3 py-1 font-semibold text-amber-700">
+            {pendingCount} awaiting auto-publish
+          </span>
+        </div>
+      )}
+
       <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
         <DataTable<Review>
           isLoading={isLoading}
-          rows={reviews ?? []}
+          rows={rows}
           emptyTitle="No reviews yet"
           columns={[
             { key: "user", label: "Customer", render: (r) => <span className="font-semibold">{r.user?.fullName ?? "—"}</span> },
@@ -49,14 +69,34 @@ export function ReviewsAdminTab() {
             {
               key: "imageUrls",
               label: "Photos",
-              render: (r) => (
-                <span className="flex gap-1">
-                  {r.imageUrls.slice(0, 3).map((url) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img key={url} src={url} alt="" className="h-8 w-8 rounded object-cover" />
-                  ))}
-                </span>
-              ),
+              render: (r) =>
+                r.imageUrls.length === 0 ? (
+                  <span className="text-xs text-gray-300">—</span>
+                ) : (
+                  <span className="flex gap-1">
+                    {r.imageUrls.slice(0, 3).map((url) =>
+                      url.toLowerCase().endsWith(".pdf") ? (
+                        <span
+                          key={url}
+                          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-red-50 text-red-600"
+                          title="PDF attachment"
+                          onClick={() => setPreview(url)}
+                        >
+                          <FileText className="h-4 w-4" />
+                        </span>
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          key={url}
+                          src={url}
+                          alt=""
+                          className="h-8 w-8 cursor-zoom-in rounded object-cover transition hover:ring-2 hover:ring-togt-orange"
+                          onClick={() => setPreview(url)}
+                        />
+                      ),
+                    )}
+                  </span>
+                ),
             },
             { key: "createdAt", label: "Submitted", render: (r) => new Date(r.createdAt).toLocaleDateString() },
             {
@@ -78,6 +118,13 @@ export function ReviewsAdminTab() {
           ]}
         />
       </div>
+
+      <Dialog open={!!preview} onClose={() => setPreview(null)} size="lg">
+        {preview && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={preview} alt="Review attachment" className="max-h-[75vh] w-full rounded-xl object-contain" />
+        )}
+      </Dialog>
     </div>
   );
 }
