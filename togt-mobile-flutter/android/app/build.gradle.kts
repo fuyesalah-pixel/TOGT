@@ -30,7 +30,9 @@ val androidDir = projectDir.parentFile
 
 android {
     namespace = "com.togt.travel"
-    compileSdk = flutter.compileSdkVersion
+    // compileSdk 36+ is required by file_picker's flutter_plugin_android_lifecycle
+    // dependency (AAR metadata check); it is independent of targetSdk/minSdk.
+    compileSdk = maxOf(36, flutter.compileSdkVersion)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
