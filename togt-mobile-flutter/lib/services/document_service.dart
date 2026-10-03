@@ -12,7 +12,7 @@ class DocumentService {
   static final instance = DocumentService._();
 
   /// Extensions the backend accepts (uploads.service.ts allow-list).
-  static const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'];
+  static const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'pdf'];
 
   /// Picks an image (gallery or camera). Optionally downscales to keep chat
   /// uploads small and fast.
@@ -42,6 +42,9 @@ class DocumentService {
       'png' => 'image/png',
       'gif' => 'image/gif',
       'webp' => 'image/webp',
+      // iPhone/some-Android cameras produce HEIC/HEIF; the backend accepts them.
+      'heic' => 'image/heic',
+      'heif' => 'image/heif',
       'pdf' => 'application/pdf',
       _ => 'application/octet-stream',
     };

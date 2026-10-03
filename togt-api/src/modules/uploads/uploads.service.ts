@@ -12,9 +12,18 @@ import { CredentialService } from '../system/credential.service';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',
+  // Non-standard aliases some browsers/cameras send for JPEG.
+  'image/jpg',
+  'image/pjpeg',
   'image/png',
   'image/gif',
   'image/webp',
+  // iPhone (and some Android) cameras default to HEIC/HEIF — accept them so
+  // review photos work without users having to convert.
+  'image/heic',
+  'image/heif',
+  'image/heic-sequence',
+  'image/heif-sequence',
   'application/pdf',
 ]);
 
@@ -60,7 +69,7 @@ export class UploadsService {
     }
     if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
       throw new BadRequestException(
-        'Unsupported file type. Allowed: jpg, jpeg, png, gif, webp, pdf',
+        'Unsupported file type. Allowed: jpg, jpeg, png, gif, webp, heic, heif, pdf',
       );
     }
 
@@ -104,6 +113,6 @@ export class UploadsService {
   private validate(file: Express.Multer.File) {
     if (!file) throw new BadRequestException('No file provided');
     if (file.size > MAX_FILE_SIZE) throw new BadRequestException('File exceeds the 10MB limit');
-    if (!ALLOWED_MIME_TYPES.has(file.mimetype)) throw new BadRequestException('Unsupported file type. Allowed: jpg, jpeg, png, gif, webp, pdf');
+    if (!ALLOWED_MIME_TYPES.has(file.mimetype)) throw new BadRequestException('Unsupported file type. Allowed: jpg, jpeg, png, gif, webp, heic, heif, pdf');
   }
 }
