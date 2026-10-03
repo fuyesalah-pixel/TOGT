@@ -4,6 +4,14 @@ import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  // Prisma maps Postgres BIGINT columns to JS BigInt; JSON.stringify throws
+  // on BigInt which 500s any endpoint returning such rows (e.g. GET /backups
+  // once a completed backup exists). Serialize BigInt as a plain number.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (BigInt.prototype as any).toJSON = function () {
+    return Number(this.toString());
+  };
+
   const app = await NestFactory.create(AppModule, { rawBody: true });
   const logger = new Logger('Bootstrap');
 
