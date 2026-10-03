@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, User } from '@prisma/client';
 import { Resend } from 'resend';
 import { createTransport, Transporter } from 'nodemailer';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -142,6 +142,25 @@ export class NotificationsService {
     const notification = await this.prisma.notification.findUnique({ where: { id } });
     if (!notification || notification.userId !== userId) throw new NotFoundException('Notification not found');
     return this.prisma.notification.update({ where: { id }, data: { isRead: true, data: { ...(notification.data as object ?? {}), confirmed: true } } });
+  }
+
+  /**
+   * TECH/ADMIN: send a test email to verify the delivery stack. Tries Resend
+   * first (same path as bulk email), then the Hostinger SMTP mailbox, and
+   * reports which provider actually delivered.
+   */
+  async sendTestEmail(to: string | undefined, actor: User) {
+    const recipient = to?.trim() || actor.email;
+    const subject = 'TOGT email delivery test';
+    const html = `<p>This is a test email from the TOGT platform, requested by ${actor.fullName}.</p><p>If you received this message, email delivery is working correctly.</p>`;
+    const resent = await this.sendEmail(recipient, subject, html);
+    if (resent) return { ok: true, provider: 'resend', to: recipient };
+    if (!this.hostinger) {
+      this.logger.warn(`[email:test] no provider configured; nothing delivered to=${recipient}`);
+      return { ok: false, provider: 'none', to: recipient };
+    }
+    await this.sendAdminEmail(recipient, subject, html);
+    return { ok: true, provider: 'smtp', to: recipient };
   }
 
   /** Resend email — returns false (logged) when RESEND_API_KEY is not configured. */

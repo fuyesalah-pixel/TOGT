@@ -49,4 +49,11 @@ export class NotificationsController {
   sendBulk(@Body() dto: BulkNotificationDto) {
     return this.notifications.sendBulk(dto);
   }
+
+  /** TECH/ADMIN: verify email delivery (Resend first, Hostinger SMTP fallback). */
+  @Post('test-email')
+  @Roles(Role.ADMIN, Role.TECH)
+  sendTestEmail(@Body() body: { to?: string }, @CurrentUser() user: User) {
+    return this.notifications.sendTestEmail(body?.to, user);
+  }
 }
