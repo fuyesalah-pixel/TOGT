@@ -5,7 +5,6 @@ import { Plane, ToggleLeft, ToggleRight } from "lucide-react";
 import { ApiError } from "@/lib/api/client";
 import { listSiteSettings, updateSiteSettings, type SiteSettingRow } from "@/lib/api/siteSettings";
 import { useToast } from "@/components/providers";
-import { Button } from "@/components/ui/button";
 
 /**
  * Admin "Site Control" tab — global site switches.

@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
  */
 export function AboutControlTab() {
   const { showToast } = useToast();
-  const [rows, setRows] = useState<Record<string, string>>({});
+  const [, setRows] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
