@@ -4,6 +4,7 @@ import '../l10n/app_localizations.dart';
 
 import '../navigation/app_navigator.dart';
 import '../services/auth_service.dart';
+import '../services/notification_service.dart';
 import '../services/permission_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
@@ -47,6 +48,9 @@ class _LoginScreenState extends State<LoginScreen>
       if (navigatorContext != null && navigatorContext.mounted) {
         PermissionService.instance.runAfterLogin(navigatorContext);
       }
+      // Register this device for push (support chat, admin messages,
+      // reminders) — tokens must be sent after the session exists.
+      NotificationService.instance.registerDeviceToken();
     } on PlatformException catch (e) {
       debugPrint('Google sign-in error: ${e.code} ${e.message} ${e.details}');
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.googleSignInFailed)));
