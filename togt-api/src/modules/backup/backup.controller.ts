@@ -1,4 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { tmpdir } from 'os';
 import type { Response } from 'express';
 import { User } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -51,5 +54,13 @@ export class BackupController {
   @Post(':id/restore')
   restore(@Param('id') id: string, @Body() body: { confirm?: string }, @CurrentUser() user: User) {
     return this.backups.restore(id, user, body.confirm ?? '');
+  }
+
+  /** TECH-only. Multipart field name: "file". Restores an uploaded .sql/.sql.gz
+   *  artifact (safety backup is taken first — see BackupService.restoreFromFile). */
+  @Post('restore-file')
+  @UseInterceptors(FileInterceptor('file', { storage: diskStorage({ destination: tmpdir() }), limits: { fileSize: 512 * 1024 * 1024 } }))
+  restoreFile(@UploadedFile() file: Express.Multer.File, @Body() body: { confirm?: string }, @CurrentUser() user: User) {
+    return this.backups.restoreFromFile(file, user, body.confirm ?? '');
   }
 }

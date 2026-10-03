@@ -17,9 +17,18 @@ FROM node:20-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3001
-# postgresql-client provides pg_dump/psql for the backup/restore engine;
-# gzip compresses the dumps.
-RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates postgresql-client gzip && rm -rf /var/lib/apt/lists/*
+# postgresql-client-16 (from the PGDG repo) provides pg_dump/psql that matches
+# the postgres:16 server. Debian bookworm ships client 15, and a version
+# mismatch makes pg_dump abort with "server version mismatch". gzip compresses
+# the dumps.
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates gzip curl gnupg \
+    && install -d /usr/share/postgresql-common/pgdg \
+    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update && apt-get install -y --no-install-recommends postgresql-client-16 \
+    && ln -sf /usr/lib/postgresql/16/bin/pg_dump /usr/bin/pg_dump \
+    && ln -sf /usr/lib/postgresql/16/bin/psql /usr/bin/psql \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
