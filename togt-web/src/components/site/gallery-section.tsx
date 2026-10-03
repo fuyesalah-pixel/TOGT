@@ -7,6 +7,7 @@ import { X, MapPin, Calendar, ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useGallery } from "@/hooks/useContent";
 import type { GalleryItem } from "@/lib/api/types";
+import { LuxuryVideoPlayer } from "./luxury-video";
 
 /** Category badge colors (presentation config) */
 const CATEGORY_COLORS: Record<string, string> = {
@@ -142,23 +143,17 @@ function GalleryModal({
               </div>
             )}
 
-            {/* Videos */}
+            {/* Videos — same luxury player as the About section */}
             {item.videos.length > 0 && (
               <div>
                 <h4 className="font-bold text-[#12394F] text-sm uppercase tracking-wider mb-3">
                   Videos
                 </h4>
-                {item.videos.map((video, i) => (
-                  <div key={i} className="relative aspect-video rounded-xl overflow-hidden">
-                    <iframe
-                      src={video.url}
-                      title={video.title}
-                      className="absolute inset-0 w-full h-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                ))}
+                <div className="space-y-4">
+                  {item.videos.map((video, i) => (
+                    <LuxuryVideoPlayer key={i} url={video.url} title={video.title || item.title} className="rounded-xl" />
+                  ))}
+                </div>
               </div>
             )}
 
