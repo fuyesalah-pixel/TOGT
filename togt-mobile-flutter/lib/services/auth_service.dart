@@ -1,14 +1,21 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../models/user_model.dart';
+import '../navigation/app_navigator.dart';
 import 'api_service.dart';
 
 class AuthService {
-  AuthService._();
+  AuthService._() {
+    // Global auth interceptor handoff: when the API layer exhausts its silent
+    // refresh (refresh token expired/revoked), clear the session and route the
+    // user to the login screen with a clear notification.
+    ApiService.instance.onSessionExpired = _handleSessionExpired;
+  }
   static final AuthService instance = AuthService._();
 
   static const _userKey = 'togt_user';
@@ -48,7 +55,9 @@ class AuthService {
     final accessToken = data['accessToken']?.toString() ?? data['token']?.toString();
     final refreshToken = data['refreshToken']?.toString();
     if (accessToken == null || refreshToken == null) throw ApiException('Login did not return a complete session');
-    ApiService.instance.setTokens(accessToken: accessToken, refreshToken: refreshToken);
+    ApiService.instance
+      ..resetSessionState()
+      ..setTokens(accessToken: accessToken, refreshToken: refreshToken);
     final remote = await ApiService.instance.get('/auth/me');
     if (remote is! Map<String, dynamic>) throw ApiException('Login session could not be verified');
     final user = TUser.fromJson(remote);
@@ -84,13 +93,35 @@ class AuthService {
     } catch (_) {}
     _currentUser = null;
     ApiService.instance.clearTokens();
+    await _clearPersistedSession();
+    await _google.signOut();
+  }
+
+  /// Storage-only teardown shared by logout and the session-expired handoff
+  /// (the handoff must not call the server — the session is already dead).
+  Future<void> _clearPersistedSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userKey);
     await prefs.remove(_tokenKey);
     await prefs.remove('togt_refresh');
     await _secureStorage.delete(key: _tokenKey);
     await _secureStorage.delete(key: 'togt_refresh');
-    await _google.signOut();
+  }
+
+  /// Invoked by ApiService after a failed silent refresh: wipe the session
+  /// locally and send the user to the login screen with a clear notice.
+  Future<void> _handleSessionExpired() async {
+    _currentUser = null;
+    await _clearPersistedSession();
+    final context = AppNavigator.navigatorKey.currentContext;
+    if (context != null) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+        content: const Text('Your session has expired — please sign in again.'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ));
+    }
+    AppNavigator.goToLogin();
   }
 
   Future<void> applyRole(String role) async {
