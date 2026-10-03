@@ -13,11 +13,14 @@ import { PackagesTab } from "@/components/dashboard/worker/packages-tab";
 import { UsersAdminTab } from "@/components/dashboard/admin/users-admin-tab";
 import { ReviewsAdminTab } from "@/components/dashboard/admin/reviews-admin-tab";
 import { BulkNotificationDialog } from "@/components/dashboard/admin/bulk-notification-dialog";
+import { BulkMessagingTab } from "@/components/dashboard/admin/bulk-messaging-tab";
+import { AboutControlTab } from "@/components/dashboard/admin/about-control-tab";
 import { AdminGroupsTab } from "@/components/dashboard/admin/groups-admin-tab";
 import { TicketsTab } from "@/components/dashboard/shared/tickets-tab";
 import { AdminTrackingTab } from "@/components/dashboard/admin/tracking-tab";
 import { ReportsTab } from "@/components/dashboard/admin/reports-tab";
 import { CallTrackerTab } from "@/components/dashboard/shared/call-tracker-tab";
+import { GalleryTab } from "@/components/dashboard/shared/gallery-tab";
 import { BackupsTab } from "@/components/dashboard/shared/backups-tab";
 import { SiteControlTab } from "@/components/dashboard/admin/site-control-tab";
 
@@ -30,10 +33,13 @@ const TABS = [
   { id: "reports", label: "Reports" },
   { id: "packages", label: "Packages" },
   { id: "groups", label: "Groups" },
+  { id: "gallery", label: "Gallery" },
   { id: "reviews", label: "Reviews" },
   { id: "notifications", label: "Notifications" },
+  { id: "bulk", label: "Bulk Messaging" },
   { id: "backups", label: "Backups" },
   { id: "site-control", label: "Site Control" },
+  { id: "about", label: "About Section" },
   { id: "settings", label: "Settings" },
 ];
 
@@ -56,6 +62,7 @@ export default function AdminDashboardPage() {
       {tab === "reports" && <ReportsTab />}
       {tab === "packages" && <PackagesTab />}
       {tab === "groups" && <AdminGroupsTab />}
+      {tab === "gallery" && <GalleryTab />}
       {tab === "reviews" && <ReviewsAdminTab />}
       {tab === "notifications" && (
         <div>
@@ -73,6 +80,8 @@ export default function AdminDashboardPage() {
       )}
       {tab === "backups" && <BackupsTab />}
       {tab === "site-control" && <SiteControlTab />}
+      {tab === "bulk" && <BulkMessagingTab />}
+      {tab === "about" && <AboutControlTab />}
       {tab === "settings" && <SettingsTab />}
       <BulkNotificationDialog open={bulkOpen} onClose={() => setBulkOpen(false)} />
     </div>

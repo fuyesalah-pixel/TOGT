@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Download, HardDriveDownload, Plus, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
+import { AlertTriangle, Download, HardDriveDownload, Plus, RefreshCw, RotateCcw, Trash2, Upload } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/providers";
 import { PageHeader } from "@/components/dashboard/shared/page-header";
@@ -17,6 +17,7 @@ import {
   formatBackupSize,
   listBackups,
   restoreBackup,
+  restoreBackupFile,
   updateBackupSchedule,
   type Backup,
   type BackupSchedule,
@@ -49,6 +50,9 @@ export function BackupsTab() {
   const [creating, setCreating] = useState(false);
   const [restoreTarget, setRestoreTarget] = useState<Backup | null>(null);
   const [restoreConfirm, setRestoreConfirm] = useState("");
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [fileRestoreOpen, setFileRestoreOpen] = useState(false);
+  const [fileConfirm, setFileConfirm] = useState("");
   const [savingSchedule, setSavingSchedule] = useState(false);
 
   const load = useCallback(async () => {
@@ -102,10 +106,34 @@ export function BackupsTab() {
     if (!restoreTarget) return;
     setBusy(true);
     try {
-      await restoreBackup(restoreTarget.id, restoreConfirm);
-      showToast({ title: "Restore acknowledged", message: "Follow the restore instructions returned by the API." });
+      const result = await restoreBackup(restoreTarget.id, restoreConfirm);
+      showToast({
+        title: "Restore completed",
+        message: `Site data was replaced${result.durationMs ? ` in ${Math.round(result.durationMs / 1000)}s` : ""}. A safety backup of the previous state was saved first.`,
+      });
       setRestoreTarget(null);
       setRestoreConfirm("");
+      await load();
+    } catch (e) {
+      showToast({ title: "Restore failed", message: e instanceof ApiError ? e.message : "Try again." });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleFileRestore = async () => {
+    if (!restoreFile) return;
+    setBusy(true);
+    try {
+      const result = await restoreBackupFile(restoreFile, fileConfirm);
+      showToast({
+        title: "Restore completed",
+        message: `The site data was replaced from ${restoreFile.name}${result.durationMs ? ` in ${Math.round(result.durationMs / 1000)}s` : ""}. A safety backup was saved first — refresh the page to see the restored data.`,
+      });
+      setFileRestoreOpen(false);
+      setRestoreFile(null);
+      setFileConfirm("");
+      await load();
     } catch (e) {
       showToast({ title: "Restore failed", message: e instanceof ApiError ? e.message : "Try again." });
     } finally {
@@ -148,6 +176,40 @@ export function BackupsTab() {
       {error && (
         <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           <AlertTriangle className="h-4 w-4" /> {error}
+        </div>
+      )}
+
+      {isTech && (
+        <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-500">
+              <Upload className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="font-semibold text-togt-navy">Restore from backup file</p>
+              <p className="mt-0.5 max-w-xl text-sm text-gray-500">
+                Upload a backup file (the .sql.gz file from “Create Backup Now” or one you downloaded) and replace the
+                website data with it. A safety backup of everything is always taken first, so the current state stays
+                recoverable from the history below. Nothing on the host server is touched.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Input
+                  type="file"
+                  accept=".sql,.gz,application/gzip,application/x-gzip"
+                  disabled={busy}
+                  onChange={(e) => setRestoreFile(e.target.files?.[0] ?? null)}
+                  className="h-9 max-w-xs cursor-pointer text-sm"
+                />
+                <Button
+                  variant="destructive"
+                  disabled={!restoreFile || busy}
+                  onClick={() => { setFileConfirm(""); setFileRestoreOpen(true); }}
+                >
+                  <Upload className="h-4 w-4" /> Process Restore
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -284,8 +346,8 @@ export function BackupsTab() {
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            Type <b>RESTORE</b> to confirm. The API verifies the artifact checksum and returns the exact restore
-            command for the host; automatic in-place restore is fail-closed while the platform is running.
+            Type <b>RESTORE</b> to confirm. A safety backup of the current data is taken first, then the database is
+            replaced with this artifact and migrations are re-applied. This action is irreversible.
           </p>
           <Input value={restoreConfirm} onChange={(e) => setRestoreConfirm(e.target.value)} placeholder="Type RESTORE" />
           <div className="flex justify-end gap-2">
@@ -299,7 +361,29 @@ export function BackupsTab() {
               Cancel
             </Button>
             <Button variant="destructive" disabled={restoreConfirm !== "RESTORE" || busy} onClick={handleRestore}>
-              {busy ? "Working..." : "Confirm restore"}
+              {busy ? "Restoring…" : "Confirm restore"}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        open={fileRestoreOpen}
+        onClose={() => { setFileRestoreOpen(false); setFileConfirm(""); }}
+        title={`Restore the website from ${restoreFile?.name ?? "backup file"}?`}
+        description="The current site data will be replaced with the uploaded backup file."
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Type <b>RESTORE</b> to confirm. Users, requests, packages, tickets and all other site content will be
+            replaced with the uploaded file. A safety backup of the current data is taken automatically first.
+          </p>
+          <Input value={fileConfirm} onChange={(e) => setFileConfirm(e.target.value)} placeholder="Type RESTORE" />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { setFileRestoreOpen(false); setFileConfirm(""); }}>Cancel</Button>
+            <Button variant="destructive" disabled={fileConfirm !== "RESTORE" || busy} onClick={() => void handleFileRestore()}>
+              {busy ? "Restoring — this can take a while…" : "Process restore"}
             </Button>
           </div>
         </div>

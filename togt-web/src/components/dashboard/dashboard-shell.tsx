@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import Image from "next/image";
-import { Bell, ExternalLink, LogOut, Menu, Plane, LayoutDashboard, Users, Package, Plus, LineChart, MessageCircle, Settings, Layers, ShieldCheck, Activity, Ticket, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Bell, ExternalLink, LogOut, Menu, Plane, LayoutDashboard, Users, Package, Plus, LineChart, MessageCircle, Settings, Layers, ShieldCheck, Activity, Ticket, PanelLeftClose, PanelLeftOpen, Megaphone, Video, Images, HardDriveDownload, ToggleLeft } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -36,11 +36,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     WORKER: [
       { id: "overview", label: "Overview", icon: LayoutDashboard }, { id: "users", label: "Users", icon: Users }, { id: "tickets", label: "Tickets", icon: Ticket },
       { id: "calls", label: "Call Tracker", icon: Activity },
-      { id: "packages", label: "Packages", icon: Package }, { id: "groups", label: "Groups", icon: Users }, { id: "create", label: "Create", icon: Plus },
+      { id: "packages", label: "Packages", icon: Package }, { id: "groups", label: "Groups", icon: Users }, { id: "gallery", label: "Gallery", icon: Images }, { id: "create", label: "Create", icon: Plus },
       { id: "progress", label: "Progress", icon: LineChart }, { id: "chat", label: "Chat", icon: MessageCircle }, { id: "notifications", label: "Notifications", icon: Bell }, { id: "settings", label: "Settings", icon: Settings },
     ],
     GUIDE: [{ id: "overview", label: "Overview", icon: LayoutDashboard }, { id: "groups", label: "My Groups", icon: Users }, { id: "tracking", label: "GPS Tracking", icon: Activity }, { id: "plans", label: "Tour Plans", icon: Layers }, { id: "chat", label: "Chat", icon: MessageCircle }, { id: "notifications", label: "Notifications", icon: Bell }, { id: "settings", label: "Settings", icon: Settings }],
-     ADMIN: [{ id: "overview", label: "Overview", icon: LayoutDashboard }, { id: "users", label: "Users", icon: Users }, { id: "tickets", label: "Tickets", icon: Ticket }, { id: "calls", label: "Call Tracker", icon: Activity }, { id: "packages", label: "Packages", icon: Package }, { id: "groups", label: "Groups", icon: Users }, { id: "tracking", label: "Tracking", icon: Activity }, { id: "reports", label: "Reports", icon: LineChart }, { id: "reviews", label: "Reviews", icon: ShieldCheck }, { id: "notifications", label: "Notifications", icon: Bell }, { id: "settings", label: "Settings", icon: Settings }],
+     ADMIN: [{ id: "overview", label: "Overview", icon: LayoutDashboard }, { id: "users", label: "Users", icon: Users }, { id: "tickets", label: "Tickets", icon: Ticket }, { id: "calls", label: "Call Tracker", icon: Activity }, { id: "packages", label: "Packages", icon: Package }, { id: "groups", label: "Groups", icon: Users }, { id: "gallery", label: "Gallery", icon: Images }, { id: "tracking", label: "Tracking", icon: Activity }, { id: "reports", label: "Reports", icon: LineChart }, { id: "reviews", label: "Reviews", icon: ShieldCheck }, { id: "notifications", label: "Notifications", icon: Bell }, { id: "bulk", label: "Bulk Messaging", icon: Megaphone }, { id: "backups", label: "Backups", icon: HardDriveDownload }, { id: "site-control", label: "Site Control", icon: ToggleLeft }, { id: "about", label: "About Section", icon: Video }, { id: "settings", label: "Settings", icon: Settings }],
     TECH: [{ id: "health", label: "System Health", icon: Activity }, { id: "settings", label: "Settings", icon: Settings }],
   };
   const tabs = roleTabs[user.role] ?? roleTabs.CUSTOMER;

@@ -1,4 +1,4 @@
-import { api, apiDelete, apiGet, apiPatch, apiPost } from "./client";
+import { api, apiDelete, apiGet, apiPatch, apiPost, apiUpload } from "./client";
 
 export interface Backup {
   id: string;
@@ -46,8 +46,17 @@ export function updateBackupSchedule(dto: Partial<Pick<BackupSchedule, "enabled"
   return apiPatch<BackupSchedule>("/backups/schedule", dto);
 }
 
-export function restoreBackup(id: string, confirm: string): Promise<{ ok: boolean }> {
-  return api<{ ok: boolean }>(`/backups/${id}/restore`, { method: "POST", json: { confirm } });
+export function restoreBackup(id: string, confirm: string): Promise<{ ok: boolean; safetyBackupId?: string | null; durationMs?: number }> {
+  return api<{ ok: boolean; safetyBackupId?: string | null; durationMs?: number }>(`/backups/${id}/restore`, { method: "POST", json: { confirm } });
+}
+
+/** TECH-only: upload a .sql/.sql.gz artifact and restore the site from it.
+ *  The API takes a safety backup first and re-runs migrations after the dump. */
+export function restoreBackupFile(file: File, confirm: string): Promise<{ ok: boolean; safetyBackupId?: string | null; durationMs?: number }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("confirm", confirm);
+  return apiUpload<{ ok: boolean; safetyBackupId?: string | null; durationMs?: number }>("/backups/restore-file", formData);
 }
 
 export function backupDownloadUrl(id: string): string {

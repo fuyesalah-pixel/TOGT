@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserMutations } from "@/hooks/useUsers";
+import { apiPost } from "@/lib/api/client";
 import { PageHeader } from "./page-header";
 import { StatusBadge } from "./status-badge";
 import { Input } from "@/components/ui/input";
@@ -179,6 +180,8 @@ export function SettingsTab() {
         </dl>
       </div>
 
+      {(user.role === "ADMIN" || user.role === "TECH") && <EmailDeliveryTestCard />}
+
       <div className="mt-4 rounded-xl border border-red-100 bg-white p-6 shadow-sm">
         <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-red-400">Session</h2>
         <p className="mb-4 text-sm text-gray-500">Sign out of your account on this device.</p>
@@ -186,6 +189,56 @@ export function SettingsTab() {
           Logout
         </Button>
       </div>
+    </div>
+  );
+}
+
+/** ADMIN/TECH only: send a test email through the production delivery stack
+ *  (Resend first, Hostinger SMTP fallback) and report which provider fired. */
+function EmailDeliveryTestCard() {
+  const { user } = useAuth();
+  const [to, setTo] = useState("");
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; provider: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const send = async () => {
+    setSending(true);
+    setError(null);
+    setResult(null);
+    try {
+      const res = await apiPost<{ ok: boolean; provider: string; to: string }>("/notifications/test-email", { to: to.trim() || undefined });
+      setResult(res);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send the test email.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (!user) return null;
+
+  return (
+    <div className="mt-4 rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-400">Email delivery test</h2>
+      <p className="mb-3 text-sm text-gray-500">
+        Sends a test email through the same delivery stack used for bulk email — Resend when configured, with the
+        Hostinger mailbox as fallback — and reports which provider delivered it.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder={`Recipient (default: ${user.email})`} className="max-w-xs" />
+        <Button onClick={() => void send()} disabled={sending} className="bg-togt-blue text-white hover:bg-togt-blue/90">
+          {sending ? "Sending…" : "Send test email"}
+        </Button>
+      </div>
+      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      {result && (
+        <p className={`mt-3 text-sm ${result.ok ? "text-emerald-600" : "text-red-600"}`}>
+          {result.ok
+            ? `Test email sent via ${result.provider === "resend" ? "Resend" : "Hostinger SMTP"}. Check the inbox (and spam folder) to confirm.`
+            : "No email provider is configured — add the Resend key in Tech Dashboard → Providers (or the RESEND_API_KEY env)."}
+        </p>
+      )}
     </div>
   );
 }
