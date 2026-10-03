@@ -312,6 +312,7 @@ export interface CallRecord {
   teamNumber: string;
   name: string;
   phone: string;
+  email?: string | null;
   fatherName?: string | null;
   passportNumber?: string | null;
   passportFileUrl?: string | null;
@@ -355,6 +356,7 @@ export interface CallRecordPayload {
   name: string;
   phone: string;
   teamNumber: string;
+  email?: string;
   fatherName?: string;
   passportNumber?: string;
   passportFileUrl?: string;

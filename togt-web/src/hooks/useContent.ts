@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFaq, createGallery, getFaq, getGallery, type FaqPayload, type GalleryPayload } from "@/lib/api/content";
+import { createFaq, createGallery, deleteGallery, getAllGallery, getFaq, getGallery, updateGallery, type FaqPayload, type GalleryPayload } from "@/lib/api/content";
 import { useLocale } from "next-intl";
 
 export function useFaq() {
@@ -22,6 +22,15 @@ export function useGallery() {
   });
 }
 
+/** Staff-only full gallery list for the dashboard Gallery tab. */
+export function useAllGallery() {
+  return useQuery({
+    queryKey: ["content", "gallery", "all"],
+    queryFn: () => getAllGallery(),
+    staleTime: 30_000,
+  });
+}
+
 export function useContentMutations() {
   const queryClient = useQueryClient();
   const invalidate = () => {
@@ -31,5 +40,7 @@ export function useContentMutations() {
   return {
     createFaq: useMutation({ mutationFn: (dto: FaqPayload) => createFaq(dto), onSuccess: invalidate }),
     createGallery: useMutation({ mutationFn: (dto: GalleryPayload) => createGallery(dto), onSuccess: invalidate }),
+    updateGallery: useMutation({ mutationFn: ({ id, dto }: { id: string; dto: Partial<GalleryPayload> }) => updateGallery(id, dto), onSuccess: invalidate }),
+    deleteGallery: useMutation({ mutationFn: (id: string) => deleteGallery(id), onSuccess: invalidate }),
   };
 }

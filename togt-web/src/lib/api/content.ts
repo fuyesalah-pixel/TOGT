@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "./client";
+import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
 import type { FaqItem, GalleryItem } from "./types";
 
 export function getFaq(locale = "en"): Promise<FaqItem[]> {
@@ -29,6 +29,31 @@ export interface FaqPayload {
 
 export function createGallery(dto: GalleryPayload): Promise<GalleryItem> {
   return apiPost<GalleryItem>("/content/gallery", dto);
+}
+
+/** Raw gallery row as returned by the staff-only /content/gallery/all endpoint. */
+export interface GalleryAdminItem {
+  id: string;
+  title: string;
+  category: string;
+  location?: string | null;
+  date?: string | null;
+  description: string;
+  images: string[];
+  videoUrl?: string | null;
+  createdAt: string;
+}
+
+export function getAllGallery(): Promise<GalleryAdminItem[]> {
+  return apiGet<GalleryAdminItem[]>("/content/gallery/all");
+}
+
+export function updateGallery(id: string, dto: Partial<GalleryPayload>): Promise<GalleryAdminItem> {
+  return apiPatch<GalleryAdminItem>(`/content/gallery/${encodeURIComponent(id)}`, dto);
+}
+
+export function deleteGallery(id: string): Promise<GalleryAdminItem> {
+  return apiDelete<GalleryAdminItem>(`/content/gallery/${encodeURIComponent(id)}`);
 }
 
 export function createFaq(dto: FaqPayload): Promise<FaqItem> {
