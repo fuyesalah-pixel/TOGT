@@ -56,4 +56,11 @@ export class NotificationsController {
   sendTestEmail(@Body() body: { to?: string }, @CurrentUser() user: User) {
     return this.notifications.sendTestEmail(body?.to, user);
   }
+
+  /** TECH/ADMIN: verify mobile push delivery to a user's registered devices. */
+  @Post('test-push')
+  @Roles(Role.ADMIN, Role.TECH)
+  sendTestPush(@Body() body: { to?: string }, @CurrentUser() user: User) {
+    return this.notifications.sendTestPush(body?.to, user);
+  }
 }

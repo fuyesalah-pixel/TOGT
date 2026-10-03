@@ -7,6 +7,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { BulkNotificationDto } from './dto/bulk-notification.dto';
 import { NotificationsGateway } from './notifications.gateway';
 import { CredentialService } from '../system/credential.service';
+import { PushService } from './push.service';
 
 @Injectable()
 export class NotificationsService {
@@ -18,6 +19,7 @@ export class NotificationsService {
     private readonly config: ConfigService,
     private readonly gateway: NotificationsGateway,
     private readonly credentials: CredentialService,
+    private readonly push: PushService,
   ) {
     const smtpUser = this.config.get<string>('hostingerSmtp.user');
     const smtpPassword = this.config.get<string>('hostingerSmtp.password');
@@ -64,6 +66,12 @@ export class NotificationsService {
       },
     });
     this.gateway.emitToUser(userId, 'newNotification', notification);
+    // Best-effort mobile push alongside the in-app notification (skipped
+    // silently when Firebase is not configured). The `kind` routes the app's
+    // notification-tap handler (chat → conversation, everything else → home).
+    void this.push
+      .sendToUser(userId, data.title, data.message, { kind: data.type?.toLowerCase() ?? 'general' })
+      .catch(() => undefined);
     return notification;
   }
 
@@ -99,6 +107,9 @@ export class NotificationsService {
     for (const userId of userIds) {
       this.gateway.emitToUser(userId, 'newNotification', { title: dto.title, message: dto.message, type: dto.type, channel });
     }
+
+    // Best-effort mobile push for the bulk blast (FCM multicast).
+    void this.push.sendToUsersWhereIn(userIds, dto.title, dto.message, { kind: 'admin_bulk' }).catch(() => undefined);
 
     // Best-effort external delivery
     const channels = channel.split(',').map((value) => value.trim().toUpperCase());
@@ -161,6 +172,23 @@ export class NotificationsService {
     }
     await this.sendAdminEmail(recipient, subject, html);
     return { ok: true, provider: 'smtp', to: recipient };
+  }
+
+  /**
+   * TECH/ADMIN: send a test push to every device registered for `to` (or the
+   * actor). Reports whether Firebase is configured and a device received it.
+   */
+  async sendTestPush(to: string | undefined, actor: User) {
+    let targetId = actor.id;
+    if (to?.trim()) {
+      const target = await this.prisma.user.findFirst({ where: { OR: [{ email: to.trim().toLowerCase() }, { id: to.trim() }] }, select: { id: true } });
+      if (!target) throw new NotFoundException('User not found for test push');
+      targetId = target.id;
+    }
+    const devices = await this.prisma.deviceToken.count({ where: { userId: targetId } });
+    if (devices === 0) return { ok: false, reason: 'no registered device tokens for this user', devices: 0 };
+    const sent = await this.push.sendToUser(targetId, 'TOGT test notification', 'Push delivery is working correctly ✅', { kind: 'test' });
+    return { ok: sent, reason: sent ? undefined : 'Firebase is not configured (add the FIREBASE service-account credential)', devices };
   }
 
   /** Resend email — returns false (logged) when RESEND_API_KEY is not configured. */
