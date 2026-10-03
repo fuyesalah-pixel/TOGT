@@ -7,6 +7,7 @@ import '../services/content_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import 'shimmer_loading.dart';
+import 'video_player_screen.dart';
 
 const _categoryColors = <String, Color>{
   'UMRAH': Color(0xFFFF9300),
@@ -166,11 +167,27 @@ class _GalleryCardState extends State<_GalleryCard>
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: () => _open(context),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(children: [
                 _ImageHeader(item: item),
-                Padding(
+                if (item.videos.isNotEmpty)
+                  Positioned(
+                    left: 10,
+                    top: 10,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: TOGTColors.orange,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.25), blurRadius: 6)],
+                      ),
+                      child: const Icon(Icons.play_arrow_rounded, color: TOGTColors.white, size: 18),
+                    ),
+                  ),
+              ]),
+              Padding(
                   padding: const EdgeInsets.all(14),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -384,20 +401,9 @@ class _GalleryDetailState extends State<_GalleryDetail> {
             Text(l10n.videos, style: TOGTTypography.h3),
             const SizedBox(height: 10),
             for (final v in videos)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: TOGTColors.blue.withOpacity(.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.play_arrow_rounded, color: TOGTColors.blue),
-                ),
-                title: Text(v.title.isEmpty ? l10n.watchVideo : v.title,
-                    style: TOGTTypography.h3),
-                trailing:
-                    const Icon(Icons.open_in_new_rounded, color: TOGTColors.grey),
+              _VideoCard(
+                url: v.url,
+                title: v.title.isEmpty ? l10n.watchVideo : v.title,
               ),
           ],
         ],
@@ -409,4 +415,74 @@ class _GalleryDetailState extends State<_GalleryDetail> {
 Future<void> _openDetail(BuildContext context, GalleryItem item) {
   return Navigator.of(context)
       .push(MaterialPageRoute(builder: (_) => _GalleryDetail(item: item)));
+}
+
+/// A tappable video card with a YouTube thumbnail (when available) that
+/// plays the video inside the app.
+class _VideoCard extends StatelessWidget {
+  const _VideoCard({required this.url, required this.title});
+
+  final String url;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final thumbnail = youTubeThumbnail(url);
+    return Material(
+      color: TOGTColors.white,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => openVideoPlayer(context, url: url, title: title),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (thumbnail != null)
+                    Image.network(
+                      thumbnail,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(color: TOGTColors.lightGrey),
+                    )
+                  else
+                    Container(color: TOGTColors.lightGrey),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: TOGTColors.orange,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(color: TOGTColors.orange.withOpacity(.4), blurRadius: 14),
+                        ],
+                      ),
+                      child: const Icon(Icons.play_arrow_rounded, color: TOGTColors.white, size: 30),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              child: Row(children: [
+                const Icon(Icons.play_circle_outline_rounded, size: 16, color: TOGTColors.orange),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TOGTTypography.small.copyWith(fontWeight: FontWeight.w700)),
+                ),
+                const Icon(Icons.chevron_right_rounded, size: 18, color: TOGTColors.grey),
+              ]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
