@@ -29,6 +29,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
   double? _distance;
   String? _locationError;
   StreamSubscription<CompassEvent>? _compass;
+  List<CustomAlarm> _customAlarms = [];
 
   AppLocalizations get l10n => AppLocalizations.of(context);
 
@@ -42,12 +43,61 @@ class _PersonalScreenState extends State<PersonalScreen> {
       });
     }
     _loadTasbih();
+    _loadCustomAlarms();
     _loadLocation();
   }
 
   Future<void> _loadTasbih() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) setState(() => _tasbih = prefs.getInt('togt_tasbih_count') ?? 0);
+  }
+
+  Future<void> _loadCustomAlarms() async {
+    final alarms = await CustomAlarm.loadAll();
+    if (mounted) setState(() => _customAlarms = alarms);
+  }
+
+  Future<void> _persistAlarmsAndReschedule(List<CustomAlarm> alarms) async {
+    await CustomAlarm.saveAll(alarms);
+    if (mounted) setState(() => _customAlarms = alarms);
+    if (_times != null) {
+      try {
+        await PrayerService.instance.schedule(_times!, enabled: _azan, customAlarms: alarms);
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _addCustomAlarm() async {
+    final picked = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    if (picked == null || !mounted) return;
+    final label = await _askAlarmLabel(picked);
+    final alarm = CustomAlarm(
+      id: '${DateTime.now().millisecondsSinceEpoch}',
+      hour: picked.hour,
+      minute: picked.minute,
+      label: label ?? '',
+    );
+    await _persistAlarmsAndReschedule([..._customAlarms, alarm]);
+  }
+
+  Future<String?> _askAlarmLabel(TimeOfDay time) async {
+    final controller = TextEditingController();
+    final label = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Alarm at ${time.format(ctx)}'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Optional label (e.g. Wake up, Ihram)'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
+          TextButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: Text(l10n.saveChanges)),
+        ],
+      ),
+    );
+    return label;
   }
 
   Future<void> _saveTasbih() async {
@@ -65,7 +115,11 @@ class _PersonalScreenState extends State<PersonalScreen> {
       final qibla = _bearing(p.latitude, p.longitude);
       final distance = Geolocator.distanceBetween(p.latitude, p.longitude, 21.4225, 39.8262) / 1000;
       final times = PrayerService.instance.calculate(p.latitude, p.longitude);
-       try { await PrayerService.instance.schedule(times, enabled: _azan); } catch (_) {}
+      // Re-arm all alarms with the fresh prayer times (custom alarms included
+      // — schedule() cancels everything first, so they must be re-passed).
+      final alarms = _customAlarms.isNotEmpty ? _customAlarms : await CustomAlarm.loadAll();
+       try { await PrayerService.instance.schedule(times, enabled: _azan, customAlarms: alarms); } catch (_) {}
+      if (mounted && _customAlarms.isEmpty) setState(() => _customAlarms = alarms);
       if (mounted) setState(() { _qiblaBearing = qibla; _distance = distance; _times = times; _locationError = null; });
     } catch (e) {
       if (mounted) setState(() => _locationError = e.toString().replaceFirst('Exception: ', ''));
@@ -114,10 +168,64 @@ class _PersonalScreenState extends State<PersonalScreen> {
         _hero(Icons.access_time_rounded, l10n.prayerTimes, l10n.azanAlarm),
         const SizedBox(height: 18),
         ..._prayerRows(),
-         SwitchListTile(contentPadding: EdgeInsets.zero, title: Text(l10n.azanAlarm), subtitle: Text(l10n.notifyBeforePrayer), value: _azan, activeThumbColor: TOGTColors.orange, onChanged: (v) async { setState(() => _azan = v); if (_times != null) await PrayerService.instance.schedule(_times!, enabled: v); }),
+         SwitchListTile(contentPadding: EdgeInsets.zero, title: Text(l10n.azanAlarm), subtitle: Text(l10n.notifyBeforePrayer), value: _azan, activeThumbColor: TOGTColors.orange, onChanged: (v) async { setState(() => _azan = v); if (_times != null) await PrayerService.instance.schedule(_times!, enabled: v, customAlarms: _customAlarms); }),
         if (_azan && !_exactAlarmHintShown && _times != null) _exactAlarmBanner(),
+        _customAlarmsCard(),
         _permissionsCard(),
       ]);
+
+  /// Custom alarms live directly under the azan alarm switch.
+  Widget _customAlarmsCard() => Card(
+        margin: const EdgeInsets.only(top: 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+            leading: const Icon(Icons.alarm_add_rounded, color: TOGTColors.orange),
+            title: Text('Custom alarms', style: TOGTTypography.h3),
+            subtitle: Text('Pick any time — it rings with the azan sound, every day', style: TOGTTypography.small),
+            trailing: IconButton(
+              icon: const Icon(Icons.add_circle_rounded, color: TOGTColors.orange, size: 30),
+              onPressed: _addCustomAlarm,
+            ),
+          ),
+          for (final alarm in _customAlarms)
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+              leading: const Icon(Icons.alarm_rounded, color: TOGTColors.blue),
+              title: Text(
+                alarm.label.isEmpty ? 'Alarm' : alarm.label,
+                style: TOGTTypography.h3.copyWith(
+                  decoration: alarm.enabled ? null : TextDecoration.lineThrough,
+                  color: alarm.enabled ? null : TOGTColors.grey,
+                ),
+              ),
+              subtitle: Text(MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay(hour: alarm.hour, minute: alarm.minute)), style: TOGTTypography.small),
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                Switch(value: alarm.enabled, activeThumbColor: TOGTColors.orange, onChanged: (v) async {
+                  alarm.enabled = v;
+                  await _persistAlarmsAndReschedule(_customAlarms);
+                }),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded, color: TOGTColors.red, size: 22),
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Delete alarm?'),
+                        content: Text('"${alarm.label.isEmpty ? 'Alarm' : alarm.label}" will stop ringing.'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+                        ],
+                      ),
+                    );
+                    if (confirmed == true) await _persistAlarmsAndReschedule(_customAlarms.where((a) => a.id != alarm.id).toList());
+                  },
+                ),
+              ]),
+            ),
+        ]),
+      );
 
   /// Re-enable (or turn back on) the app permission flow: "don't ask again
   /// unless the user asks for it" — this tile is that ask-again entry point.
