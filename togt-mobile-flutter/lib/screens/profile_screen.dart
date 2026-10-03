@@ -146,10 +146,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   );
 
   Future<void> _saveLanguage(BuildContext context, String language) async {
+    final navigator = Navigator.of(context);
+    // Close the bottom sheet BEFORE switching locale: the sheet's context is
+    // under the current localizations, and rebuilding the whole app
+    // (MaterialApp locale change) while it is animating out is what produced
+    // the one-time black screen on the first language change.
+    navigator.pop();
     await LocaleService.instance.setLocale(language);
+    // Fire-and-forget: a slow/failing profile patch must never block or
+    // crash the locale switch.
     final id = user?.id;
-    if (id != null) await ApiService.instance.patch('/users/$id', body: {'languagePref': language});
-    if (context.mounted) Navigator.pop(context);
+    if (id != null) {
+      ApiService.instance
+          .patch('/users/$id', body: {'languagePref': language})
+          .catchError((_) => null);
+    }
   }
 }
 

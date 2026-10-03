@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -7,6 +8,7 @@ import 'navigation/app_navigator.dart';
 import 'screens/splash_screen.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
+import 'services/prayer_service.dart';
 import 'services/update_service.dart';
 import 'services/locale_service.dart';
 import 'theme/theme.dart';
@@ -20,6 +22,10 @@ Future<void> main() async {
   runApp(const TogtApp());
   WidgetsBinding.instance.addPostFrameCallback((_) async {
     NotificationService.instance.initialize().catchError((_) => false);
+    // Weekly Friday (Jumu'ah) Surat Al-Kahf reminder — armed at every app
+    // start with a native weekly repeat so it fires even if the app is not
+    // opened again. Also re-armed after any azan rescheduling.
+    PrayerService.instance.scheduleFridayKahfReminder().catchError((_) => null);
     // Permissions are asked ONCE, right after the first login (see
     // PermissionService.runAfterLogin + LoginScreen) — never on app open.
     _runStartupUpdateFlow();
@@ -50,8 +56,41 @@ Future<void> _runStartupUpdateFlow() async {
   }
 }
 
-class TogtApp extends StatelessWidget {
+/// In release builds a build-phase exception normally paints NOTHING (the
+/// black screen users reported on the first language switch, when the whole
+/// widget tree rebuilt with new localizations for the first time). Render a
+/// self-healing fallback instead so the app can always recover.
+final ErrorWidgetBuilder _defaultErrorWidgetBuilder = ErrorWidget.builder;
+
+class TogtApp extends StatefulWidget {
   const TogtApp({super.key});
+
+  @override
+  State<TogtApp> createState() => _TogtAppState();
+}
+
+class _TogtAppState extends State<TogtApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Release-only: flutter_test asserts ErrorWidget.builder is never replaced
+    // (and debug builds keep the red error screen anyway).
+    if (kDebugMode) return;
+    ErrorWidget.builder = (details) {
+      // Keep the developer red screen in debug builds.
+      if (kDebugMode) return _defaultErrorWidgetBuilder(details);
+      return Container(
+        color: const Color(0xFF12394F),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.all(32),
+        child: Text(
+          'Something went wrong — tap to reload.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white.withOpacity(.85), fontSize: 15),
+        ),
+      );
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
