@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Eye, ShieldCheck, ShieldOff, X } from "lucide-react";
-import type { Role, Status, User } from "@/lib/api/types";
+import type { Role, ServiceType, Status, User } from "@/lib/api/types";
 import { useUser, useUserMutations, useUsers } from "@/hooks/useUsers";
 import { useAuth } from "@/hooks/useAuth";
 import { DataTable } from "../shared/data-table";
@@ -17,6 +17,7 @@ import { getUserChanges } from "@/lib/api/users";
 import { listServiceRequests } from "@/lib/api/service-requests";
 
 const ROLES: Role[] = ["CUSTOMER", "WORKER", "GUIDE", "ADMIN", "TECH"];
+const SERVICE_TYPES: ServiceType[] = ["UMRAH", "TICKET", "DOMESTIC", "TOURIST", "VISA", "FOREIGN_TRAVEL"];
 
 export function UsersAdminTab() {
   const { user: currentUser } = useAuth();
@@ -24,6 +25,8 @@ export function UsersAdminTab() {
   const [page, setPage] = useState(1);
   const [pendingStatus, setPendingStatus] = useState<{ user: User; status: Status } | null>(null);
   const [status, setStatus] = useState<Status | "">("");
+  const [role, setRole] = useState<Role | "">("");
+  const [serviceType, setServiceType] = useState<ServiceType | "">("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [changesUser, setChangesUser] = useState<User | null>(null);
   const [infoUser, setInfoUser] = useState<User | null>(null);
@@ -36,7 +39,7 @@ export function UsersAdminTab() {
     enabled: !!changesUser,
   });
 
-  const { data, isLoading } = useUsers({ search: search || undefined, status: status || undefined, page, limit: 15 });
+  const { data, isLoading } = useUsers({ search: search || undefined, status: status || undefined, role: role || undefined, serviceType: serviceType || undefined, page, limit: 15 });
   const { changeUserRole, setUserStatus } = useUserMutations();
 
   const handleRoleChange = async (user: User, role: Role) => {
@@ -66,6 +69,14 @@ export function UsersAdminTab() {
           <option value="">All statuses</option>
           <option value="ACTIVE">Active</option>
           <option value="TERMINATED">Terminated</option>
+        </select>
+        <select value={role} onChange={(e) => { setRole(e.target.value as Role | ""); setPage(1); }} className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm">
+          <option value="">All roles</option>
+          {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <select value={serviceType} onChange={(e) => { setServiceType(e.target.value as ServiceType | ""); setPage(1); }} className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm">
+          <option value="">All service types</option>
+          {SERVICE_TYPES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
         </select>
       </div>
 
