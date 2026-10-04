@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import {
   cancelTrackingRequest,
+  listTrackingRequests,
   respondTrackingRequest,
   searchTrackingMembers,
   searchTrackingPeople,
@@ -67,6 +68,15 @@ export function ParentTrackingTab() {
     retry: false,
     refetchInterval: LIVE_REFRESH_MS,
   });
+  // Real tracking-request rows: incoming requests to answer + the state of
+  // the requests I sent. (The people search below only reflects requests the
+  // viewer SENT — requests sent TO the viewer appear only here.)
+  const requests = useQuery({
+    queryKey: ["tracking-requests"],
+    queryFn: listTrackingRequests,
+    retry: false,
+    refetchInterval: LIVE_REFRESH_MS,
+  });
 
   const send = useMutation({
     mutationFn: sendTrackingRequest,
@@ -94,7 +104,8 @@ export function ParentTrackingTab() {
     },
   });
 
-  const incoming = people.data?.filter((person) => person.consent === "PENDING") ?? [];
+  // Requests addressed to me that still need an answer (id = tracking-request id).
+  const incomingRequests = requests.data?.received.filter((row) => row.status === "PENDING") ?? [];
   const members: TrackableMember[] = live.data ?? [];
   const focused = members.find((member) => member.memberId === focusedId) ?? members[0];
 
@@ -130,22 +141,22 @@ export function ParentTrackingTab() {
       )}
 
       {/* Incoming requests needing B's answer (accept / decline) */}
-      {incoming.length > 0 && (
+      {incomingRequests.length > 0 && (
         <div className="mb-6 rounded-xl border border-togt-orange/30 bg-togt-orange/5 p-4">
           <h3 className="text-sm font-bold text-togt-navy">Tracking requests for you</h3>
           <p className="mt-1 text-xs text-gray-500">Decide who can follow your live location while you travel.</p>
           <div className="mt-3 space-y-2">
-            {incoming.map((person) => (
-              <div key={person.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 bg-white p-3">
+            {incomingRequests.map((row) => (
+              <div key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 bg-white p-3">
                 <div>
-                  <p className="text-sm font-semibold text-togt-navy">{person.fullName}</p>
-                  <p className="text-xs text-gray-500">{person.email}</p>
+                  <p className="text-sm font-semibold text-togt-navy">{row.user.fullName}</p>
+                  <p className="text-xs text-gray-500">{row.user.email}</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={respond.isPending} onClick={() => respond.mutate({ id: person.id, accept: true })}>
+                  <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={respond.isPending} onClick={() => respond.mutate({ id: row.id, accept: true })}>
                     <Check className="mr-1 h-4 w-4" />Accept
                   </Button>
-                  <Button size="sm" variant="outline" className="text-red-600" disabled={respond.isPending} onClick={() => respond.mutate({ id: person.id, accept: false })}>
+                  <Button size="sm" variant="outline" className="text-red-600" disabled={respond.isPending} onClick={() => respond.mutate({ id: row.id, accept: false })}>
                     <X className="mr-1 h-4 w-4" />Decline
                   </Button>
                 </div>
@@ -164,7 +175,7 @@ export function ParentTrackingTab() {
           <div className="rounded-xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-500">Loading live tracking…</div>
         ) : members.length === 0 ? (
           <div className="rounded-xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-500">
-            Nobody is on an active trip yet. once a linked traveler joins a group that is marked IN_PROGRESS, their location appears here automatically.
+            Nobody is on an active trip right now. Once a linked traveler joins a group marked “in progress”, their live location appears here automatically.
           </div>
           ) : (
           <>
@@ -267,9 +278,18 @@ export function ParentTrackingTab() {
                         <MapPin className="mr-1 h-3.5 w-3.5" />Request tracking
                       </Button>
                     )}
-                    {person.consent === "PENDING" && (
-                      <Button size="sm" variant="outline" disabled={cancel.isPending} onClick={() => cancel.mutate(person.id)}>
-                        Cancel request
+                    {person.consent === "PENDING" && (() => {
+                      // Cancel needs the tracking-REQUEST id, not the user id.
+                      const pendingRow = requests.data?.sent.find((r) => r.user.id === person.id && r.status === "PENDING");
+                      return pendingRow ? (
+                        <Button size="sm" variant="outline" disabled={cancel.isPending} onClick={() => cancel.mutate(pendingRow.id)}>
+                          Cancel request
+                        </Button>
+                      ) : null;
+                    })()}
+                    {person.consent === "DECLINED" && (
+                      <Button size="sm" variant="outline" className="text-togt-blue" disabled={send.isPending} onClick={() => send.mutate(person.id)}>
+                        Request again
                       </Button>
                     )}
                     {person.consent === "ACCEPTED" && !person.travelingNow && (

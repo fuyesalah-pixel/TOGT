@@ -5,6 +5,7 @@ import {
   createServiceRequest,
   getRequestHistory,
   listServiceRequests,
+  setRequestAmount,
   uploadRequestDocument,
   updateRequestStatus,
   type CreateServiceRequestPayload,
@@ -40,6 +41,17 @@ export function useUpdateRequestStatus() {
   return useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: UpdateStatusPayload }) =>
       updateRequestStatus(id, dto),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["service-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["request-history", variables.id] });
+    },
+  });
+}
+
+export function useSetRequestAmount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, amount }: { id: string; amount: number }) => setRequestAmount(id, amount),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["service-requests"] });
       queryClient.invalidateQueries({ queryKey: ["request-history", variables.id] });

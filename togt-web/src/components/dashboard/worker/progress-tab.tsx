@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Banknote, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RequestStatus, ServiceRequest } from "@/lib/api/types";
-import { useRequestHistory, useServiceRequests, useUpdateRequestStatus } from "@/hooks/useServiceRequests";
+import { useRequestHistory, useServiceRequests, useSetRequestAmount, useUpdateRequestStatus } from "@/hooks/useServiceRequests";
 import { useChatSocket } from "@/hooks/useChat";
 import { DataTable } from "../shared/data-table";
 import { PageHeader } from "../shared/page-header";
@@ -39,8 +40,11 @@ function RequestDetailDialog({
   const [status, setStatus] = useState<RequestStatus>("PENDING");
   const [notes, setNotes] = useState("");
   const [assignToMe, setAssignToMe] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [amountError, setAmountError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const updateStatus = useUpdateRequestStatus();
+  const setAmountMutation = useSetRequestAmount();
   const { data: history, isLoading: historyLoading } = useRequestHistory(request?.id);
 
   // sync local state when a new request is opened
@@ -49,6 +53,8 @@ function RequestDetailDialog({
       setStatus(request.status);
       setNotes("");
       setAssignToMe(false);
+      setAmount(request.amount != null ? String(request.amount) : "");
+      setAmountError(null);
       setError(null);
     }
   }, [request]);
@@ -105,6 +111,62 @@ function RequestDetailDialog({
             <span className="ml-2 text-gray-400">{request.user?.email}</span>
             {request.user?.phone && <span className="ml-2 text-gray-400">{request.user.phone}</span>}
           </div>
+        </div>
+
+        {/* Payment — staff set the price, the customer then sees it and pays */}
+        <div className="rounded-xl border border-gray-100 p-4">
+          <h3 className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-400">
+            <Banknote className="h-4 w-4 text-togt-orange" /> Payment
+          </h3>
+          <div className="mb-3 flex items-center gap-2">
+            <StatusBadge value={request.paymentStatus} />
+            {request.amount != null ? (
+              <span className="text-sm font-semibold text-togt-navy">
+                {request.amount.toLocaleString()} {request.currency ?? "ETB"}
+              </span>
+            ) : (
+              <span className="text-sm text-gray-400">No amount set yet</span>
+            )}
+          </div>
+          {request.paymentStatus === "UNPAID" && (
+            <>
+              <div className="flex items-end gap-2">
+                <div className="w-44">
+                  <Label htmlFor="amount">Amount ({request.currency ?? "ETB"})</Label>
+                  <input
+                    id="amount"
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="e.g. 4500"
+                    className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm"
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  disabled={setAmountMutation.isPending || !amount || Number(amount) <= 0}
+                  onClick={async () => {
+                    setAmountError(null);
+                    try {
+                      await setAmountMutation.mutateAsync({ id: request.id, amount: Number(amount) });
+                      onClose();
+                    } catch (err) {
+                      setAmountError(err instanceof Error ? err.message : "Failed to set amount");
+                    }
+                  }}
+                >
+                  {setAmountMutation.isPending ? "Saving..." : request.amount == null ? "Set amount & notify customer" : "Update amount"}
+                </Button>
+              </div>
+              <p className="mt-2 flex items-start gap-1 text-[11px] text-gray-400">
+                <Info className="mt-0.5 h-3 w-3 shrink-0" />
+                The customer cannot set or change the price. Once saved, they see the amount in their app and can pay.
+              </p>
+              {amountError && <p className="mt-1 text-sm text-red-600">{amountError}</p>}
+            </>
+          )}
         </div>
 
         {/* Status update */}

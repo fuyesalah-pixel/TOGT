@@ -59,6 +59,10 @@ export function updateRequestStatus(
   return apiPatch<ServiceRequest>(`/service-requests/${id}/status`, dto);
 }
 
+export function setRequestAmount(id: string, amount: number): Promise<ServiceRequest> {
+  return apiPatch<ServiceRequest>(`/service-requests/${id}/amount`, { amount });
+}
+
 export function getRequestHistory(id: string): Promise<ProgressHistoryItem[]> {
   return apiGet<ProgressHistoryItem[]>(`/service-requests/${id}/history`);
 }
