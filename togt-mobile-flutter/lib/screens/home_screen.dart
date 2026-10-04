@@ -16,7 +16,7 @@ import '../widgets/shimmer_loading.dart';
 import 'packages_screen.dart';
 import 'service_request_screen.dart';
 import 'forms/ticket_form_screen.dart';
-import 'forms/umrah_form_screen.dart';
+import 'forms/umrah_gift_form_screen.dart';
 import 'forms/visa_form_screen.dart';
 import 'forms/domestic_form_screen.dart';
 import 'forms/tourist_form_screen.dart';
@@ -205,7 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
                        _Service(icon: Icons.badge_outlined, label: l10n.visa, type: 'VISA'),
                        _Service(icon: Icons.business_center_outlined, label: l10n.services, type: 'CONSULTING'),
                        _Service(icon: Icons.phone_in_talk_outlined, label: l10n.contact, type: 'CONTACT'),
-                       _Service(icon: Icons.card_giftcard_rounded, label: l10n.umrah, type: 'UMRAH_GIFT'),
+                       _Service(icon: Icons.card_giftcard_rounded, label: l10n.umrahGift, type: 'UMRAH_GIFT'),
                     ],
                   ),
                 ),
@@ -322,7 +322,7 @@ class _Service extends StatelessWidget {
           } else {
             final screen = switch (type) {
               'FLIGHT' => const TicketFormScreen(),
-              'UMRAH_GIFT' => const UmrahFormScreen(),
+              'UMRAH_GIFT' => const UmrahGiftFormScreen(),
               'VISA' => const VisaFormScreen(),
               'CONSULTING' => const ServiceRequestScreen(serviceType: 'CONSULTING', title: 'Consulting'),
               'CONTACT' => const ServiceRequestScreen(serviceType: 'CONTACT', title: 'Contact Us'),

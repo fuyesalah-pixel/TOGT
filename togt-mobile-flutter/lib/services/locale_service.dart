@@ -10,11 +10,11 @@ class LocaleService {
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     final value = prefs.getString(_key);
-    if (value == 'en' || value == 'ar' || value == 'am') locale.value = Locale(value!);
+    if (value == 'en' || value == 'ar' || value == 'am' || value == 'om') locale.value = Locale(value!);
   }
 
   Future<void> setLocale(String languageCode) async {
-    if (!{'en', 'ar', 'am'}.contains(languageCode)) return;
+    if (!{'en', 'ar', 'am', 'om'}.contains(languageCode)) return;
     locale.value = Locale(languageCode);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_key, languageCode);

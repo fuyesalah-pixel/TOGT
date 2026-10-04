@@ -4,16 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../theme/colors.dart';
 import '../../theme/typography.dart';
 
-/// Customer-side live tracking with a real in-app map (OpenStreetMap tiles via
-/// flutter_map — no external maps app, no API key). Shows the traveler's
-/// status (SAFE / WARNING / DANGER / OFFLINE), live distance to the guide and
-/// both positions as markers on the map, refreshed automatically every 20s.
-/// Data comes from GET /tracking/search (the API tracks the signed-in
-/// customer's own group), identical to the web dashboard.
+/// Customer-side tracking, rebuilt around consent:
+///  1. "Requests" section — incoming tracking requests to accept or decline,
+///     and sent requests shown as in-progress / accepted / declined.
+///  2. "Live now" — everyone who accepted and is on an active trip, on a real
+///     in-app map (OpenStreetMap via flutter_map), refreshed every 20s.
+///  3. "People you can track" — search any customer and send a request.
+/// No same-group requirement anymore: consent + an active trip is enough.
 class ParentTrackingScreen extends StatefulWidget {
   const ParentTrackingScreen({super.key});
 
@@ -22,15 +24,17 @@ class ParentTrackingScreen extends StatefulWidget {
 }
 
 class _ParentTrackingScreenState extends State<ParentTrackingScreen> {
-  Map<String, dynamic>? tracking;
-  String? message;
-  bool loading = true;
+  List<dynamic> _people = [];
+  List<dynamic> _live = [];
+  Map<String, dynamic>? _requests;
+  String? _message;
+  bool _loading = true;
   bool _following = true;
+  String? _focusedId;
   Timer? _poll;
   final MapController _map = MapController();
 
-  LatLng? _memberPoint;
-  LatLng? _guidePoint;
+  AppLocalizations get l10n => AppLocalizations.of(context);
 
   @override
   void initState() {
@@ -45,6 +49,44 @@ class _ParentTrackingScreenState extends State<ParentTrackingScreen> {
     super.dispose();
   }
 
+  Future<void> _load({bool silent = false}) async {
+    if (!silent && mounted) setState(() { _loading = true; _message = null; });
+    try {
+      final results = await Future.wait([
+        ApiService.instance.get('/tracking/people', query: {'query': ''}),
+        ApiService.instance.get('/tracking/search', query: {'query': ''}),
+        ApiService.instance.get('/tracking/requests'),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _people = (results[0] as List).toList();
+        _live = (results[1] as List).toList();
+        _requests = results[2] is Map ? Map<String, dynamic>.from(results[2] as Map) : null;
+        _loading = false;
+        _message = null;
+      });
+      _followFocused();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _loading = false; if (!silent) _message = e.toString(); });
+    }
+  }
+
+  void _followFocused() {
+    final focused = _focusedMember();
+    final point = focused == null ? null : _toPoint(focused['memberLocation']);
+    if (point != null && _following) _map.move(point, _map.camera.zoom);
+  }
+
+  Map<String, dynamic>? _focusedMember() {
+    if (_live.isEmpty) return null;
+    for (final entry in _live) {
+      final member = Map<String, dynamic>.from(entry as Map);
+      if (member['memberId']?.toString() == _focusedId) return member;
+    }
+    return Map<String, dynamic>.from(_live.first as Map);
+  }
+
   LatLng? _toPoint(dynamic location) {
     if (location is! Map) return null;
     final lat = (location['latitude'] as num?)?.toDouble();
@@ -53,37 +95,25 @@ class _ParentTrackingScreenState extends State<ParentTrackingScreen> {
     return LatLng(lat, lng);
   }
 
-  Future<void> _load({bool silent = false}) async {
-    if (!silent && mounted) setState(() { loading = true; message = null; });
+  Future<void> _sendRequest(String targetId) async {
     try {
-      final data = await ApiService.instance.get('/tracking/search', query: {'query': ''});
+      await ApiService.instance.post('/tracking/requests', body: {'targetId': targetId});
       if (!mounted) return;
-      final map = data is Map ? Map<String, dynamic>.from(data) : null;
-      final member = _toPoint(map?['memberLocation']);
-      final guide = _toPoint(map?['guideLocation']);
-      setState(() {
-        tracking = map;
-        _memberPoint = member;
-        _guidePoint = guide;
-        message = null;
-        loading = false;
-      });
-      // Keep the camera on the traveler until the user pans manually.
-      if (member != null && _following) {
-        _map.move(member, _map.camera.zoom);
-      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.trackingPendingStatus)));
+      await _load(silent: true);
     } catch (e) {
-      final notActive = e.toString().contains('Member not found') || e.toString().contains('not found');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> _respond(String requestId, bool accept) async {
+    try {
+      await ApiService.instance.post('/tracking/requests/$requestId/${accept ? 'accept' : 'decline'}');
       if (!mounted) return;
-      setState(() {
-        tracking = null;
-        _memberPoint = null;
-        _guidePoint = null;
-        message = notActive
-            ? 'Tracking is not active yet. It turns on automatically once your team\u2019s trip starts (team A-number must be marked in progress).'
-            : e.toString();
-        loading = false;
-      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(accept ? l10n.trackingAccepted : l10n.trackingDeclined)));
+      await _load(silent: true);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -98,10 +128,10 @@ class _ParentTrackingScreenState extends State<ParentTrackingScreen> {
 
   String _statusText(String status) {
     switch (status.toUpperCase()) {
-      case 'SAFE': return 'With guide';
-      case 'WARNING': return 'Drifting from guide';
-      case 'DANGER': return 'Separated from guide';
-      default: return 'Signal offline';
+      case 'SAFE': return l10n.trackingWithGuide;
+      case 'WARNING': return l10n.trackingDrifting;
+      case 'DANGER': return l10n.trackingSeparated;
+      default: return l10n.trackingOffline;
     }
   }
 
@@ -121,177 +151,304 @@ class _ParentTrackingScreenState extends State<ParentTrackingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final status = (tracking?['status'] ?? '').toString();
-    final distance = tracking?['distance'] is num ? tracking!['distance'] as num : null;
-    final lastUpdated = tracking?['lastUpdated']?.toString();
-    final hasMap = _memberPoint != null || _guidePoint != null;
-    final initialCenter = _memberPoint ?? _guidePoint ?? const LatLng(21.4225, 39.8262);
+    final incoming = _people.where((entry) => (entry as Map)['consent']?.toString() == 'PENDING').toList();
+    final sent = ((_requests?['sent'] as List?) ?? []).map((entry) => Map<String, dynamic>.from(entry as Map)).toList();
+    final focused = _focusedMember();
+    final status = (focused?['status'] ?? '').toString();
+    final distance = focused?['distance'] is num ? focused!['distance'] as num : null;
+    final lastUpdated = focused?['lastUpdated']?.toString();
+    final memberPoint = focused == null ? null : _toPoint(focused['memberLocation']);
+    final guidePoint = focused == null ? null : _toPoint(focused['guideLocation']);
+    final hasMap = memberPoint != null || guidePoint != null;
+    final initialCenter = memberPoint ?? guidePoint ?? const LatLng(21.4225, 39.8262);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Parent Tracking')),
-      body: loading && tracking == null && message == null
+      appBar: AppBar(title: Text(l10n.parentTracking)),
+      body: _loading && _people.isEmpty && _live.isEmpty
           ? const Center(child: CircularProgressIndicator(color: TOGTColors.orange))
           : RefreshIndicator(
               color: TOGTColors.orange,
-              onRefresh: _load,
+              onRefresh: () => _load(),
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  if (message != null)
+                  if (_message != null)
                     Card(
                       color: TOGTColors.orange.withOpacity(.06),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                       child: Padding(
-                        padding: const EdgeInsets.all(18),
+                        padding: const EdgeInsets.all(16),
                         child: Row(children: [
                           const Icon(Icons.radar_rounded, color: TOGTColors.orange),
                           const SizedBox(width: 12),
-                          Expanded(child: Text(message!, style: TOGTTypography.body)),
+                          Expanded(child: Text(l10n.trackingIntro, style: TOGTTypography.body)),
+                        ]),
+                      ),
+                    ),
+
+                  // ── Incoming requests: B decides ────────────────────────────
+                  if (incoming.isNotEmpty) ...[
+                    _sectionHeader(l10n.trackingIncomingTitle, Icons.pending_actions_rounded),
+                    for (final entry in incoming)
+                      Card(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        color: TOGTColors.orange.withOpacity(.05),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: TOGTColors.orange.withOpacity(.35))),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          leading: CircleAvatar(
+                            backgroundColor: TOGTColors.blue.withOpacity(.12),
+                            child: Text(((entry as Map)['fullName'] ?? '?').toString().substring(0, 1).toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w800, color: TOGTColors.blue)),
+                          ),
+                          title: Text((entry as Map)['fullName']?.toString() ?? '', style: TOGTTypography.h3),
+                          subtitle: Text((entry as Map)['email']?.toString() ?? '', style: TOGTTypography.small),
+                          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                            IconButton(
+                              tooltip: l10n.trackingAccepted,
+                              onPressed: () => _respond((entry as Map)['id'].toString(), true),
+                              icon: const Icon(Icons.check_circle_rounded, color: TOGTColors.green, size: 30),
+                            ),
+                            IconButton(
+                              tooltip: l10n.trackingDeclined,
+                              onPressed: () => _respond((entry as Map)['id'].toString(), false),
+                              icon: const Icon(Icons.cancel_rounded, color: TOGTColors.red, size: 30),
+                            ),
+                          ]),
+                        ),
+                      ),
+                    const SizedBox(height: 6),
+                  ],
+
+                  // ── Live now ────────────────────────────────────────────────
+                  _sectionHeader(l10n.trackingLiveTitle, Icons.radar_rounded),
+                  if (_live.isEmpty)
+                    Card(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(18),
+                        child: Row(children: [
+                          const Icon(Icons.travel_explore_rounded, color: TOGTColors.grey),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text(l10n.trackingStartsWhenActive, style: TOGTTypography.body.copyWith(color: TOGTColors.grey))),
                         ]),
                       ),
                     )
-                  else if (tracking != null) ...[
-                    // Status banner.
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: _statusColor(status).withOpacity(.08),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: _statusColor(status).withOpacity(.35)),
-                      ),
-                      child: Row(children: [
-                        Icon(_statusIcon(status), color: _statusColor(status), size: 30),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text((tracking!['memberName'] ?? 'Traveler').toString(), style: TOGTTypography.h2),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${_statusText(status)} · ${_formatDistance(distance)} from guide',
-                              style: TOGTTypography.small.copyWith(color: _statusColor(status), fontWeight: FontWeight.w700),
-                            ),
-                            if ((tracking!['groupName'] ?? '').toString().isNotEmpty)
-                              Text('Group: ${tracking!['groupName']}', style: TOGTTypography.small),
-                          ]),
+                  else ...[
+                    if (_live.length > 1)
+                      SizedBox(
+                        height: 42,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _live.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          itemBuilder: (context, i) {
+                            final member = Map<String, dynamic>.from(_live[i] as Map);
+                            final id = member['memberId']?.toString();
+                            final selected = (focused?['memberId']?.toString() == id) || (_focusedId == null && i == 0);
+                            return ChoiceChip(
+                              label: Text(member['memberName']?.toString() ?? ''),
+                              selected: selected,
+                              selectedColor: TOGTColors.orange,
+                              labelStyle: TextStyle(color: selected ? TOGTColors.white : TOGTColors.navy, fontWeight: FontWeight.w700),
+                              onSelected: (_) { setState(() { _focusedId = id; _following = true; }); _followFocused(); },
+                            );
+                          },
                         ),
-                      ]),
-                    ),
-                    const SizedBox(height: 12),
-                    // In-app live map.
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: SizedBox(
-                        height: 340,
-                        child: hasMap
-                            ? Stack(children: [
-                                FlutterMap(
-                                  mapController: _map,
-                                  options: MapOptions(
-                                    initialCenter: initialCenter,
-                                    initialZoom: 14,
-                                    // Any user-driven camera change stops follow mode.
-                                    onMapEvent: (event) {
-                                      if (event.source != MapEventSource.mapController && _following) {
-                                        _following = false;
-                                      }
-                                    },
-                                  ),
-                                  children: [
-                                    TileLayer(
-                                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                      userAgentPackageName: 'com.togt.travel',
-                                    ),
-                                    MarkerLayer(markers: [
-                                      if (_guidePoint != null)
-                                        Marker(
-                                          point: _guidePoint!,
-                                          width: 56,
-                                          height: 56,
-                                          alignment: Alignment.topCenter,
-                                          child: _pin(icon: Icons.route_rounded, color: TOGTColors.blue, label: 'Guide'),
-                                        ),
-                                      if (_memberPoint != null)
-                                        Marker(
-                                          point: _memberPoint!,
-                                          width: 56,
-                                          height: 56,
-                                          alignment: Alignment.topCenter,
-                                          child: _pin(
-                                            icon: Icons.person_pin_circle_rounded,
-                                            color: _statusColor(status),
-                                            label: (tracking?['memberName'] ?? 'Traveler').toString().split(' ').first,
-                                          ),
-                                        ),
-                                    ]),
-                                  ],
-                                ),
-                                Positioned(
-                                  right: 10,
-                                  top: 10,
-                                  child: Column(children: [
-                                    _mapButton(
-                                      icon: _following ? Icons.my_location_rounded : Icons.location_searching_rounded,
-                                      onTap: () {
-                                        final target = _memberPoint ?? _guidePoint;
-                                        if (target == null) return;
-                                        setState(() => _following = true);
-                                        _map.move(target, 14);
+                      ),
+                    if (focused != null) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: _statusColor(status).withOpacity(.08),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: _statusColor(status).withOpacity(.35)),
+                        ),
+                        child: Row(children: [
+                          Icon(_statusIcon(status), color: _statusColor(status), size: 28),
+                          const SizedBox(width: 12),
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(focused['memberName']?.toString() ?? '', style: TOGTTypography.h2),
+                            const SizedBox(height: 2),
+                            Text('${_statusText(status)} · ${_formatDistance(distance)}', style: TOGTTypography.small.copyWith(color: _statusColor(status), fontWeight: FontWeight.w700)),
+                          ])),
+                        ]),
+                      ),
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: SizedBox(
+                          height: 320,
+                          child: hasMap
+                              ? Stack(children: [
+                                  FlutterMap(
+                                    mapController: _map,
+                                    options: MapOptions(
+                                      initialCenter: initialCenter,
+                                      initialZoom: 14,
+                                      onMapEvent: (event) {
+                                        if (event.source != MapEventSource.mapController && _following) _following = false;
                                       },
                                     ),
-                                    const SizedBox(height: 8),
-                                    _mapButton(icon: Icons.refresh_rounded, onTap: () => _load(silent: true)),
-                                  ]),
-                                ),
-                                if (lastUpdated != null)
+                                    children: [
+                                      TileLayer(
+                                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                        userAgentPackageName: 'com.togt.travel',
+                                      ),
+                                      MarkerLayer(markers: [
+                                        if (guidePoint != null)
+                                          Marker(
+                                            point: guidePoint,
+                                            width: 56,
+                                            height: 56,
+                                            alignment: Alignment.topCenter,
+                                            child: _pin(icon: Icons.route_rounded, color: TOGTColors.blue, label: 'Guide'),
+                                          ),
+                                        if (memberPoint != null)
+                                          Marker(
+                                            point: memberPoint,
+                                            width: 56,
+                                            height: 56,
+                                            alignment: Alignment.topCenter,
+                                            child: _pin(icon: Icons.person_pin_circle_rounded, color: _statusColor(status), label: (focused['memberName'] ?? '').toString().split(' ').first),
+                                          ),
+                                      ]),
+                                    ],
+                                  ),
                                   Positioned(
-                                    left: 10,
-                                    bottom: 10,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                      decoration: BoxDecoration(color: Colors.white.withOpacity(.92), borderRadius: BorderRadius.circular(20)),
-                                      child: Text(
-                                        'Updated ${lastUpdated.replaceFirst('T', ' · ').split('.').first}',
-                                        style: TOGTTypography.small.copyWith(color: TOGTColors.navy),
+                                    right: 10,
+                                    top: 10,
+                                    child: Column(children: [
+                                      _mapButton(
+                                        icon: _following ? Icons.my_location_rounded : Icons.location_searching_rounded,
+                                        onTap: () {
+                                          final target = memberPoint ?? guidePoint;
+                                          if (target == null) return;
+                                          setState(() => _following = true);
+                                          _map.move(target, 14);
+                                        },
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _mapButton(icon: Icons.refresh_rounded, onTap: () => _load(silent: true)),
+                                    ]),
+                                  ),
+                                  if (lastUpdated != null)
+                                    Positioned(
+                                      left: 10,
+                                      bottom: 10,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(color: Colors.white.withOpacity(.92), borderRadius: BorderRadius.circular(20)),
+                                        child: Text('Updated ${lastUpdated.replaceFirst('T', ' · ').split('.').first}', style: TOGTTypography.small.copyWith(color: TOGTColors.navy)),
                                       ),
                                     ),
-                                  ),
-                              ])
-                            : Container(
-                                color: TOGTColors.grey.withOpacity(.12),
-                                child: Center(
-                                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                                ])
+                              : Container(
+                                  color: TOGTColors.grey.withOpacity(.12),
+                                  child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                                     const Icon(Icons.location_off_rounded, color: TOGTColors.grey, size: 40),
                                     const SizedBox(height: 8),
-                                    Text('Waiting for the first location…', style: TOGTTypography.body),
-                                  ]),
+                                    Text(l10n.trackingWaitingSignal, style: TOGTTypography.body),
+                                  ])),
                                 ),
-                              ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Latest readings under the map.
-                    _readingTile(
-                      icon: Icons.person_pin_circle_rounded,
-                      color: _statusColor(status),
-                      title: 'Traveler location',
-                      location: tracking?['memberLocation'],
-                    ),
-                    const SizedBox(height: 8),
-                    _readingTile(
-                      icon: Icons.route_rounded,
-                      color: TOGTColors.blue,
-                      title: 'Guide location',
-                      location: tracking?['guideLocation'],
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Live every 20 seconds while this screen is open — the map works fully inside the app.',
-                      textAlign: TextAlign.center,
-                      style: TOGTTypography.small.copyWith(color: TOGTColors.grey),
-                    ),
+                      if (status == 'DANGER')
+                        Container(
+                          margin: const EdgeInsets.only(top: 10),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(color: TOGTColors.red.withOpacity(.08), borderRadius: BorderRadius.circular(14)),
+                          child: Row(children: [
+                            const Icon(Icons.emergency_rounded, color: TOGTColors.red),
+                            const SizedBox(width: 10),
+                            Expanded(child: Text(l10n.trackingSeparated, style: TOGTTypography.small.copyWith(color: TOGTColors.red, fontWeight: FontWeight.w700))),
+                          ]),
+                        ),
+                    ],
                   ],
+
+                  // ── People: send requests ──────────────────────────────────
+                  const SizedBox(height: 8),
+                  _sectionHeader(l10n.trackingPeopleTitle, Icons.person_search_rounded),
+                  if (_people.isEmpty && !_loading)
+                    Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Text(l10n.trackingSearchHint, style: TOGTTypography.small.copyWith(color: TOGTColors.grey)),
+                    ),
+                  for (final entry in _people) ...[
+                    // PENDING people already appear in the incoming section.
+                    if (!((entry as Map)['consent']?.toString() == 'PENDING')) _personRow(entry as Map),
+                  ],
+
+                  // ── Sent requests with their state ─────────────────────────
+                  if (sent.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    for (final request in sent)
+                      if (request['status']?.toString() != 'ACCEPTED')
+                        ListTile(
+                          dense: true,
+                          leading: Icon(
+                            request['status']?.toString() == 'DECLINED' ? Icons.cancel_outlined : Icons.hourglass_top_rounded,
+                            color: request['status']?.toString() == 'DECLINED' ? TOGTColors.red : const Color(0xFFF59E0B),
+                          ),
+                          title: Text(request['user'] is Map ? request['user']['fullName']?.toString() ?? '' : '', style: TOGTTypography.small.copyWith(fontWeight: FontWeight.w700)),
+                          subtitle: Text(
+                            request['status']?.toString() == 'DECLINED' ? l10n.trackingDeclined : l10n.trackingPendingStatus,
+                            style: TOGTTypography.small.copyWith(color: TOGTColors.grey),
+                          ),
+                        ),
+                  ],
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _sectionHeader(String title, IconData icon) => Padding(
+        padding: const EdgeInsets.only(top: 8, bottom: 10),
+        child: Row(children: [
+          Icon(icon, size: 18, color: TOGTColors.orange),
+          const SizedBox(width: 8),
+          Text(title.toUpperCase(), style: TOGTTypography.small.copyWith(fontWeight: FontWeight.w800, color: TOGTColors.grey, letterSpacing: .8)),
+        ]),
+      );
+
+  Widget _personRow(Map entry) {
+    final consent = entry['consent']?.toString() ?? 'NONE';
+    final traveling = entry['travelingNow'] == true;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        leading: CircleAvatar(
+          backgroundColor: TOGTColors.blue.withOpacity(.1),
+          child: Text((entry['fullName'] ?? '?').toString().substring(0, 1).toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w800, color: TOGTColors.blue)),
+        ),
+        title: Row(children: [
+          Flexible(child: Text(entry['fullName']?.toString() ?? '', style: TOGTTypography.h3, overflow: TextOverflow.ellipsis)),
+          if (traveling) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(color: TOGTColors.green.withOpacity(.12), borderRadius: BorderRadius.circular(20)),
+              child: Text(l10n.trackingTravelingNow, style: TOGTTypography.small.copyWith(fontSize: 9.5, color: TOGTColors.green, fontWeight: FontWeight.w800)),
+            ),
+          ],
+        ]),
+        subtitle: Text(
+          consent == 'ACCEPTED' ? l10n.trackingLinked : consent == 'DECLINED' ? l10n.trackingDeclined : consent == 'PENDING' ? l10n.trackingPendingStatus : l10n.trackingNotLinked,
+          style: TOGTTypography.small.copyWith(color: consent == 'ACCEPTED' ? TOGTColors.green : TOGTColors.grey),
+        ),
+        trailing: consent == 'NONE'
+            ? ElevatedButton(
+                onPressed: () => _sendRequest(entry['id'].toString()),
+                style: ElevatedButton.styleFrom(backgroundColor: TOGTColors.blue, foregroundColor: TOGTColors.white, padding: const EdgeInsets.symmetric(horizontal: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                child: Text(l10n.trackingSendRequest, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+              )
+            : null,
+      ),
     );
   }
 
@@ -320,26 +477,4 @@ class _ParentTrackingScreenState extends State<ParentTrackingScreen> {
           child: Icon(icon, size: 20, color: TOGTColors.navy),
         ),
       );
-
-  Widget _readingTile({required IconData icon, required Color color, required String title, required dynamic location}) {
-    final lat = location is Map ? (location['latitude'] as num?)?.toDouble() : null;
-    final lng = location is Map ? (location['longitude'] as num?)?.toDouble() : null;
-    final name = location is Map ? location['name']?.toString() ?? '' : '';
-    return Card(
-      color: TOGTColors.white,
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Icon(lat == null ? Icons.location_off_rounded : icon, color: lat == null ? TOGTColors.grey : color),
-        title: Text(title, style: TOGTTypography.h3),
-        subtitle: Text(
-          lat == null
-              ? 'No location shared yet'
-              : (name.isNotEmpty ? '$name · ${lat.toStringAsFixed(5)}, ${lng?.toStringAsFixed(5) ?? '—'}' : '${lat.toStringAsFixed(5)}, ${lng?.toStringAsFixed(5) ?? '—'}'),
-          style: TOGTTypography.small,
-        ),
-      ),
-    );
-  }
 }

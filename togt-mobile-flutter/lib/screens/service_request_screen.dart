@@ -9,9 +9,16 @@ import '../widgets/animated_button.dart';
 import '../widgets/success_dialog.dart';
 
 class ServiceRequestScreen extends StatefulWidget {
-  const ServiceRequestScreen({super.key, required this.serviceType, required this.title});
+  const ServiceRequestScreen({super.key, required this.serviceType, required this.title, this.extraFields = const [], this.fieldDefaults = const {}});
   final String serviceType;
   final String title;
+
+  /// Extra labels appended to the base field set (e.g. gift fields for the
+  /// Umrah Gift form) — grouped into the trip-details section.
+  final List<String> extraFields;
+
+  /// Pre-selected values for any of the fields above.
+  final Map<String, String> fieldDefaults;
 
   @override
   State<ServiceRequestScreen> createState() => _ServiceRequestScreenState();
@@ -47,11 +54,14 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
     if (_fieldNames.contains('Adults')) {
       _field('Adults').text = '1';
     }
+    for (final entry in widget.fieldDefaults.entries) {
+      if (_fieldNames.contains(entry.key)) _field(entry.key).text = entry.value;
+    }
   }
 
   TextEditingController _field(String name) => _fields.putIfAbsent(name, TextEditingController.new);
 
-  List<String> get _fieldNames => switch (widget.serviceType) {
+  List<String> get _fieldNames => [...switch (widget.serviceType) {
     'FLIGHT' => ['Trip type', 'From', 'To', 'Departure date', 'Return date', 'Adults', 'Children', 'Infants', 'Cabin class', 'Airline preference', 'Passport number', 'Passport issue date', 'Passport expiry date', 'Full name', 'Email', 'Phone'],
     'UMRAH' => ['Package type', 'Travel date', 'Return date', 'Number of pilgrims', 'Hotel preference', 'Room type', 'Full name', 'Email', 'Phone', 'Passport number', 'Passport issue date', 'Passport expiry date'],
     'VISA' => ['Nationality', 'Destination country', 'Visa type', 'Need ticket?', 'Airline', 'Travel date', 'Cabin class', 'Full name', 'Email', 'Phone', 'Address', 'Passport number', 'Passport issue date', 'Passport expiry date'],
@@ -60,7 +70,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
     'CONTACT' => ['Full name', 'Email', 'Phone', 'Message'],
     'CONSULTING' => ['Full name', 'Email', 'Phone', 'Message'],
     _ => ['Destination country', 'Departure date', 'Return date', 'Adults', 'Children', 'Infants', 'Cabin class', 'Airline preference', 'Full name', 'Email', 'Phone', 'Passport number', 'Passport issue date', 'Passport expiry date'],
-  };
+  }, ...widget.extraFields];
 
   @override
   void dispose() { for (final field in _fields.values) field.dispose(); super.dispose(); }
@@ -70,7 +80,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
   // professional booking flows users already know.
   List<(String, List<String>)> get _sections {
     final names = _fieldNames;
-    final trip = names.where((n) => ['Trip type', 'From', 'To', 'Destination', 'Destination country', 'Departure date', 'Return date', 'Travel date', 'Arrival date', 'Start date', 'End date', 'Adults', 'Children', 'Infants', 'Number of pilgrims', 'Number of people', 'Tour duration', 'Cabin class', 'Airline', 'Airline preference', 'Package type', 'Hotel preference', 'Room type', 'Accommodation type', 'Tour type', 'Visa type', 'Need ticket?'].contains(n)).toList();
+    final trip = names.where((n) => ['Trip type', 'From', 'To', 'Destination', 'Destination country', 'Departure date', 'Return date', 'Travel date', 'Arrival date', 'Start date', 'End date', 'Adults', 'Children', 'Infants', 'Number of pilgrims', 'Number of people', 'Tour duration', 'Cabin class', 'Airline', 'Airline preference', 'Package type', 'Hotel preference', 'Room type', 'Accommodation type', 'Tour type', 'Visa type', 'Need ticket?', 'Gift type', 'Recipient name', 'Recipient phone', 'Recipient email'].contains(n)).toList();
     final passport = names.where((n) => ['Nationality', 'Passport number', 'Passport issue date', 'Passport expiry date'].contains(n)).toList();
     final contact = names.where((n) => ['Full name', 'Email', 'Phone', 'Address'].contains(n)).toList();
     final message = names.where((n) => ['Message'].contains(n)).toList();
@@ -228,6 +238,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
     'Room type' => const ['Shared', 'Private'],
     'Accommodation type' => const ['Hotel', 'Apartment', 'Resort', 'Camping'],
     'Need ticket?' => const ['Yes', 'No'],
+    'Gift type' => const ['Full gift (100% paid by sender)', 'Half gift (50% paid by sender)'],
     _ => null,
   };
 

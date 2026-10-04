@@ -64,7 +64,9 @@
   "chatSendFailed": "Unable to send message: {error}",
   "@chatSendFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "retry": "Retry",
@@ -257,7 +259,9 @@
   "fieldRequired": "{field} is required",
   "@fieldRequired": {
     "placeholders": {
-      "field": { "type": "String" }
+      "field": {
+        "type": "String"
+      }
     }
   },
   "invalidEmail": "Please enter a valid email address",
@@ -279,5 +283,40 @@
   "updateReady": "Update ready",
   "installUpdate": "Install",
   "autoUpdateNote": "TOGT updates download automatically when you are online.",
-  "updateInstalling": "Installing the new version…"
+  "updateInstalling": "Installing the new version…",
+  "oromiffa": "Afaan Oromoo",
+  "umrahGift": "Umrah Gift",
+  "giftNote": "Give Umrah as a gift — full or half-sponsored for someone you love.",
+  "giftCheckbox": "This is a gift",
+  "giftType": "Gift type",
+  "giftFull": "Full gift (100% paid by sender)",
+  "giftHalf": "Half gift (50% paid by sender)",
+  "giftHalfNote": "The recipient pays the remaining 50% before travel.",
+  "recipientName": "Recipient full name",
+  "recipientPhone": "Recipient phone",
+  "recipientEmail": "Recipient email (optional)",
+  "trackingIntro": "Send a request to follow someone’s trips — tracking starts once they accept.",
+  "trackingSendRequest": "Request tracking",
+  "trackingAccepted": "Accepted",
+  "trackingDeclined": "Declined",
+  "trackingPendingStatus": "Request in progress",
+  "trackingCancelled": "Cancelled",
+  "trackingSearchHint": "Search customers by name or email",
+  "trackingIncomingTitle": "Tracking requests for you",
+  "trackingLiveTitle": "Live now",
+  "trackingPeopleTitle": "People you can track",
+  "trackingLinked": "Linked — you can follow their trips",
+  "trackingNotLinked": "Not linked",
+  "trackingStartsWhenActive": "Tracking starts when their trip is active",
+  "trackingTravelingNow": "Traveling now",
+  "trackingFromGuide": "{distance} from guide",
+  "trackingWithGuide": "With guide",
+  "trackingDrifting": "Drifting from guide",
+  "trackingSeparated": "Separated from guide",
+  "trackingOffline": "Signal offline",
+  "trackingWaitingSignal": "Waiting for the first location…",
+  "trackingRefresh": "Refresh",
+  "locationBackgroundTitle": "Background location needed",
+  "locationBackgroundBody": "TOGT uses your location in the background to keep your trip protected. Please choose “Allow all the time”.",
+  "alarmsVolumeHint": "The azan plays on the alarm volume. If it is silent, raise Alarm volume in Settings → Sound."
 }

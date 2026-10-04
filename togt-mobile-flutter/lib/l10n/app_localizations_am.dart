@@ -861,4 +861,113 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get updateInstalling => 'አዲሱ ስሪት በመጫን ላይ…';
+
+  @override
+  String get oromiffa => 'ኦሮምኛ';
+
+  @override
+  String get umrahGift => 'የዑምራ ስጦታ';
+
+  @override
+  String get giftNote => 'ዑምራን እንደ ስጦታ ይስጡ — ሙሉ ወይም ግማሽ ክፍያ ለሚወዱት ሰው።';
+
+  @override
+  String get giftCheckbox => 'ይህ ስጦታ ነው';
+
+  @override
+  String get giftType => 'የስጦታ ዓይነት';
+
+  @override
+  String get giftFull => 'ሙሉ ስጦታ (100% በላኪው ይከፈላል)';
+
+  @override
+  String get giftHalf => 'ግማሽ ስጦታ (50% በላኪው ይከፈላል)';
+
+  @override
+  String get giftHalfNote => 'ተቀባዩ ቀሪውን 50% ከጉዞ በፊት ይከፍላል።';
+
+  @override
+  String get recipientName => 'የተቀባዩ ሙሉ ስም';
+
+  @override
+  String get recipientPhone => 'የተቀባዩ ስልክ';
+
+  @override
+  String get recipientEmail => 'የተቀባዩ ኢሜይል (አማራጭ)';
+
+  @override
+  String get trackingIntro => 'የሌሎችን ጉዞ ለመከታተል ጥያቄ ይላኩ — ከተስማሙ በኋላ ክትትል ይጀምራል።';
+
+  @override
+  String get trackingSendRequest => 'የክትትል ጥያቄ ላክ';
+
+  @override
+  String get trackingAccepted => 'ተቀብቷል';
+
+  @override
+  String get trackingDeclined => 'አልተቀበለም';
+
+  @override
+  String get trackingPendingStatus => 'ጥያቄው በሂደት ላይ ነው';
+
+  @override
+  String get trackingCancelled => 'ተሰርዟል';
+
+  @override
+  String get trackingSearchHint => 'ተጠቃሚዎችን በስም ወይም በኢሜይል ይፈልጉ';
+
+  @override
+  String get trackingIncomingTitle => 'ለእርስዎ የመጡ የክትትል ጥያቄዎች';
+
+  @override
+  String get trackingLiveTitle => 'አሁን በስራ ላይ';
+
+  @override
+  String get trackingPeopleTitle => 'መከታተል የሚችሏቸው ሰዎች';
+
+  @override
+  String get trackingLinked => 'የተገናኘ — ጉዞዎቻቸውን መከታተል ይችላሉ';
+
+  @override
+  String get trackingNotLinked => 'አልተገናኘም';
+
+  @override
+  String get trackingStartsWhenActive => 'ጉዞያቸው ሲጀመር ክትትሉ ይጀምራል';
+
+  @override
+  String get trackingTravelingNow => 'አሁን በጉዞ ላይ';
+
+  @override
+  String trackingFromGuide(Object distance) {
+    return 'ከመሪው $distance ርቀት';
+  }
+
+  @override
+  String get trackingWithGuide => 'ከመሪው ጋር';
+
+  @override
+  String get trackingDrifting => 'ከመሪው እየራቀ';
+
+  @override
+  String get trackingSeparated => 'ከመሪው ተለይቷል';
+
+  @override
+  String get trackingOffline => 'ምልክት የለም';
+
+  @override
+  String get trackingWaitingSignal => 'የመጀመሪያውን አካባቢ በመጠበቅ ላይ…';
+
+  @override
+  String get trackingRefresh => 'አድስ';
+
+  @override
+  String get locationBackgroundTitle => 'የአካባቢ ፈቃድ ያስፈልጋል';
+
+  @override
+  String get locationBackgroundBody =>
+      'TOGT ጉዞዎ ደህንነቱ እንዲጠበቅ አካባቢዎን በዳራ ላይ ይጠቀማል። “Allow all the time” ይምረጡ።';
+
+  @override
+  String get alarmsVolumeHint =>
+      'አዛን የማንቂያ ድምፅ ይጠቀማል። ከሆነ የማንቂያ ድምፅን በ Settings → Sound ያሳድጉ።';
 }

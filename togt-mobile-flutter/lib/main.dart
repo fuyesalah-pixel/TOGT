@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'l10n/app_localizations.dart';
 
 import 'navigation/app_navigator.dart';
@@ -26,6 +28,22 @@ Future<void> main() async {
     // start with a native weekly repeat so it fires even if the app is not
     // opened again. Also re-armed after any azan rescheduling.
     PrayerService.instance.scheduleFridayKahfReminder().catchError((_) => null);
+    // Re-arm the full 7-day azan + custom alarm pool at every start. The
+    // schedule() call that used to happen only when the Personal screen was
+    // opened left alarms silent whenever the app stayed installed but was
+    // not opened for days.
+    try {
+      final alarms = await CustomAlarm.loadAll();
+      final azanOn = (await SharedPreferences.getInstance()).getBool('togt_azan_enabled') ?? true;
+      final location = await Geolocator.getLastKnownPosition();
+      if (location != null) {
+        await PrayerService.instance.schedule(
+          PrayerService.instance.calculate(location.latitude, location.longitude),
+          enabled: azanOn,
+          customAlarms: alarms,
+        );
+      }
+    } catch (_) {}
     // Permissions are asked ONCE, right after the first login (see
     // PermissionService.runAfterLogin + LoginScreen) — never on app open.
     _runStartupUpdateFlow();

@@ -41,7 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(appBar: AppBar(title: Text(l10n.settings)), body: ListView(padding: const EdgeInsets.all(22), children: [
     Text(l10n.profileSettings, style: Theme.of(context).textTheme.headlineSmall),
     const SizedBox(height: 18),
-    DropdownButtonFormField<String>(value: selected, decoration: InputDecoration(labelText: l10n.language), items: [DropdownMenuItem(value: 'en', child: Text(l10n.english)), DropdownMenuItem(value: 'ar', child: Text(l10n.arabic)), DropdownMenuItem(value: 'am', child: Text(l10n.amharic))], onChanged: (value) { if (value != null) LocaleService.instance.setLocale(value); }),
+    DropdownButtonFormField<String>(value: selected, decoration: InputDecoration(labelText: l10n.language), items: [DropdownMenuItem(value: 'en', child: Text(l10n.english)), DropdownMenuItem(value: 'ar', child: Text(l10n.arabic)), DropdownMenuItem(value: 'am', child: Text(l10n.amharic)), DropdownMenuItem(value: 'om', child: Text(l10n.oromiffa))], onChanged: (value) { if (value != null) LocaleService.instance.setLocale(value); }),
     const SizedBox(height: 18),
     for (final field in [TextField(controller: name, decoration: InputDecoration(labelText: l10n.fullName)), TextField(controller: phone, decoration: InputDecoration(labelText: l10n.phone)), TextField(controller: address, decoration: InputDecoration(labelText: l10n.address)), TextField(controller: nationality, decoration: InputDecoration(labelText: l10n.nationality)), TextField(controller: passport, decoration: InputDecoration(labelText: l10n.passportNumber))]) Padding(padding: const EdgeInsets.only(bottom: 14), child: field),
     FilledButton(onPressed: busy ? null : save, child: Text(busy ? l10n.saving : l10n.saveChanges)),

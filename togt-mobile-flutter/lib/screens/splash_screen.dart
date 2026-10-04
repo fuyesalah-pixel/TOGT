@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
+import '../navigation/app_navigator.dart';
+import '../services/permission_service.dart';
 import '../theme/colors.dart';
 import 'onboarding_screen.dart';
 import '../services/auth_service.dart';
@@ -34,12 +36,21 @@ class _SplashScreenState extends State<SplashScreen>
     _c.forward();
     Future.delayed(const Duration(milliseconds: 2900), () {
       if (!mounted) return;
+      final loggedIn = AuthService.instance.isLoggedIn;
       Navigator.of(context).pushReplacement(PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 500),
-         pageBuilder: (_, __, ___) => AuthService.instance.isLoggedIn ? const HomeShell() : const OnboardingScreen(),
+         pageBuilder: (_, __, ___) => loggedIn ? const HomeShell() : const OnboardingScreen(),
         transitionsBuilder: (_, a, __, child) =>
             FadeTransition(opacity: a, child: ScaleTransition(scale: Tween<double>(begin: .96, end: 1).animate(a), child: child)),
       ));
+      // Signed-in visitors get the location re-check on every visit — if
+      // location was turned off, we ask again (dialog → settings redirect).
+      if (loggedIn) {
+        final navigatorContext = AppNavigator.navigatorKey.currentContext;
+        if (navigatorContext != null && navigatorContext.mounted) {
+          PermissionService.instance.ensureLocationOnVisit(navigatorContext);
+        }
+      }
     });
   }
 

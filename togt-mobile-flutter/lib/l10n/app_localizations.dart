@@ -8,6 +8,7 @@ import 'package:intl/intl.dart' as intl;
 import 'app_localizations_am.dart';
 import 'app_localizations_ar.dart';
 import 'app_localizations_en.dart';
+import 'app_localizations_om.dart';
 
 // ignore_for_file: type=lint
 
@@ -97,7 +98,8 @@ abstract class AppLocalizations {
   static const List<Locale> supportedLocales = <Locale>[
     Locale('am'),
     Locale('ar'),
-    Locale('en')
+    Locale('en'),
+    Locale('om')
   ];
 
   /// No description provided for @appTitle.
@@ -1719,6 +1721,216 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Installing the new version…'**
   String get updateInstalling;
+
+  /// No description provided for @oromiffa.
+  ///
+  /// In en, this message translates to:
+  /// **'Afaan Oromoo'**
+  String get oromiffa;
+
+  /// No description provided for @umrahGift.
+  ///
+  /// In en, this message translates to:
+  /// **'Umrah Gift'**
+  String get umrahGift;
+
+  /// No description provided for @giftNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Give Umrah as a gift — full or half-sponsored for someone you love.'**
+  String get giftNote;
+
+  /// No description provided for @giftCheckbox.
+  ///
+  /// In en, this message translates to:
+  /// **'This is a gift'**
+  String get giftCheckbox;
+
+  /// No description provided for @giftType.
+  ///
+  /// In en, this message translates to:
+  /// **'Gift type'**
+  String get giftType;
+
+  /// No description provided for @giftFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Full gift (100% paid by sender)'**
+  String get giftFull;
+
+  /// No description provided for @giftHalf.
+  ///
+  /// In en, this message translates to:
+  /// **'Half gift (50% paid by sender)'**
+  String get giftHalf;
+
+  /// No description provided for @giftHalfNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The recipient pays the remaining 50% before travel.'**
+  String get giftHalfNote;
+
+  /// No description provided for @recipientName.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipient full name'**
+  String get recipientName;
+
+  /// No description provided for @recipientPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipient phone'**
+  String get recipientPhone;
+
+  /// No description provided for @recipientEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipient email (optional)'**
+  String get recipientEmail;
+
+  /// No description provided for @trackingIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a request to follow someone’s trips — tracking starts once they accept.'**
+  String get trackingIntro;
+
+  /// No description provided for @trackingSendRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Request tracking'**
+  String get trackingSendRequest;
+
+  /// No description provided for @trackingAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted'**
+  String get trackingAccepted;
+
+  /// No description provided for @trackingDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'Declined'**
+  String get trackingDeclined;
+
+  /// No description provided for @trackingPendingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Request in progress'**
+  String get trackingPendingStatus;
+
+  /// No description provided for @trackingCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get trackingCancelled;
+
+  /// No description provided for @trackingSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search customers by name or email'**
+  String get trackingSearchHint;
+
+  /// No description provided for @trackingIncomingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking requests for you'**
+  String get trackingIncomingTitle;
+
+  /// No description provided for @trackingLiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Live now'**
+  String get trackingLiveTitle;
+
+  /// No description provided for @trackingPeopleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'People you can track'**
+  String get trackingPeopleTitle;
+
+  /// No description provided for @trackingLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked — you can follow their trips'**
+  String get trackingLinked;
+
+  /// No description provided for @trackingNotLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'Not linked'**
+  String get trackingNotLinked;
+
+  /// No description provided for @trackingStartsWhenActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking starts when their trip is active'**
+  String get trackingStartsWhenActive;
+
+  /// No description provided for @trackingTravelingNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Traveling now'**
+  String get trackingTravelingNow;
+
+  /// No description provided for @trackingFromGuide.
+  ///
+  /// In en, this message translates to:
+  /// **'{distance} from guide'**
+  String trackingFromGuide(Object distance);
+
+  /// No description provided for @trackingWithGuide.
+  ///
+  /// In en, this message translates to:
+  /// **'With guide'**
+  String get trackingWithGuide;
+
+  /// No description provided for @trackingDrifting.
+  ///
+  /// In en, this message translates to:
+  /// **'Drifting from guide'**
+  String get trackingDrifting;
+
+  /// No description provided for @trackingSeparated.
+  ///
+  /// In en, this message translates to:
+  /// **'Separated from guide'**
+  String get trackingSeparated;
+
+  /// No description provided for @trackingOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Signal offline'**
+  String get trackingOffline;
+
+  /// No description provided for @trackingWaitingSignal.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the first location…'**
+  String get trackingWaitingSignal;
+
+  /// No description provided for @trackingRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get trackingRefresh;
+
+  /// No description provided for @locationBackgroundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Background location needed'**
+  String get locationBackgroundTitle;
+
+  /// No description provided for @locationBackgroundBody.
+  ///
+  /// In en, this message translates to:
+  /// **'TOGT uses your location in the background to keep your trip protected. Please choose “Allow all the time”.'**
+  String get locationBackgroundBody;
+
+  /// No description provided for @alarmsVolumeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The azan plays on the alarm volume. If it is silent, raise Alarm volume in Settings → Sound.'**
+  String get alarmsVolumeHint;
 }
 
 class _AppLocalizationsDelegate
@@ -1732,7 +1944,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['am', 'ar', 'en'].contains(locale.languageCode);
+      <String>['am', 'ar', 'en', 'om'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -1747,6 +1959,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsAr();
     case 'en':
       return AppLocalizationsEn();
+    case 'om':
+      return AppLocalizationsOm();
   }
 
   throw FlutterError(

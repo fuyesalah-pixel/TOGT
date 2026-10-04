@@ -869,4 +869,115 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get updateInstalling => 'جارٍ تثبيت الإصدار الجديد…';
+
+  @override
+  String get oromiffa => 'الأورومو';
+
+  @override
+  String get umrahGift => 'عمرة كهدية';
+
+  @override
+  String get giftNote => 'أهدِ عمرة — برعاية كاملة أو نصفية لمن تحب.';
+
+  @override
+  String get giftCheckbox => 'هذه هدية';
+
+  @override
+  String get giftType => 'نوع الهدية';
+
+  @override
+  String get giftFull => 'هدية كاملة (100% يدفعها المرسل)';
+
+  @override
+  String get giftHalf => 'هدية نصفية (50% يدفعها المرسل)';
+
+  @override
+  String get giftHalfNote => 'يدفع المستلم الـ50% المتبقية قبل السفر.';
+
+  @override
+  String get recipientName => 'اسم المستلم الكامل';
+
+  @override
+  String get recipientPhone => 'هاتف المستلم';
+
+  @override
+  String get recipientEmail => 'بريد المستلم (اختياري)';
+
+  @override
+  String get trackingIntro =>
+      'أرسل طلبًا لمتابعة رحلات شخص ما — تبدأ المتابعة بعد موافقته.';
+
+  @override
+  String get trackingSendRequest => 'إرسال طلب متابعة';
+
+  @override
+  String get trackingAccepted => 'تم القبول';
+
+  @override
+  String get trackingDeclined => 'تم الرفض';
+
+  @override
+  String get trackingPendingStatus => 'الطلب قيد الانتظار';
+
+  @override
+  String get trackingCancelled => 'تم الإلغاء';
+
+  @override
+  String get trackingSearchHint =>
+      'ابحث عن العملاء بالاسم أو البريد الإلكتروني';
+
+  @override
+  String get trackingIncomingTitle => 'طلبات متابعة موجهة إليك';
+
+  @override
+  String get trackingLiveTitle => 'مباشر الآن';
+
+  @override
+  String get trackingPeopleTitle => 'أشخاص يمكنك متابقتهم';
+
+  @override
+  String get trackingLinked => 'مرتبط — يمكنك متابعة رحلاتهم';
+
+  @override
+  String get trackingNotLinked => 'غير مرتبط';
+
+  @override
+  String get trackingStartsWhenActive => 'تبدأ المتابعة عند بدء رحلتهم';
+
+  @override
+  String get trackingTravelingNow => 'في رحلة الآن';
+
+  @override
+  String trackingFromGuide(Object distance) {
+    return 'على بُعد $distance من المرشد';
+  }
+
+  @override
+  String get trackingWithGuide => 'مع المرشد';
+
+  @override
+  String get trackingDrifting => 'يبتعد عن المرشد';
+
+  @override
+  String get trackingSeparated => 'منفصل عن المرشد';
+
+  @override
+  String get trackingOffline => 'لا إشارة';
+
+  @override
+  String get trackingWaitingSignal => 'في انتظار أول موقع…';
+
+  @override
+  String get trackingRefresh => 'تحديث';
+
+  @override
+  String get locationBackgroundTitle => 'مطلوب إذن الموقع في الخلفية';
+
+  @override
+  String get locationBackgroundBody =>
+      'يستخدم TOGT موقعك في الخلفية لحماية رحلتك. اختر “Allow all the time”.';
+
+  @override
+  String get alarmsVolumeHint =>
+      'يستخدم الأذان مستوى صوت المنبه. إذا كان صامتًا ارفع مستوى صوت المنبه من الإعدادات → الصوت.';
 }

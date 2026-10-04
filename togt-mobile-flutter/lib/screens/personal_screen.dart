@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_compass/flutter_compass.dart';
@@ -367,13 +368,13 @@ class _Azkar {
 }
 
 const _morningAzkar = [
-  _Azkar(arabic: 'أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ. اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ...', transliteration: 'A\u2018ūdhu billāhi minash-shayṭānir-rajīm. Allāhu lā ilāha illā huwal-ḥayyul-qayyūm...', meaning: 'Ayat al-Kursi — whoever recites it in the morning is protected until evening.', count: 1),
-  _Azkar(arabic: 'قُلْ هُوَ اللَّهُ أَحَدٌ ۝ اللَّهُ الصَّمَدُ ۝ لَمْ يَلِدْ وَلَمْ يُولَدْ ۝ وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ', transliteration: 'Qul huwa Allāhu aḥad... (Sūrat al-Ikhlāṣ)', meaning: 'Recite 3 times — equals reciting the whole Quran.', count: 3),
-  _Azkar(arabic: 'قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ ۝ مِن شَرِّ مَا خَلَقَ...', transliteration: 'Qul a\u2018ūdhu birabbil-falaq... (Sūrat al-Falaq)', meaning: 'Recite 3 times for protection.', count: 3),
-  _Azkar(arabic: 'قُلْ أَعُوذُ بِرَبِّ النَّاسِ ۝ مَلِكِ النَّاسِ...', transliteration: 'Qul a\u2018ūdhu birabbin-nās... (Sūrat an-Nās)', meaning: 'Recite 3 times for protection.', count: 3),
+  _Azkar(arabic: 'أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ. اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ ۚ لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ ۚ لَهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ ۗ مَنْ ذَا الَّذِي يَشْفَعُ عِنْدَهُ إِلَّا بِإِذْنِهِ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَيْءٍ مِنْ عِلْمِهِ إِلَّا بِمَا شَاءَ ۚ وَسِعَ كُرْسِيُّهُ السَّمَاوَاتِ وَالْأَرْضَ ۖ وَلَا يَئُودُهُ حِفْظُهُمَا ۚ وَهُوَ الْعَلِيُّ الْعَظِيمُ', transliteration: 'A\u2018ūdhu billāhi minash-shayṭānir-rajīm. Allāhu lā ilāha illā huwal-ḥayyul-qayyūm... wa-lā ya\u2019ūduhu ḥifẓuhumā wa-huwal-\u2018aliyyul-\u2018aẓīm', meaning: 'Ayat al-Kursi (complete) — whoever recites it in the morning is protected until evening.', count: 1),
+  _Azkar(arabic: 'قُلْ هُوَ اللَّهُ أَحَدٌ ۝ اللَّهُ الصَّمَدُ ۝ لَمْ يَلِدْ وَلَمْ يُولَدْ ۝ وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ', transliteration: 'Qul huwa Allāhu aḥad, Allāhuṣ-ṣamad, lam yalid wa lam yūlad, wa lam yakul-lahu kufuwan aḥad (Sūrat al-Ikhlāṣ — complete)', meaning: 'Recite 3 times — equals reciting the whole Quran.', count: 3),
+  _Azkar(arabic: 'قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ ۝ مِن شَرِّ مَا خَلَقَ ۝ وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ ۝ وَمِن شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ ۝ وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ', transliteration: 'Qul a\u2018ūdhu birabbil-falaq, min sharri mā khalaq, wa min sharri ghāsiqin idhā waqab, wa min sharrin-naffāthāti fil-\u2018uqad, wa min sharri ḥāsidin idhā ḥasad (Sūrat al-Falaq — complete)', meaning: 'Recite 3 times for protection.', count: 3),
+  _Azkar(arabic: 'قُلْ أَعُوذُ بِرَبِّ النَّاسِ ۝ مَلِكِ النَّاسِ ۝ إِلَٰهِ النَّاسِ ۝ مِن شَرِّ الْوَسْوَاسِ الْخَنَّاسِ ۝ الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ ۝ مِنَ الْجِنَّةِ وَالنَّاسِ', transliteration: 'Qul a\u2018ūdhu birabbin-nās, malikin-nās, ilāhin-nās, min sharril-waswāsil-khannās, alladhī yuwaswisu fī ṣudūrin-nās, minal-jinnati wan-nās (Sūrat an-Nās — complete)', meaning: 'Recite 3 times for protection.', count: 3),
   _Azkar(arabic: 'أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لَا إِلَٰهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ', transliteration: 'Aṣbaḥnā wa aṣbaḥal-mulku lillāh...', meaning: 'We have entered the morning and with it all dominion belongs to Allah.', count: 1),
   _Azkar(arabic: 'اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ النُّشُورُ', transliteration: 'Allāhumma bika aṣbaḥnā...', meaning: 'O Allah, by You we enter the morning and evening, live and die, and to You is the resurrection.', count: 1),
-  _Azkar(arabic: 'اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَٰهَ إِلَّا أَنْتَ، خَلَقْتَنِي وَأَنَا عَبْدُكَ...', transliteration: 'Allāhumma anta rabbī lā ilāha illā anta... (Sayyid al-Istighfār)', meaning: 'The master of supplications — said once in the morning.', count: 1),
+  _Azkar(arabic: 'اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَٰهَ إِلَّا أَنْتَ، خَلَقْتَنِي وَأَنَا عَبْدُكَ، وَأَنَا عَلَىٰ عَهْدِكَ وَوَعْدِكَ مَا اسْتَطَعْتُ، أَعُوذُ بِكَ مِنْ شَرِّ مَا صَنَعْتُ، أَبُوءُ لَكَ بِنِعْمَتِكَ عَلَيَّ، وَأَبُوءُ بِذَنْبِي فَاغْفِرْ لِي، فَإِنَّهُ لَا يَغْفِرُ الذُّنُوبَ إِلَّا أَنْتَ', transliteration: 'Allāhumma anta rabbī lā ilāha illā anta... fa-innahū lā yaghfirudh-dhunūba illā anta (Sayyid al-Istighfār — complete)', meaning: 'The master of supplications — said once in the morning.', count: 1),
   _Azkar(arabic: 'اللَّهُمَّ إِنِّي أَسْأَلُكَ عِلْمًا نَافِعًا، وَرِزْقًا طَيِّبًا، وَعَمَلًا مُتَقَبَّلًا', transliteration: 'Allāhumma innī as\u2019aluka \u2018ilman nāfi\u2018an...', meaning: 'O Allah, I ask You for beneficial knowledge, pure provision, and accepted deeds.', count: 1),
   _Azkar(arabic: 'رَضِيتُ بِاللَّهِ رَبًّا، وَبِالْإِسْلَامِ دِينًا، وَبِمُحَمَّدٍ ﷺ نَبِيًّا', transliteration: 'Raḍītu billāhi rabbā...', meaning: 'I am pleased with Allah as my Lord, Islam as my religion, and Muhammad as my Prophet.', count: 3),
   _Azkar(arabic: 'بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ', transliteration: 'Bismillāhil-ladhī lā yaḍurru...', meaning: 'Nothing will harm you by Allah\u2019s name.', count: 3),
@@ -411,7 +412,7 @@ const _travelAzkar = [
 const _sleepAzkar = [
   _Azkar(arabic: 'بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا', transliteration: 'Bismika Allāhumma amūtu wa aḥyā', meaning: 'In Your name, O Allah, I die and I live.', count: 1),
   _Azkar(arabic: 'اللَّهُمَّ أَسْلَمْتُ نَفْسِي إِلَيْكَ، وَوَجَّهْتُ وَجْهِي إِلَيْكَ، وَفَوَّضْتُ أَمْرِي إِلَيْكَ', transliteration: 'Allāhumma aslamtu nafsī ilayk...', meaning: 'The Prophet\u2019s ﷺ bedtime dua.', count: 1),
-  _Azkar(arabic: 'قراءة آية الكرسي: اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ...', transliteration: 'Āyat al-Kursī', meaning: 'Whoever recites it before sleep has a guardian from Allah all night.', count: 1),
+  _Azkar(arabic: 'اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ ۚ لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ ۚ لَهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ ۗ مَنْ ذَا الَّذِي يَشْفَعُ عِنْدَهُ إِلَّا بِإِذْنِهِ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَيْءٍ مِنْ عِلْمِهِ إِلَّا بِمَا شَاءَ ۚ وَسِعَ كُرْسِيُّهُ السَّمَاوَاتِ وَالْأَرْضَ ۖ وَلَا يَئُودُهُ حِفْظُهُمَا ۚ وَهُوَ الْعَلِيُّ الْعَظِيمُ', transliteration: 'Āyat al-Kursī (complete) — Allāhu lā ilāha illā huwa... wa-huwal-\u2018aliyyul-\u2018aẓīm', meaning: 'Whoever recites it before sleep has a guardian from Allah all night.', count: 1),
   _Azkar(arabic: 'قراءة الإخلاص والمعوذتين ثم مسح الجسد بالكفين', transliteration: 'Al-Ikhlāṣ, al-Falaq, an-Nās (×3, wipe over body)', meaning: 'The Prophet\u2019s ﷺ nightly protection — cup hands, recite, wipe over body three times.', count: 3),
   _Azkar(arabic: 'سُبْحَانَ اللَّهِ (33) الْحَمْدُ لِلَّهِ (33) اللَّهُ أَكْبَرُ (34)', transliteration: 'Subḥānallāh ×33, Alḥamdulillāh ×33, Allāhu akbar ×34', meaning: 'The bedtime tasbih — better than a servant for you.', count: 100),
   _Azkar(arabic: 'اللَّهُمَّ قِنِي عَذَابَكَ يَوْمَ تَبْعَثُ عِبَادَكَ', transliteration: 'Allāhumma qinī \u2018adhābaka yawma tab\u2018athu \u2018ibādak', meaning: 'Said three times when lying down.', count: 3),
@@ -433,10 +434,10 @@ const _commonAzkar = [
   _Azkar(arabic: 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ', transliteration: 'Rabbanā ātinā fid-dunyā ḥasanah...', meaning: 'The most frequent dua of the Quran.', count: 1),
   _Azkar(arabic: 'اللَّهُمَّ إِنِّي أَسْأَلُكَ الْجَنَّةَ وَأَعُوذُ بِكَ مِنَ النَّارِ', transliteration: 'Allāhumma innī as\u2019alukal-jannah...', meaning: 'Ask for Paradise and refuge from the Fire.', count: 1),
 ];
-
-/// A real misbaha-style dial: 33 beads arranged in a ring, a rotating pointer,
-/// and the current count in the middle. Each tap advances one bead with a
-/// haptic tick; the ring visually completes at 33 and keeps counting.
+/// A lifelike handheld tasbih (misbaha): a real wire loop threaded with 33
+/// amber wooden beads, a bigger imam (leader) bead with a metal cap, and a
+/// hanging tassel. Beads slide along the wire as you tap — every 33 taps one
+/// full lap has passed through your fingers.
 class _TasbihDial extends StatelessWidget {
   const _TasbihDial({required this.count, required this.onTap});
 
@@ -445,93 +446,153 @@ class _TasbihDial extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final completed = count % 33 == 0 && count > 0;
+    final inLoop = count % 33;
+    final completed = inLoop == 0 && count > 0;
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 280,
-        height: 280,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: completed ? TOGTColors.orangeGradient : TOGTColors.blueGradient,
-          boxShadow: [
-            BoxShadow(
-              color: (completed ? TOGTColors.orange : TOGTColors.blue).withOpacity(.35),
-              blurRadius: 28,
-              spreadRadius: 2,
+      child: SizedBox(
+        width: 300,
+        height: 340,
+        child: Stack(
+          alignment: Alignment.topCenter,
+          children: [
+            // The wire + beads artwork.
+            CustomPaint(
+              size: const Size(300, 340),
+              painter: _WireTasbihPainter(done: completed ? 33 : inLoop, total: 33),
             ),
-          ],
-        ),
-        child: AnimatedRotation(
-          turns: count / 33,
-          duration: const Duration(milliseconds: 320),
-          curve: Curves.easeOutCubic,
-          child: CustomPaint(
-            painter: _TasbihPainter(progress: (count % 33) / 33, completed: completed),
-            child: Center(
+            // The count floats inside the loop, like fingers holding the misbaha.
+            Positioned(
+              top: 96,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     '$count',
-                    style: const TextStyle(fontSize: 56, color: TOGTColors.white, fontWeight: FontWeight.w800),
+                    style: TextStyle(
+                      fontSize: 52,
+                      fontWeight: FontWeight.w800,
+                      color: completed ? TOGTColors.orange : const Color(0xFF12394F),
+                      height: 1.0,
+                    ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
-                    '${count % 33}/33',
-                    style: TextStyle(fontSize: 14, color: TOGTColors.white.withOpacity(.75), fontWeight: FontWeight.w600),
+                    '$inLoop / 33',
+                    style: TOGTTypography.small.copyWith(color: TOGTColors.grey, fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _TasbihPainter extends CustomPainter {
-  const _TasbihPainter({required this.progress, required this.completed});
-  final double progress;
-  final bool completed;
+/// Draws the tasbih: warm brass wire loop, wood-grain beads with specular
+/// highlights, an imam bead with a metal cap at the top, and a tassel.
+class _WireTasbihPainter extends CustomPainter {
+  const _WireTasbihPainter({required this.done, required this.total});
+
+  final int done;
+  final int total;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 22;
+    final center = Offset(size.width / 2, size.height * 0.42);
+    final radius = size.width * 0.38;
 
-    // Progress arc
-    final arcPaint = Paint()
+    // ── Wire: warm brass cable with a subtle sheen ─────────────────────────
+    final wire = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 5
+      ..strokeWidth = 4.5
       ..strokeCap = StrokeCap.round
-      ..color = TOGTColors.orange;
-    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), -math.pi / 2, 2 * math.pi * progress, false, arcPaint);
+      ..shader = ui.Gradient.linear(
+        Offset(center.dx - radius, center.dy - radius),
+        Offset(center.dx + radius, center.dy + radius),
+        const [Color(0xFFB98A4B), Color(0xFFE0B372), Color(0xFF9A6E35)],
+      );
+    canvas.drawCircle(center, radius, wire);
+    final sheen = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..color = Colors.white.withOpacity(.28);
+    canvas.drawCircle(center, radius - 1.5, sheen);
 
-    // 33 beads
-    const beads = 33;
-    final beadPaint = Paint()..color = TOGTColors.white.withOpacity(.92);
-    final doneBeadPaint = Paint()..color = TOGTColors.orange;
-    final highlightPaint = Paint()
-      ..color = TOGTColors.white.withOpacity(.35)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-    for (var i = 0; i < beads; i++) {
-      final angle = -math.pi / 2 + (2 * math.pi * i / beads);
+    // ── Beads: 33 wooden beads threaded on the wire ────────────────────────
+    final beadRadius = (2 * math.pi * radius) / total * 0.42;
+    for (var i = 0; i < total; i++) {
+      final angle = -math.pi / 2 + (2 * math.pi * i / total);
       final position = Offset(center.dx + radius * math.cos(angle), center.dy + radius * math.sin(angle));
-      final done = i < (progress == 0 ? (completed ? beads : 0) : progress * beads);
-      canvas.drawCircle(position, 5.5, done ? doneBeadPaint : beadPaint);
-      canvas.drawCircle(position - const Offset(1.5, 1.5), 2, highlightPaint);
+      final isDone = i < done;
+      // Softly blurred fill gives the wood-grain depth.
+      final beadPaint = Paint()
+        ..color = isDone ? const Color(0xFFB34700) : const Color(0xFF8A5A2B)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.6);
+      canvas.drawCircle(position, beadRadius, beadPaint);
+      // Highlight gives the bead its polished 3D look.
+      canvas.drawCircle(
+        position - Offset(beadRadius * .3, beadRadius * .35),
+        beadRadius * .3,
+        Paint()..color = Colors.white.withOpacity(isDone ? .5 : .32),
+      );
+      // Thin dark rim separates beads from the wire.
+      canvas.drawCircle(
+        position,
+        beadRadius,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = const Color(0xFF3E2A12).withOpacity(.55),
+      );
     }
 
-    // Decorative inner ring
-    final innerPaint = Paint()
+    // ── Imam bead + metal cap at the top of the loop ───────────────────────
+    final imam = Offset(center.dx, center.dy - radius);
+    canvas.drawCircle(imam, beadRadius * 1.55, Paint()..color = const Color(0xFF6E4520));
+    canvas.drawCircle(
+      imam - Offset(beadRadius * .35, beadRadius * .4),
+      beadRadius * .45,
+      Paint()..color = Colors.white.withOpacity(.4),
+    );
+    canvas.drawCircle(
+      imam,
+      beadRadius * 1.55,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = const Color(0xFF3E2A12).withOpacity(.6),
+    );
+    final cap = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset(imam.dx - 6, imam.dy - 12),
+        Offset(imam.dx + 6, imam.dy - 4),
+        const [Color(0xFFF0D9A0), Color(0xFFB98A4B)],
+      );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: imam - Offset(0, beadRadius * 1.75), width: beadRadius * 1.7, height: beadRadius * 0.8),
+        const Radius.circular(2),
+      ),
+      cap,
+    );
+
+    // ── Tassel hanging from the imam bead ──────────────────────────────────
+    final tasselTop = Offset(imam.dx, imam.dy + beadRadius * 1.6);
+    final tasselPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..color = TOGTColors.white.withOpacity(.25);
-    canvas.drawCircle(center, radius - 16, innerPaint);
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(0xFFB34700).withOpacity(.85);
+    for (final dx in [-3.0, -1.0, 0.0, 1.0, 3.0]) {
+      canvas.drawLine(tasselTop, Offset(imam.dx + dx, tasselTop.dy + 22 + (dx == 0 ? 6.0 : 0)), tasselPaint);
+    }
+    canvas.drawCircle(tasselTop, 2.2, Paint()..color = const Color(0xFFB98A4B));
   }
 
   @override
-  bool shouldRepaint(covariant _TasbihPainter oldDelegate) =>
-      oldDelegate.progress != progress || oldDelegate.completed != completed;
+  bool shouldRepaint(covariant _WireTasbihPainter oldDelegate) =>
+      oldDelegate.done != done || oldDelegate.total != total;
 }

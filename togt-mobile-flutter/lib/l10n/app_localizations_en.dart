@@ -875,4 +875,117 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateInstalling => 'Installing the new version…';
+
+  @override
+  String get oromiffa => 'Afaan Oromoo';
+
+  @override
+  String get umrahGift => 'Umrah Gift';
+
+  @override
+  String get giftNote =>
+      'Give Umrah as a gift — full or half-sponsored for someone you love.';
+
+  @override
+  String get giftCheckbox => 'This is a gift';
+
+  @override
+  String get giftType => 'Gift type';
+
+  @override
+  String get giftFull => 'Full gift (100% paid by sender)';
+
+  @override
+  String get giftHalf => 'Half gift (50% paid by sender)';
+
+  @override
+  String get giftHalfNote =>
+      'The recipient pays the remaining 50% before travel.';
+
+  @override
+  String get recipientName => 'Recipient full name';
+
+  @override
+  String get recipientPhone => 'Recipient phone';
+
+  @override
+  String get recipientEmail => 'Recipient email (optional)';
+
+  @override
+  String get trackingIntro =>
+      'Send a request to follow someone’s trips — tracking starts once they accept.';
+
+  @override
+  String get trackingSendRequest => 'Request tracking';
+
+  @override
+  String get trackingAccepted => 'Accepted';
+
+  @override
+  String get trackingDeclined => 'Declined';
+
+  @override
+  String get trackingPendingStatus => 'Request in progress';
+
+  @override
+  String get trackingCancelled => 'Cancelled';
+
+  @override
+  String get trackingSearchHint => 'Search customers by name or email';
+
+  @override
+  String get trackingIncomingTitle => 'Tracking requests for you';
+
+  @override
+  String get trackingLiveTitle => 'Live now';
+
+  @override
+  String get trackingPeopleTitle => 'People you can track';
+
+  @override
+  String get trackingLinked => 'Linked — you can follow their trips';
+
+  @override
+  String get trackingNotLinked => 'Not linked';
+
+  @override
+  String get trackingStartsWhenActive =>
+      'Tracking starts when their trip is active';
+
+  @override
+  String get trackingTravelingNow => 'Traveling now';
+
+  @override
+  String trackingFromGuide(Object distance) {
+    return '$distance from guide';
+  }
+
+  @override
+  String get trackingWithGuide => 'With guide';
+
+  @override
+  String get trackingDrifting => 'Drifting from guide';
+
+  @override
+  String get trackingSeparated => 'Separated from guide';
+
+  @override
+  String get trackingOffline => 'Signal offline';
+
+  @override
+  String get trackingWaitingSignal => 'Waiting for the first location…';
+
+  @override
+  String get trackingRefresh => 'Refresh';
+
+  @override
+  String get locationBackgroundTitle => 'Background location needed';
+
+  @override
+  String get locationBackgroundBody =>
+      'TOGT uses your location in the background to keep your trip protected. Please choose “Allow all the time”.';
+
+  @override
+  String get alarmsVolumeHint =>
+      'The azan plays on the alarm volume. If it is silent, raise Alarm volume in Settings → Sound.';
 }

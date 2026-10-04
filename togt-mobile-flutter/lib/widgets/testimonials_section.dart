@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 
 import '../models/review_item.dart';
+import '../services/api_service.dart';
 import '../services/content_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
@@ -196,6 +197,10 @@ class StaggeredTestimonialCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text('“${review.text}”',
                 style: TOGTTypography.body.copyWith(color: TOGTColors.navy)),
+            if (review.imageUrls.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _ReviewPhotoRow(imageUrls: review.imageUrls),
+            ],
             const SizedBox(height: 16),
             Row(
               children: [
@@ -239,6 +244,44 @@ class StaggeredTestimonialCard extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Photos attached to a review — resolved against the web origin (uploads
+/// return paths like `/uploads/reviews/…`) and tappable for full screen.
+class _ReviewPhotoRow extends StatelessWidget {
+  const _ReviewPhotoRow({required this.imageUrls});
+
+  final List<String> imageUrls;
+
+  @override
+  Widget build(BuildContext context) {
+    final urls = imageUrls.where((url) => !url.toLowerCase().endsWith('.pdf')).toList();
+    if (urls.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 88,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: urls.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) => GestureDetector(
+          onTap: () => showDialog(
+            context: context,
+            builder: (_) => Dialog(backgroundColor: Colors.black, child: InteractiveViewer(maxScale: 4, child: Image.network(ApiService.instance.resolveImageUrl(urls[i])))),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              ApiService.instance.resolveImageUrl(urls[i]),
+              width: 88,
+              height: 88,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(width: 88, height: 88, color: TOGTColors.grey.withOpacity(.15), child: const Icon(Icons.broken_image_outlined, color: TOGTColors.grey)),
+            ),
+          ),
         ),
       ),
     );

@@ -84,6 +84,13 @@ class PrayerService {
     await notifications
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
+    // Full-screen alarm intents need the special USE_FULL_SCREEN_INTENT grant
+    // on Android 14+ — request it so alarms break through silently-dropped    //    notifications instead of never showing at all.
+    try {
+      await notifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestFullScreenIntentPermission();
+    } catch (_) {}
     _ready = true;
   }
 
@@ -104,6 +111,11 @@ class PrayerService {
       priority: Priority.max,
       sound: RawResourceAndroidNotificationSound('azan'),
       playSound: true,
+      // Alarms must be heard even when the phone is silent or in Do Not
+      // Disturb: route the sound through the ALARM stream and mark the
+      // notification as an alarm so the OS can break through DND.
+      audioAttributesUsage: AudioAttributesUsage.alarm,
+      showWhen: false,
       fullScreenIntent: true,
       category: AndroidNotificationCategory.alarm,
       visibility: NotificationVisibility.public,
@@ -113,7 +125,7 @@ class PrayerService {
       sound: 'azan.mp3',
       presentSound: true,
       presentAlert: true,
-      interruptionLevel: InterruptionLevel.timeSensitive,
+      interruptionLevel: InterruptionLevel.critical,
     );
     return const NotificationDetails(android: android, iOS: ios);
   }

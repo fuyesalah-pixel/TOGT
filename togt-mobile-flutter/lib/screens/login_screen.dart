@@ -47,6 +47,9 @@ class _LoginScreenState extends State<LoginScreen>
       final navigatorContext = AppNavigator.navigatorKey.currentContext;
       if (navigatorContext != null && navigatorContext.mounted) {
         PermissionService.instance.runAfterLogin(navigatorContext);
+        // Location is re-verified on EVERY login: if it was turned off we
+        // ask again (with a settings redirect when the OS dialog is gone).
+        PermissionService.instance.ensureLocationOnVisit(navigatorContext);
       }
       // Register this device for push (support chat, admin messages,
       // reminders) — tokens must be sent after the session exists.

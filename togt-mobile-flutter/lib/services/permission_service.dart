@@ -25,6 +25,7 @@ class PermissionService {
 
   static const _channel = MethodChannel('togt/permissions');
   static const _askedKey = 'togt_permissions_intro_shown';
+  static const _backgroundKey = 'togt_background_location_explained';
 
   final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
   bool _prompting = false;
@@ -63,6 +64,99 @@ class PermissionService {
   Future<bool> get hasCompletedIntro async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_askedKey) ?? false;
+  }
+
+  /// LOCATION IS SPECIAL: tracking and prayer tools only work when it is ON,
+  /// so unlike the other permissions this one is re-checked on EVERY visit.
+  /// If the user turned location off (or permanently denied it), we ask again
+  /// with an explainer and — when the OS no longer shows the dialog — take
+  /// them straight to the app's settings page. Call right after login.
+  Future<void> ensureLocationOnVisit(BuildContext context) async {
+    if (_prompting) return;
+    try {
+      final permission = await Geolocator.checkPermission();
+      final serviceOn = await Geolocator.isLocationServiceEnabled();
+      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+        // Granted — now push for "Allow all the time" so trip tracking keeps
+        // working off-screen (background location). Explained once.
+        if (permission != LocationPermission.always && context.mounted) await _askBackgroundLocation(context);
+        return;
+      }
+      if (serviceOn && permission == LocationPermission.denied) {
+        // OS dialog is still available — request directly.
+        await Geolocator.requestPermission();
+        final after = await Geolocator.checkPermission();
+        if (after == LocationPermission.whileInUse && context.mounted) await _askBackgroundLocation(context);
+        return;
+      }
+      // Permanently denied (or service off): dialog → system settings.
+      if (!context.mounted) return;
+      final l10n = AppLocalizations.of(context);
+      final proceed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          title: Row(children: [
+            Container(
+              padding: const EdgeInsets.all(9),
+              decoration: BoxDecoration(gradient: TOGTColors.blueGradient, borderRadius: BorderRadius.circular(12)),
+              child: const Icon(Icons.location_on_rounded, color: TOGTColors.white, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Text(l10n.locationBackgroundTitle, style: TOGTTypography.h3)),
+          ]),
+          content: Text(l10n.locationBackgroundBody, style: TOGTTypography.body),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(l10n.permissionLater)),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: TOGTColors.orange),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(l10n.permissionOpenSettings),
+            ),
+          ],
+        ),
+      );
+      if (proceed == true) await openAppSettings();
+    } catch (_) {
+      // Never block login because of a permission crash.
+    }
+  }
+
+  /// One-time explainer for upgrading to background ("Allow all the time")
+  /// location, then a redirect to the settings page where Android exposes it.
+  Future<void> _askBackgroundLocation(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_backgroundKey) ?? false) return;
+    await prefs.setBool(_backgroundKey, true);
+    if (!context.mounted) return;
+    final l10n = AppLocalizations.of(context);
+    final proceed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: Row(children: [
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(gradient: TOGTColors.blueGradient, borderRadius: BorderRadius.circular(12)),
+            child: const Icon(Icons.travel_explore_rounded, color: TOGTColors.white, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Text(l10n.locationBackgroundTitle, style: TOGTTypography.h3)),
+        ]),
+        content: Text(l10n.locationBackgroundBody, style: TOGTTypography.body),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(l10n.permissionLater)),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: TOGTColors.orange),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(l10n.permissionOpenSettings),
+          ),
+        ],
+      ),
+    );
+    if (proceed == true) await openAppSettings();
   }
 
   /// Reset the stored state so the next login shows the permission flow again.
