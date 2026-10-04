@@ -170,17 +170,32 @@ export class ServiceRequestsService {
     return request;
   }
 
+  /**
+   * Set the payable amount. Staff-only by design: the customer must never
+   * price their own request — they wait for the team, then pay. When the
+   * amount is first set the customer is notified so they know they can pay.
+   */
   async setAmount(id: string, amount: number, actor: User) {
     if (!Number.isFinite(amount) || amount <= 0) throw new ForbiddenException('Amount must be greater than zero');
-    if (!(new Set<Role>([Role.CUSTOMER, Role.WORKER, Role.ADMIN])).has(actor.role)) throw new ForbiddenException('Not allowed');
+    if (actor.role !== Role.WORKER && actor.role !== Role.ADMIN) throw new ForbiddenException('Only our team can set the payment amount');
     const request = await this.prisma.serviceRequest.findUnique({ where: { id } });
-    if (!request || (actor.role === Role.CUSTOMER && request.userId !== actor.id)) throw new ForbiddenException('Request not found');
+    if (!request) throw new NotFoundException('Service request not found');
     if (request.paymentStatus !== 'UNPAID') throw new ForbiddenException('Only unpaid requests can be updated');
     if (request.packageId) {
       const pkg = await this.prisma.package.findUnique({ where: { id: request.packageId }, select: { price: true } });
       if (pkg?.price != null && Math.abs(pkg.price - amount) > 0.01) throw new ForbiddenException('This package has a fixed price');
     }
-    return this.prisma.serviceRequest.update({ where: { id }, data: { amount } });
+    const isFirstQuote = request.amount == null;
+    const updated = await this.prisma.serviceRequest.update({ where: { id }, data: { amount } });
+    if (isFirstQuote) {
+      await this.notifications.notifyUser(request.userId, {
+        title: 'Payment amount set',
+        message: `The cost of your ${request.serviceType.replace('_', ' ').toLowerCase()} request has been set to ${amount.toString()} ${request.currency}. Open the request to pay.`,
+        type: 'STATUS_UPDATE',
+      });
+      this.gateway.emitToUser(request.userId, 'requestStatusUpdated', { request: updated, changedBy: actor.fullName, notes: `Payment amount set: ${amount} ${request.currency}` });
+    }
+    return updated;
   }
 
   async getHistory(id: string, actor: User) {

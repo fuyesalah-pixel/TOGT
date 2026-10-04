@@ -31,7 +31,7 @@ export class ServiceRequestsController {
   }
 
   @Patch(':id/amount')
-  @Roles(Role.CUSTOMER, Role.WORKER, Role.ADMIN)
+  @Roles(Role.WORKER, Role.ADMIN)
   setAmount(@Param('id') id: string, @Body('amount') amount: number, @CurrentUser() user: User) {
     return this.serviceRequests.setAmount(id, amount, user);
   }

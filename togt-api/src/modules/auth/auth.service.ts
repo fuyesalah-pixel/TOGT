@@ -148,7 +148,7 @@ export class AuthService {
       Object.assign(user, promoted);
     }
     const accessTtl = this.config.get<number>('jwt.accessTtl') ?? 900;
-    const refreshTtl = this.config.get<number>('jwt.refreshTtl') ?? 604800;
+    const refreshTtl = this.config.get<number>('jwt.refreshTtl') ?? 2_592_000; // 30 days
     const refreshJti = randomUUID();
 
     const accessToken = this.jwt.sign(
@@ -173,7 +173,9 @@ export class AuthService {
       path: '/',
     };
     res.cookie(ACCESS_COOKIE, tokens.accessToken, { ...base, maxAge: 15 * 60 * 1000 });
-    res.cookie(REFRESH_COOKIE, tokens.refreshToken, { ...base, maxAge: 7 * 24 * 60 * 60 * 1000 });
+    // Keep the session alive for a month: the client rotates this cookie on
+    // every refresh, so 30 days of inactivity is what logs a user out.
+    res.cookie(REFRESH_COOKIE, tokens.refreshToken, { ...base, maxAge: 30 * 24 * 60 * 60 * 1000 });
   }
 
   clearAuthCookies(res: Response) {

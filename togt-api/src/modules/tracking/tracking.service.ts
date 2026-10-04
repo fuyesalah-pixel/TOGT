@@ -38,6 +38,12 @@ export class TrackingService {
     if (targetId === actor.id) throw new BadRequestException('You cannot track yourself');
     const target = await this.prisma.user.findFirst({ where: { id: targetId, status: 'ACTIVE', role: Role.CUSTOMER }, select: { id: true, fullName: true } });
     if (!target) throw new NotFoundException('Customer not found');
+    // An already-accepted link is never downgraded by re-sending — only a
+    // PENDING / DECLINED / CANCELLED request is reset to PENDING.
+    const existing = await this.prisma.trackingRequest.findUnique({ where: { requesterId_targetId: { requesterId: actor.id, targetId } } });
+    if (existing?.status === TrackingRequestStatus.ACCEPTED) {
+      return { id: existing.id, targetId, status: existing.status, targetName: target.fullName };
+    }
     const request = await this.prisma.trackingRequest.upsert({
       where: { requesterId_targetId: { requesterId: actor.id, targetId } },
       create: { requesterId: actor.id, targetId },
@@ -57,7 +63,14 @@ export class TrackingService {
     const request = await this.prisma.trackingRequest.findUnique({ where: { id: requestId }, include: { requester: { select: { id: true, fullName: true } }, target: { select: { id: true, fullName: true } } } });
     if (!request) throw new NotFoundException('Tracking request not found');
     if (request.targetId !== actor.id) throw new ForbiddenException('Only the recipient can respond');
-    if (request.status !== TrackingRequestStatus.PENDING) throw new BadRequestException(`This request was already ${request.status.toLowerCase()}`);
+    if (request.status !== TrackingRequestStatus.PENDING) {
+      // Idempotent by design: a stale double-tap or an outdated list must not
+      // error — re-confirming the same answer returns the same result.
+      if ((accept && request.status === TrackingRequestStatus.ACCEPTED) || (!accept && request.status === TrackingRequestStatus.DECLINED)) {
+        return request;
+      }
+      throw new BadRequestException(`This request was already ${request.status.toLowerCase()}`);
+    }
     const updated = await this.prisma.trackingRequest.update({ where: { id: requestId }, data: { status: accept ? TrackingRequestStatus.ACCEPTED : TrackingRequestStatus.DECLINED, respondedAt: new Date() } });
     await this.notifications.notifyUser(request.requesterId, {
       title: accept ? 'Tracking approved' : 'Tracking declined',
@@ -88,7 +101,7 @@ export class TrackingService {
     };
     const [sent, received] = await Promise.all([
       this.prisma.trackingRequest.findMany({ where: { requesterId: actor.id, status: { not: TrackingRequestStatus.CANCELLED } }, include: { target: { select: { id: true, fullName: true, email: true } } }, orderBy: { createdAt: 'desc' } }),
-      this.prisma.trackingRequest.findMany({ where: { targetId: actor.id, status: TrackingRequestStatus.PENDING }, include: { requester: { select: { id: true, fullName: true, email: true } } }, orderBy: { createdAt: 'desc' } }),
+      this.prisma.trackingRequest.findMany({ where: { targetId: actor.id, status: { in: [TrackingRequestStatus.PENDING, TrackingRequestStatus.DECLINED] } }, include: { requester: { select: { id: true, fullName: true, email: true } } }, orderBy: { createdAt: 'desc' } }),
     ]);
     return { sent: sent.map((request) => map(request, 'sent')), received: received.map((request) => map(request, 'received')) };
   }
