@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { LuxuryVideoPlayer } from "./luxury-video";
@@ -9,11 +9,15 @@ const EASE = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
 export function About() {
   const t = useTranslations("About");
+  const locale = useLocale();
   const settings = useSiteSettings();
 
   const videoUrl = settings.ABOUT_VIDEO_URL.trim() || null;
-  // Admin-managed text (ABOUT_TEXT) overrides the translated default when set.
-  const body = settings.ABOUT_TEXT.trim() || t("body");
+  // Admin-managed text (ABOUT_TEXT) overrides the translated default when
+  // set. On ar/am/om the auto-translated copy stored at save time is served;
+  // it falls back to the source text until the AI translation has landed.
+  const stored = locale === "ar" ? settings.ABOUT_TEXT_AR : locale === "am" ? settings.ABOUT_TEXT_AM : locale === "om" ? settings.ABOUT_TEXT_OM : "";
+  const body = (locale === "en" ? settings.ABOUT_TEXT : stored.trim() || settings.ABOUT_TEXT.trim()) || t("body");
 
   return (
     <section id="about" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">

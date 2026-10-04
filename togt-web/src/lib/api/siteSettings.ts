@@ -6,6 +6,9 @@ export type SiteSettings = {
   TICKETING_ENABLED: string;
   ABOUT_VIDEO_URL: string;
   ABOUT_TEXT: string;
+  ABOUT_TEXT_AR: string;
+  ABOUT_TEXT_AM: string;
+  ABOUT_TEXT_OM: string;
 };
 
 export type SiteSettingRow = { key: string; value: string; updatedAt: string | null; updatedBy: string | null };
