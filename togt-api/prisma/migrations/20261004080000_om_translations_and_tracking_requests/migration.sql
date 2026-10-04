@@ -30,7 +30,7 @@ CREATE TABLE "TrackingRequest" (
     CONSTRAINT "TrackingRequest_pkey" PRIMARY KEY ("id")
 );
 
-CREATE UNIQUE INDEX "TrackingRequest_requesterId_targetId_key" ON "TrackingRequest"("requesterId" TEXT, "targetId" TEXT);
+CREATE UNIQUE INDEX "TrackingRequest_requesterId_targetId_key" ON "TrackingRequest"("requesterId", "targetId");
 CREATE INDEX "TrackingRequest_targetId_status_idx" ON "TrackingRequest"("targetId", "status");
 
 ALTER TABLE "TrackingRequest" ADD CONSTRAINT "TrackingRequest_requesterId_fkey" FOREIGN KEY ("requesterId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
