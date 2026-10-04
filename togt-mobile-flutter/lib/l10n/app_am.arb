@@ -311,5 +311,9 @@
   "trackingRefresh": "አድስ",
   "locationBackgroundTitle": "የአካባቢ ፈቃድ ያስፈልጋል",
   "locationBackgroundBody": "TOGT ጉዞዎ ደህንነቱ እንዲጠበቅ አካባቢዎን በዳራ ላይ ይጠቀማል። “Allow all the time” ይምረጡ።",
-  "alarmsVolumeHint": "አዛን የማንቂያ ድምፅ ይጠቀማል። ከሆነ የማንቂያ ድምፅን በ Settings → Sound ያሳድጉ።"
+  "alarmsVolumeHint": "አዛን የማንቂያ ድምፅ ይጠቀማል። ከሆነ የማንቂያ ድምፅን በ Settings → Sound ያሳድጉ።",
+  "tasbih": "ተስቢሕ",
+  "paymentNotSetYet": "ክፍያው ገና አልተወሰነም — ወጪዎን እስኪያወስን እባክዎ ይጠብቁ።",
+  "reviewSubmittedThanks": "እናመሰግናለን! ግምገማዎ ተልኳል።",
+  "reviewSubmittedNoPhotos": "እናመሰግናለን! ግምገማዎ ተልኳል፣ ነገር ግን {count} ፎቶዎች መላክ አልተቻሉም።"
 }

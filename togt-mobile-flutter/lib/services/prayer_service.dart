@@ -91,6 +91,15 @@ class PrayerService {
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
           ?.requestFullScreenIntentPermission();
     } catch (_) {}
+    // Android freezes notification-channel settings at creation — the legacy
+    // channel shipped with a custom sound that could be missing, leaving
+    // alarms silent. The channel id was bumped (see _details) and the old
+    // channel is removed so only the system-ringtone channel remains.
+    try {
+      await notifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.deleteNotificationChannel(channelId: 'azan_channel');
+    } catch (_) {}
     _ready = true;
   }
 
@@ -103,17 +112,19 @@ class PrayerService {
   }
 
   NotificationDetails get _details {
+    // Use the SYSTEM ringtone (no custom sound file): a missing/misnamed
+    // custom asset can end up silently — the device's default alarm sound is
+    // always present and always audible.
     const android = AndroidNotificationDetails(
-      'azan_channel',
+      'azan_alarms_v2',
       'Azan Alarms',
       channelDescription: 'Prayer time notifications',
       importance: Importance.max,
       priority: Priority.max,
-      sound: RawResourceAndroidNotificationSound('azan'),
       playSound: true,
-      // Alarms must be heard even when the phone is silent or in Do Not
-      // Disturb: route the sound through the ALARM stream and mark the
-      // notification as an alarm so the OS can break through DND.
+      // No `sound:` → falls back to the system default notification/alarm
+      // sound. Route it through the ALARM stream and mark the notification as
+      // an alarm so the OS plays it even in silent mode and breaks through DND.
       audioAttributesUsage: AudioAttributesUsage.alarm,
       showWhen: false,
       fullScreenIntent: true,
@@ -122,9 +133,9 @@ class PrayerService {
       autoCancel: true,
     );
     const ios = DarwinNotificationDetails(
-      sound: 'azan.mp3',
       presentSound: true,
       presentAlert: true,
+      // No custom sound name → the default system alert sound plays.
       interruptionLevel: InterruptionLevel.critical,
     );
     return const NotificationDetails(android: android, iOS: ios);

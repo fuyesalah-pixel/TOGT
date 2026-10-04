@@ -318,5 +318,9 @@
   "trackingRefresh": "Refresh",
   "locationBackgroundTitle": "Background location needed",
   "locationBackgroundBody": "TOGT uses your location in the background to keep your trip protected. Please choose “Allow all the time”.",
-  "alarmsVolumeHint": "The azan plays on the alarm volume. If it is silent, raise Alarm volume in Settings → Sound."
+  "alarmsVolumeHint": "The azan plays on the alarm volume. If it is silent, raise Alarm volume in Settings → Sound.",
+  "tasbih": "Tasbih",
+  "paymentNotSetYet": "The payment was not set yet — please wait for our team to set your cost.",
+  "reviewSubmittedThanks": "Thank you! Your review has been submitted.",
+  "reviewSubmittedNoPhotos": "Thank you! Your review was submitted, but {count} photo(s) could not be uploaded."
 }

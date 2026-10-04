@@ -980,4 +980,19 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get alarmsVolumeHint =>
       'يستخدم الأذان مستوى صوت المنبه. إذا كان صامتًا ارفع مستوى صوت المنبه من الإعدادات → الصوت.';
+
+  @override
+  String get tasbih => 'المسبحة';
+
+  @override
+  String get paymentNotSetYet =>
+      'لم يتم تحديد المبلغ بعد — يرجى انتظار فريقنا لتحديد التكلفة.';
+
+  @override
+  String get reviewSubmittedThanks => 'شكرًا لك! تم إرسال تقييمك.';
+
+  @override
+  String reviewSubmittedNoPhotos(Object count) {
+    return 'شكرًا لك! تم إرسال تقييمك، لكن تعذر رفع $count من الصور.';
+  }
 }

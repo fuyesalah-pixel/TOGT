@@ -311,5 +311,9 @@
   "trackingRefresh": "تحديث",
   "locationBackgroundTitle": "مطلوب إذن الموقع في الخلفية",
   "locationBackgroundBody": "يستخدم TOGT موقعك في الخلفية لحماية رحلتك. اختر “Allow all the time”.",
-  "alarmsVolumeHint": "يستخدم الأذان مستوى صوت المنبه. إذا كان صامتًا ارفع مستوى صوت المنبه من الإعدادات → الصوت."
+  "alarmsVolumeHint": "يستخدم الأذان مستوى صوت المنبه. إذا كان صامتًا ارفع مستوى صوت المنبه من الإعدادات → الصوت.",
+  "tasbih": "المسبحة",
+  "paymentNotSetYet": "لم يتم تحديد المبلغ بعد — يرجى انتظار فريقنا لتحديد التكلفة.",
+  "reviewSubmittedThanks": "شكرًا لك! تم إرسال تقييمك.",
+  "reviewSubmittedNoPhotos": "شكرًا لك! تم إرسال تقييمك، لكن تعذر رفع {count} من الصور."
 }

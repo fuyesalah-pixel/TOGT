@@ -20,6 +20,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   final List<XFile> _images = [];
   int _rating = 0;
   bool _busy = false;
+  bool _submitted = false;
   String? _message;
 
   @override
@@ -39,10 +40,15 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     }
     setState(() { _busy = true; _message = null; });
     try {
+      // Photos upload first, but one failing upload must never lose the
+      // review itself — submit with whatever made it and say so.
       final urls = <String>[];
+      var failedUploads = 0;
       for (final image in _images) {
-        final result = await DocumentService.instance.uploadPath(image.path, folder: 'reviews');
-        if (result != null) urls.add(result);
+        try {
+          final result = await DocumentService.instance.uploadPath(image.path, folder: 'reviews');
+          if (result != null) { urls.add(result); } else { failedUploads++; }
+        } catch (_) { failedUploads++; }
       }
       await ApiService.instance.post('/reviews', body: {
         if (widget.serviceRequestId != null) 'serviceRequestId': widget.serviceRequestId,
@@ -50,9 +56,17 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
         'reviewText': _text.text.trim(),
         'imageUrls': urls,
       });
-       if (mounted) setState(() => _message = l10n.requestSubmitted);
+      if (mounted) {
+        setState(() {
+          _submitted = true;
+          _message = failedUploads == 0 ? l10n.reviewSubmittedThanks : l10n.reviewSubmittedNoPhotos(failedUploads);
+          _rating = 0;
+          _text.clear();
+          _images.clear();
+        });
+      }
     } catch (e) {
-       if (mounted) setState(() => _message = l10n.submissionFailed(e.toString()));
+       if (mounted) setState(() { _submitted = false; _message = l10n.submissionFailed(e.toString()); });
     } finally { if (mounted) setState(() => _busy = false); }
   }
 
@@ -72,7 +86,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
       if (_images.isNotEmpty) SizedBox(height: 92, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: _images.length, separatorBuilder: (_, __) => const SizedBox(width: 10), itemBuilder: (_, i) => Stack(children: [ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(File(_images[i].path), width: 92, height: 92, fit: BoxFit.cover)), Positioned(right: 2, top: 2, child: GestureDetector(onTap: () => setState(() => _images.removeAt(i)), child: const CircleAvatar(radius: 11, backgroundColor: Colors.black54, child: Icon(Icons.close, color: Colors.white, size: 14))))]))),
       const SizedBox(height: 24),
       AnimatedButton(label: _busy ? l10n.sending : l10n.reviews, icon: Icons.send_rounded, onPressed: _busy ? null : _submit),
-      if (_message != null) Padding(padding: const EdgeInsets.only(top: 16), child: Text(_message!, style: TOGTTypography.body.copyWith(color: _message!.startsWith('Thank') ? TOGTColors.green : TOGTColors.red))),
+      if (_message != null) Padding(padding: const EdgeInsets.only(top: 16), child: Text(_message!, style: TOGTTypography.body.copyWith(color: _submitted ? TOGTColors.green : TOGTColors.red))),
     ]),
   ); }
 }

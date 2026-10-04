@@ -1,12 +1,9 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
-import '../../services/document_service.dart';
 import '../../services/payment_service.dart';
 import '../../theme/colors.dart';
+import '../../theme/typography.dart';
 import '../chat_screen.dart';
 
 class RequestDetailScreen extends StatefulWidget {
@@ -18,145 +15,60 @@ class RequestDetailScreen extends StatefulWidget {
 class _RequestDetailScreenState extends State<RequestDetailScreen> {
   Map<String, dynamic>? request;
   List<dynamic> history = [];
-  List<String> uploads = [];
   String? error;
-  bool uploading = false;
-  double? packageAmount;
-  final amountController = TextEditingController();
 
-  static const _uploadsKey = 'togt_request_uploads';
-
-  Future<void> _loadUploads() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getStringList('$_uploadsKey:${widget.id}') ?? const [];
-    if (mounted && saved.isNotEmpty) setState(() => uploads = saved.toList());
-  }
-
-  Future<void> _persistUploads() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('$_uploadsKey:${widget.id}', uploads);
-  }
-
-  @override void initState() { super.initState(); _load(); _loadUploads(); }
-  @override void dispose() { amountController.dispose(); super.dispose(); }
+  @override void initState() { super.initState(); _load(); }
   Future<void> _load() async {
     try {
-      final results = await Future.wait([ApiService.instance.get('/service-requests'), ApiService.instance.get('/service-requests/${widget.id}/history'), ApiService.instance.get('/packages')]);
+      final results = await Future.wait([ApiService.instance.get('/service-requests'), ApiService.instance.get('/service-requests/${widget.id}/history')]);
       final raw = results[0] is Map ? (results[0]['data'] ?? []) : results[0];
       final items = raw is List ? raw : <dynamic>[];
       Map<String, dynamic>? found;
       for (final item in items.whereType<Map>()) { if (item['id']?.toString() == widget.id) { found = Map<String, dynamic>.from(item); break; } }
       if (found == null) throw Exception('Request not found');
-      final packageId = found['packageId']?.toString();
-      final packageData = results[2] is Map ? results[2]['data'] ?? results[2]['items'] ?? [] : results[2];
-      double? matchedAmount;
-      if (packageId != null && packageData is List) {
-        for (final item in packageData.whereType<Map>()) {
-          if (item['id']?.toString() == packageId && item['price'] is num) matchedAmount = (item['price'] as num).toDouble();
-        }
-      }
-      if (matchedAmount == null && packageData is List) {
-        final detailsText = found['formData'] is Map ? (found['formData']['details'] ?? '').toString().toLowerCase() : '';
-        for (final item in packageData.whereType<Map>()) {
-          if (item['price'] is num && item['title'] != null && detailsText.contains(item['title'].toString().toLowerCase())) matchedAmount = (item['price'] as num).toDouble();
-        }
-      }
-      if (mounted) setState(() { request = found; packageAmount = matchedAmount; history = results[1] is List ? results[1] as List : []; });
+      if (mounted) setState(() { request = found; history = results[1] is List ? results[1] as List : []; });
     } catch (e) { if (mounted) setState(() => error = e.toString()); }
-  }
-  Future<void> _upload() async {
-    if (uploads.length >= 5 || request == null) return;
-    final image = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
-    if (image == null) return;
-    if (await File(image.path).length() > 10 * 1024 * 1024) { if (mounted) setState(() => error = 'Each file must be smaller than 10MB.'); return; }
-    setState(() { uploading = true; error = null; });
-    try {
-      // Upload directly against the request — the file lands in private R2
-      // storage and is linked to THIS request, visible to staff immediately.
-      await ApiService.instance.upload('/service-requests/${widget.id}/documents', image.path);
-      await _load();
-      await _persistUploads();
-    } catch (e) { if (mounted) setState(() => error = 'Upload failed: $e'); } finally { if (mounted) setState(() => uploading = false); }
-  }
-
-  /// Open a document: private r2:// keys are exchanged for a signed URL first.
-  Future<void> _openDocument(String url) async {
-    try {
-      final resolved = await ApiService.instance.resolveDocumentUrl(url);
-      await DocumentService.instance.openRemote(resolved);
-    } catch (e) {
-      if (mounted) setState(() => error = 'Could not open document: $e');
-    }
-  }
-
-  /// Preview widget for a stored document URL (images render inline).
-  Widget _documentPreview(String url) {
-    if (url.startsWith('r2-private://')) {
-      return FutureBuilder<String>(
-        future: ApiService.instance.resolveDocumentUrl(url),
-        builder: (context, snapshot) {
-          final signed = snapshot.data;
-          if (snapshot.connectionState != ConnectionState.done) return const SizedBox(height: 90, width: 90, child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))));
-          if (signed == null || signed == url) return const Icon(Icons.insert_drive_file, size: 40);
-          return ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(signed, width: 90, height: 90, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.insert_drive_file, size: 40)));
-        },
-      );
-    }
-    final resolved = ApiService.instance.resolveImageUrl(url);
-    final isImage = RegExp(r'\.(jpe?g|png|gif|webp)(\?|$)', caseSensitive: false).hasMatch(resolved);
-    return isImage
-        ? ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(resolved, width: 90, height: 90, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.insert_drive_file, size: 40)))
-        : const Icon(Icons.insert_drive_file, size: 40);
   }
   @override Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (error != null && request == null) return Scaffold(appBar: AppBar(title: Text(l10n.requestDetails)), body: Center(child: Text(l10n.failedLoad(l10n.requestDetails, error!), textAlign: TextAlign.center)));
     if (request == null) return Scaffold(appBar: AppBar(title: Text(l10n.requestDetails)), body: const Center(child: CircularProgressIndicator()));
     final r = request!; final type = (r['serviceType'] ?? 'Request').toString(); final status = (r['status'] ?? 'PENDING').toString(); final payment = (r['paymentStatus'] ?? 'UNPAID').toString().toUpperCase(); final details = (r['formData'] is Map ? Map<String, dynamic>.from(r['formData']) : <String, dynamic>{});
-    final storedDocuments = (details['documents'] is List ? (details['documents'] as List).whereType<String>().toList() : <String>[]);
-    final amount = double.tryParse((r['amount'] ?? details['amount'] ?? details['price'] ?? packageAmount ?? '').toString());
+    // Only the staff-set amount is shown — never a guessed price.
+    final amount = double.tryParse((r['amount'] ?? details['amount'] ?? details['price'] ?? '').toString());
     return Scaffold(appBar: AppBar(title: Text(l10n.requestDetails)), body: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(18), children: [
       _card(Row(children: [CircleAvatar(backgroundColor: TOGTColors.blue, child: Icon(_icon(type), color: Colors.white)), const SizedBox(width: 12), Expanded(child: Text(type, style: Theme.of(context).textTheme.headlineSmall)), _badge(status)])),
       const SizedBox(height: 12),
       _card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Package & request', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), const SizedBox(height: 10), ...details.entries.where((e) => e.key != 'packageId').take(8).map((e) => Padding(padding: const EdgeInsets.only(bottom: 5), child: Text('${e.key}: ${e.value}')))])),
       const SizedBox(height: 12),
-      _paymentCard(r, payment, details, amount),
+      _paymentCard(r, payment, amount),
       const SizedBox(height: 12),
       _card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Progress timeline', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), const SizedBox(height: 10), if (history.isEmpty) const Text('No progress updates yet.') else ...history.map((item) { final h = item as Map; return ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.check_circle, color: TOGTColors.green), title: Text('${h['statusFrom'] ?? 'Created'} → ${h['statusTo'] ?? 'Updated'}'), subtitle: Text('${h['changedBy']?['fullName'] ?? h['changedByName'] ?? ''}\n${h['notes'] ?? h['note'] ?? ''}\n${h['createdAt'] ?? ''}')); })])),
-      const SizedBox(height: 12),
-      _card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Documents', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        const SizedBox(height: 8),
-        ...storedDocuments.map((url) => ListTile(
-          contentPadding: EdgeInsets.zero,
-          onTap: () => _openDocument(url),
-          leading: _documentPreview(url),
-          title: Text(Uri.parse(url.startsWith('r2-private://') ? url.substring(13) : url).pathSegments.lastOrNull ?? 'Document', maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: const Text('Tap to open'),
-        )),
-        ...uploads.map((url) => ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: _documentPreview(url),
-          title: Text(Uri.parse(url.startsWith('r2-private://') ? url.substring(13) : url).pathSegments.lastOrNull ?? 'Document', maxLines: 1, overflow: TextOverflow.ellipsis),
-        )),
-        OutlinedButton.icon(onPressed: uploading ? null : _upload, icon: const Icon(Icons.upload_file), label: Text(uploading ? 'Uploading...' : 'Upload document')),
-      ])),
       const SizedBox(height: 12),
       FilledButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatScreen(human: true))), icon: const Icon(Icons.support_agent), label: const Text('Contact support')),
     ])));
   }
   Widget _card(Widget child) => Card(color: TOGTColors.white, elevation: 2, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)), child: Padding(padding: const EdgeInsets.all(16), child: child));
-  Widget _paymentCard(Map<String, dynamic> r, String payment, Map<String, dynamic> details, double? amount) => _card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+  /// Customer view of payment: the price is set by our team only. Until then
+  /// the customer sees a clear "please wait" state — no amount entry.
+  Widget _paymentCard(Map<String, dynamic> r, String payment, double? amount) => _card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     const Text('Payment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
     const SizedBox(height: 10),
-    Text('Amount: ${amount?.toStringAsFixed(0) ?? 'Not set'} ${r['currency'] ?? 'ETB'}'),
+    if (amount != null) Text('Amount: ${amount.toStringAsFixed(0)} ${r['currency'] ?? 'ETB'}'),
     const SizedBox(height: 6),
     _badge(payment),
     if (payment == 'UNPAID' && amount == null) ...[
       const SizedBox(height: 10),
-      TextField(controller: amountController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Enter amount (ETB)')),
-      const SizedBox(height: 8),
-      OutlinedButton(onPressed: () async { final entered = double.tryParse(amountController.text.trim()); if (entered == null || entered <= 0) return; await ApiService.instance.patch('/service-requests/${widget.id}/amount', body: {'amount': entered}); await _load(); }, child: const Text('Save amount')),
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: TOGTColors.orange.withOpacity(.07), borderRadius: BorderRadius.circular(14), border: Border.all(color: TOGTColors.orange.withOpacity(.3))),
+        child: Row(children: [
+          const Icon(Icons.hourglass_top_rounded, color: TOGTColors.orange),
+          const SizedBox(width: 12),
+          Expanded(child: Text(AppLocalizations.of(context).paymentNotSetYet, style: TOGTTypography.body.copyWith(color: TOGTColors.navy))),
+        ]),
+      ),
     ],
     if (payment == 'PAID' && r['paymentId'] != null) Text('Transaction: ${r['paymentId']}\n${r['paidAt'] ?? ''}'),
     if (payment == 'UNPAID' && amount != null && amount > 0) Padding(padding: const EdgeInsets.only(top: 12), child: SizedBox(width: double.infinity, child: FilledButton.icon(

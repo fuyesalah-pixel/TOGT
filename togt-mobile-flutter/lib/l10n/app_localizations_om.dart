@@ -987,4 +987,19 @@ class AppLocalizationsOm extends AppLocalizations {
   @override
   String get alarmsVolumeHint =>
       'Adaan teeknooloojii \'Alarm volume\' fayyadama — yoo dhaga\'amu baatu Qindaa\'ina → Sound irraa ol keessi.';
+
+  @override
+  String get tasbih => 'Tasbihaa';
+
+  @override
+  String get paymentNotSetYet =>
+      'Kaffaalni amma hin qindaa\'in — maaloo gatiin kee qindaa\'uuf karaa timma eegadhu.';
+
+  @override
+  String get reviewSubmittedThanks => 'Galatoomi! Ilbaaxsi kee ergameera.';
+
+  @override
+  String reviewSubmittedNoPhotos(Object count) {
+    return 'Galatoomi! Ilbaaxsi kee ergameera, garuu suufii $count hin olkaa\'inne.';
+  }
 }

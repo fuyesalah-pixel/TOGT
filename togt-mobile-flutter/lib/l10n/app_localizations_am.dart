@@ -970,4 +970,18 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get alarmsVolumeHint =>
       'አዛን የማንቂያ ድምፅ ይጠቀማል። ከሆነ የማንቂያ ድምፅን በ Settings → Sound ያሳድጉ።';
+
+  @override
+  String get tasbih => 'ተስቢሕ';
+
+  @override
+  String get paymentNotSetYet => 'ክፍያው ገና አልተወሰነም — ወጪዎን እስኪያወስን እባክዎ ይጠብቁ።';
+
+  @override
+  String get reviewSubmittedThanks => 'እናመሰግናለን! ግምገማዎ ተልኳል።';
+
+  @override
+  String reviewSubmittedNoPhotos(Object count) {
+    return 'እናመሰግናለን! ግምገማዎ ተልኳል፣ ነገር ግን $count ፎቶዎች መላክ አልተቻሉም።';
+  }
 }

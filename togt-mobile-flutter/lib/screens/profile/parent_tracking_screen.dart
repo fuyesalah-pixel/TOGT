@@ -151,7 +151,7 @@ class _ParentTrackingScreenState extends State<ParentTrackingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final incoming = _people.where((entry) => (entry as Map)['consent']?.toString() == 'PENDING').toList();
+    final incoming = ((_requests?['received'] as List?) ?? []).map((entry) => Map<String, dynamic>.from(entry as Map)).where((row) => row['status']?.toString() == 'PENDING').toList();
     final sent = ((_requests?['sent'] as List?) ?? []).map((entry) => Map<String, dynamic>.from(entry as Map)).toList();
     final focused = _focusedMember();
     final status = (focused?['status'] ?? '').toString();
@@ -186,10 +186,12 @@ class _ParentTrackingScreenState extends State<ParentTrackingScreen> {
                       ),
                     ),
 
-                  // ── Incoming requests: B decides ────────────────────────────
+                  // ── Incoming requests: B decides (rows come from real
+                  //    tracking-request records — the people search only
+                  //    reflects requests the VIEWER sent) ────────────────────
                   if (incoming.isNotEmpty) ...[
                     _sectionHeader(l10n.trackingIncomingTitle, Icons.pending_actions_rounded),
-                    for (final entry in incoming)
+                    for (final request in incoming)
                       Card(
                         margin: const EdgeInsets.only(bottom: 10),
                         color: TOGTColors.orange.withOpacity(.05),
@@ -198,19 +200,19 @@ class _ParentTrackingScreenState extends State<ParentTrackingScreen> {
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                           leading: CircleAvatar(
                             backgroundColor: TOGTColors.blue.withOpacity(.12),
-                            child: Text(((entry as Map)['fullName'] ?? '?').toString().substring(0, 1).toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w800, color: TOGTColors.blue)),
+                            child: Text((((request['user'] as Map?)?['fullName']) ?? '?').toString().substring(0, 1).toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w800, color: TOGTColors.blue)),
                           ),
-                          title: Text((entry as Map)['fullName']?.toString() ?? '', style: TOGTTypography.h3),
-                          subtitle: Text((entry as Map)['email']?.toString() ?? '', style: TOGTTypography.small),
+                          title: Text(((request['user'] as Map?)?['fullName'])?.toString() ?? '', style: TOGTTypography.h3),
+                          subtitle: Text(((request['user'] as Map?)?['email'])?.toString() ?? '', style: TOGTTypography.small),
                           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                             IconButton(
                               tooltip: l10n.trackingAccepted,
-                              onPressed: () => _respond((entry as Map)['id'].toString(), true),
+                              onPressed: () => _respond(request['id'].toString(), true),
                               icon: const Icon(Icons.check_circle_rounded, color: TOGTColors.green, size: 30),
                             ),
                             IconButton(
                               tooltip: l10n.trackingDeclined,
-                              onPressed: () => _respond((entry as Map)['id'].toString(), false),
+                              onPressed: () => _respond(request['id'].toString(), false),
                               icon: const Icon(Icons.cancel_rounded, color: TOGTColors.red, size: 30),
                             ),
                           ]),
@@ -376,8 +378,9 @@ class _ParentTrackingScreenState extends State<ParentTrackingScreen> {
                       child: Text(l10n.trackingSearchHint, style: TOGTTypography.small.copyWith(color: TOGTColors.grey)),
                     ),
                   for (final entry in _people) ...[
-                    // PENDING people already appear in the incoming section.
-                    if (!((entry as Map)['consent']?.toString() == 'PENDING')) _personRow(entry as Map),
+                    // Outgoing PENDING people render here too — the subtitle
+                    // already shows "Request in progress".
+                    _personRow(entry as Map),
                   ],
 
                   // ── Sent requests with their state ─────────────────────────

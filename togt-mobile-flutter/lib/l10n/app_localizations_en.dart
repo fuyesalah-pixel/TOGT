@@ -988,4 +988,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get alarmsVolumeHint =>
       'The azan plays on the alarm volume. If it is silent, raise Alarm volume in Settings → Sound.';
+
+  @override
+  String get tasbih => 'Tasbih';
+
+  @override
+  String get paymentNotSetYet =>
+      'The payment was not set yet — please wait for our team to set your cost.';
+
+  @override
+  String get reviewSubmittedThanks =>
+      'Thank you! Your review has been submitted.';
+
+  @override
+  String reviewSubmittedNoPhotos(Object count) {
+    return 'Thank you! Your review was submitted, but $count photo(s) could not be uploaded.';
+  }
 }

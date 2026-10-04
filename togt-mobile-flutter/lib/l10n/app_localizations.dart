@@ -1931,6 +1931,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The azan plays on the alarm volume. If it is silent, raise Alarm volume in Settings → Sound.'**
   String get alarmsVolumeHint;
+
+  /// No description provided for @tasbih.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasbih'**
+  String get tasbih;
+
+  /// No description provided for @paymentNotSetYet.
+  ///
+  /// In en, this message translates to:
+  /// **'The payment was not set yet — please wait for our team to set your cost.'**
+  String get paymentNotSetYet;
+
+  /// No description provided for @reviewSubmittedThanks.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you! Your review has been submitted.'**
+  String get reviewSubmittedThanks;
+
+  /// No description provided for @reviewSubmittedNoPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you! Your review was submitted, but {count} photo(s) could not be uploaded.'**
+  String reviewSubmittedNoPhotos(Object count);
 }
 
 class _AppLocalizationsDelegate

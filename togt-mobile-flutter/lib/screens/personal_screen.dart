@@ -31,6 +31,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
   String? _locationError;
   StreamSubscription<CompassEvent>? _compass;
   List<CustomAlarm> _customAlarms = [];
+  final ScrollController _scrollController = ScrollController();
 
   AppLocalizations get l10n => AppLocalizations.of(context);
 
@@ -139,18 +140,19 @@ class _PersonalScreenState extends State<PersonalScreen> {
   @override
   void dispose() {
     _compass?.cancel();
+    _scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => SafeArea(
         bottom: false,
-        child: ListView(padding: const EdgeInsets.fromLTRB(20, 14, 20, 32), children: [
+        child: ListView(controller: _scrollController, padding: const EdgeInsets.fromLTRB(20, 14, 20, 32), children: [
           Text(l10n.personalTitle, style: TOGTTypography.h1),
           const SizedBox(height: 5),
           Text(l10n.personalTools, style: TOGTTypography.body),
           const SizedBox(height: 20),
-           SizedBox(height: 42, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: 4, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (_, i) => ChoiceChip(label: Text([l10n.prayerTimes, l10n.qibla, l10n.azkar, l10n.personalTitle][i]), selected: _section == i, selectedColor: TOGTColors.orange, labelStyle: TextStyle(color: _section == i ? TOGTColors.white : TOGTColors.navy, fontWeight: FontWeight.w700), onSelected: (_) => setState(() => _section = i)))),
+           SizedBox(height: 42, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: 4, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (_, i) => ChoiceChip(label: Text([l10n.prayerTimes, l10n.qibla, l10n.azkar, l10n.tasbih][i]), selected: _section == i, selectedColor: TOGTColors.orange, labelStyle: TextStyle(color: _section == i ? TOGTColors.white : TOGTColors.navy, fontWeight: FontWeight.w700), onSelected: (_) => setState(() { _section = i; if (_scrollController.hasClients) _scrollController.jumpTo(0); })))),
           const SizedBox(height: 18),
           AnimatedSwitcher(duration: const Duration(milliseconds: 350), child: _content()),
         ]),

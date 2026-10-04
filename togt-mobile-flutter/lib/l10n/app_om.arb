@@ -304,5 +304,9 @@
   "trackingRefresh": "Haari",
   "locationBackgroundTitle": "Iddoo duubbee barbaachisa",
   "locationBackgroundBody": "TOGT imala kee nageenyaan akka hordofamuuf iddoo duubbee fayyadama. Maaloo \"Allow all the time\" filadhu.",
-  "alarmsVolumeHint": "Adaan teeknooloojii 'Alarm volume' fayyadama — yoo dhaga'amu baatu Qindaa'ina → Sound irraa ol keessi."
+  "alarmsVolumeHint": "Adaan teeknooloojii 'Alarm volume' fayyadama — yoo dhaga'amu baatu Qindaa'ina → Sound irraa ol keessi.",
+  "tasbih": "Tasbihaa",
+  "paymentNotSetYet": "Kaffaalni amma hin qindaa'in — maaloo gatiin kee qindaa'uuf karaa timma eegadhu.",
+  "reviewSubmittedThanks": "Galatoomi! Ilbaaxsi kee ergameera.",
+  "reviewSubmittedNoPhotos": "Galatoomi! Ilbaaxsi kee ergameera, garuu suufii {count} hin olkaa'inne."
 }

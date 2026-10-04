@@ -45,6 +45,12 @@ class ApiService {
 
   bool _sessionExpiredHandled = false;
 
+  /// In-flight refresh guard: the dashboard fires many requests at once and
+  /// several can 401 in the same instant. Without this guard each of them
+  /// called /auth/refresh with the SAME refresh token — the server rotates
+  /// (invalidates) it and only the first caller wins, so the losers wiped the
+  /// session. That race is what logged users out minutes after sign-in.
+
   bool get hasToken => _accessToken != null;
   String? get accessToken => _accessToken;
   String? get refreshToken => _refreshToken;
@@ -190,7 +196,13 @@ class ApiService {
     return response;
   }
 
-  Future<bool> _refresh() async {
+  Future<bool>? _refreshInFlight;
+
+  Future<bool> _refresh() {
+    return _refreshInFlight ??= _doRefresh().whenComplete(() => _refreshInFlight = null);
+  }
+
+  Future<bool> _doRefresh() async {
     try {
       final headers = {'Content-Type': 'application/json', if (_cookieHeader != null) 'Cookie': _cookieHeader!, if (_accessToken != null) 'Authorization': 'Bearer $_accessToken'};
       final response = await http.post(_uri('/auth/refresh'), headers: headers, body: jsonEncode({'refreshToken': _refreshToken})).timeout(timeout);
@@ -199,12 +211,14 @@ class ApiService {
       if (response.statusCode < 200 || response.statusCode >= 300) return false;
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       setTokens(accessToken: data['accessToken']?.toString(), refreshToken: data['refreshToken']?.toString());
-      final prefs = await SharedPreferences.getInstance();
+      // Persist the rotated pair so the next cold start keeps the session alive.
       const secure = FlutterSecureStorage();
-       if (_accessToken != null) { await secure.write(key: 'togt_token', value: _accessToken); }
-       if (_refreshToken != null) { await secure.write(key: 'togt_refresh', value: _refreshToken); }
-       await prefs.remove('togt_token');
-       await prefs.remove('togt_refresh');
+      final prefs = await SharedPreferences.getInstance();
+      if (_accessToken != null) await secure.write(key: 'togt_token', value: _accessToken);
+      if (_refreshToken != null) {
+        await secure.write(key: 'togt_refresh', value: _refreshToken);
+        await prefs.setString('togt_refresh', _refreshToken!);
+      }
       return _accessToken != null;
     } catch (_) {
       return false;
