@@ -1,24 +1,34 @@
 -- Oromiffa (om) becomes the 4th content language: every translatable entity
--- gains Om columns alongside the existing Ar/Am ones.
-ALTER TABLE "Package" ADD COLUMN "titleOm" TEXT,
-  ADD COLUMN "descriptionOm" TEXT,
-  ADD COLUMN "includesOm" TEXT[],
-  ADD COLUMN "excludesOm" TEXT[];
+-- gains Om columns alongside the existing Ar/Am ones. Plus the
+-- customer-to-customer TrackingRequest consent table.
+--
+-- Idempotent on purpose: an earlier failed deploy attempt may have left
+-- partial objects in the database, so every statement tolerates
+-- pre-existing state (IF NOT EXISTS / guard blocks).
+
+ALTER TABLE "Package" ADD COLUMN IF NOT EXISTS "titleOm" TEXT,
+  ADD COLUMN IF NOT EXISTS "descriptionOm" TEXT,
+  ADD COLUMN IF NOT EXISTS "includesOm" TEXT[],
+  ADD COLUMN IF NOT EXISTS "excludesOm" TEXT[];
 UPDATE "Package" SET "includesOm" = ARRAY[]::TEXT[], "excludesOm" = ARRAY[]::TEXT[] WHERE "includesOm" IS NULL OR "excludesOm" IS NULL;
 
-ALTER TABLE "GalleryItem" ADD COLUMN "titleOm" TEXT,
-  ADD COLUMN "categoryOm" TEXT,
-  ADD COLUMN "locationOm" TEXT,
-  ADD COLUMN "descriptionOm" TEXT;
+ALTER TABLE "GalleryItem" ADD COLUMN IF NOT EXISTS "titleOm" TEXT,
+  ADD COLUMN IF NOT EXISTS "categoryOm" TEXT,
+  ADD COLUMN IF NOT EXISTS "locationOm" TEXT,
+  ADD COLUMN IF NOT EXISTS "descriptionOm" TEXT;
 
-ALTER TABLE "FAQItem" ADD COLUMN "questionOm" TEXT,
-  ADD COLUMN "answerOm" TEXT;
+ALTER TABLE "FAQItem" ADD COLUMN IF NOT EXISTS "questionOm" TEXT,
+  ADD COLUMN IF NOT EXISTS "answerOm" TEXT;
 
--- Customer-to-customer tracking consent (item 2): A sends a request to B,
--- B accepts/declines; PENDING until B responds. Workers/admins bypass.
-CREATE TYPE "TrackingRequestStatus" AS ENUM ('PENDING', 'ACCEPTED', 'DECLINED', 'CANCELLED');
+-- CREATE TYPE has no IF NOT EXISTS — guard with a DO block instead.
+DO $$
+BEGIN
+  CREATE TYPE "TrackingRequestStatus" AS ENUM ('PENDING', 'ACCEPTED', 'DECLINED', 'CANCELLED');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TABLE "TrackingRequest" (
+CREATE TABLE IF NOT EXISTS "TrackingRequest" (
     "id" TEXT NOT NULL,
     "requesterId" TEXT NOT NULL,
     "targetId" TEXT NOT NULL,
@@ -30,8 +40,10 @@ CREATE TABLE "TrackingRequest" (
     CONSTRAINT "TrackingRequest_pkey" PRIMARY KEY ("id")
 );
 
-CREATE UNIQUE INDEX "TrackingRequest_requesterId_targetId_key" ON "TrackingRequest"("requesterId", "targetId");
-CREATE INDEX "TrackingRequest_targetId_status_idx" ON "TrackingRequest"("targetId", "status");
+CREATE UNIQUE INDEX IF NOT EXISTS "TrackingRequest_requesterId_targetId_key" ON "TrackingRequest"("requesterId", "targetId");
+CREATE INDEX IF NOT EXISTS "TrackingRequest_targetId_status_idx" ON "TrackingRequest"("targetId", "status");
 
+ALTER TABLE "TrackingRequest" DROP CONSTRAINT IF EXISTS "TrackingRequest_requesterId_fkey";
 ALTER TABLE "TrackingRequest" ADD CONSTRAINT "TrackingRequest_requesterId_fkey" FOREIGN KEY ("requesterId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "TrackingRequest" DROP CONSTRAINT IF EXISTS "TrackingRequest_targetId_fkey";
 ALTER TABLE "TrackingRequest" ADD CONSTRAINT "TrackingRequest_targetId_fkey" FOREIGN KEY ("targetId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
