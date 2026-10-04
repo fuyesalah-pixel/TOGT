@@ -224,20 +224,40 @@ export class NotificationsService {
   }
 
   /** SMSEthiopia SMS — no-op (logged) when SMS_ETHIOPIA_TOKEN is not configured. */
-  async sendSms(phone: string, message: string) {
+  async sendSms(phone: string, message: string): Promise<boolean> {
     const token = await this.credentials.get('SMS_ETHIOPIA');
     if (!token) {
       this.logger.log(`[sms:skipped] to=${phone} message="${message}"`);
-      return;
+      return false;
     }
     try {
-      await fetch('https://api.smsethiopia.com/v1/send', {
+      const response = await fetch('https://api.smsethiopia.com/v1/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ to: phone, message, sender_id: this.config.get<string>('sms.senderId') ?? 'TOGT' }),
       });
+      if (!response.ok) {
+        this.logger.warn(`[sms:failed] to=${phone}: SMS gateway HTTP ${response.status}`);
+        return false;
+      }
+      return true;
     } catch (err) {
       this.logger.warn(`[sms:failed] to=${phone}: ${(err as Error).message}`);
+      return false;
     }
+  }
+
+  /**
+   * TECH/ADMIN: send a test SMS to verify the SMSEthiopia delivery stack.
+   * Mirrors sendTestEmail — reports whether the credential exists and the
+   * gateway accepted the message.
+   */
+  async sendTestSms(to: string | undefined, actor: User) {
+    const recipient = (to?.trim() || actor.phone || '').replace(/[^+\d]/g, '');
+    if (!recipient) return { ok: false, reason: 'no phone number — pass { to: "+2519xxxxxxxx" } or set a phone on your profile', to: recipient };
+    const hasCredential = Boolean(await this.credentials.get('SMS_ETHIOPIA'));
+    if (!hasCredential) return { ok: false, reason: 'SMS_ETHIOPIA credential is not configured (add it in Tech → Providers)', to: recipient };
+    const sent = await this.sendSms(recipient, `TOGT SMS delivery test — requested by ${actor.fullName}. If you received this, SMS is working.`);
+    return { ok: sent, reason: sent ? undefined : 'gateway rejected the message (check the API logs)', to: recipient };
   }
 }

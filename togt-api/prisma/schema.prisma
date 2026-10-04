@@ -111,6 +111,16 @@ enum MemberRole {
   GUIDE
 }
 
+// Customer-to-customer tracking consent. Mister A asks to track mister B;
+// B accepts (A can track B while B is in an active group) or declines (A is
+// told it was declined). Workers/admins never need a request.
+enum TrackingRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
 enum NotificationType {
   STATUS_UPDATE
   NEW_PACKAGE
@@ -169,6 +179,8 @@ model User {
   confirmedPlanSteps    TourPlanStep[]      @relation("ConfirmedPlanSteps")
   locationUpdates       LocationTracking[]
   geofenceAlerts        GeofenceAlert[]
+  sentTrackingRequests  TrackingRequest[]   @relation("TrackingRequester")
+  receivedTrackingRequests TrackingRequest[] @relation("TrackingTarget")
   customerConversations Conversation[]      @relation("CustomerConversations")
   workerConversations   Conversation[]      @relation("WorkerConversations")
   profileChanges        ProfileChangeLog[]
@@ -203,6 +215,10 @@ model Package {
   descriptionAm       String?
   includesAm          String[]    @default([])
   excludesAm          String[]    @default([])
+  titleOm             String?
+  descriptionOm       String?
+  includesOm          String[]    @default([])
+  excludesOm          String[]    @default([])
   translationStatus   String      @default("PENDING")
   translationAttempts Int         @default(0)
   isActive            Boolean     @default(true)
@@ -231,6 +247,10 @@ model GalleryItem {
   categoryAm    String?
   locationAm    String?
   descriptionAm String?
+  titleOm       String?
+  categoryOm    String?
+  locationOm    String?
+  descriptionOm String?
   images        String[] @default([])
   videoUrl      String?
   createdById   String
@@ -246,6 +266,8 @@ model FAQItem {
   answerAr    String?
   questionAm  String?
   answerAm    String?
+  questionOm  String?
+  answerOm    String?
   category    String
   order       Int      @default(0)
   isActive    Boolean  @default(true)
@@ -345,6 +367,21 @@ model LocationTracking {
   createdAt DateTime @default(now())
 
   @@index([groupId, userId, createdAt])
+}
+
+model TrackingRequest {
+  id          String                @id @default(uuid())
+  requesterId String
+  requester   User                  @relation("TrackingRequester", fields: [requesterId], references: [id])
+  targetId    String
+  target      User                  @relation("TrackingTarget", fields: [targetId], references: [id])
+  status      TrackingRequestStatus @default(PENDING)
+  respondedAt DateTime?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@unique([requesterId, targetId])
+  @@index([targetId, status])
 }
 
 model GeofenceAlert {

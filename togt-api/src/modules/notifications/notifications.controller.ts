@@ -63,4 +63,11 @@ export class NotificationsController {
   sendTestPush(@Body() body: { to?: string }, @CurrentUser() user: User) {
     return this.notifications.sendTestPush(body?.to, user);
   }
+
+  /** TECH/ADMIN: verify SMSEthiopia delivery (same flow as bulk SMS). */
+  @Post('test-sms')
+  @Roles(Role.ADMIN, Role.TECH)
+  sendTestSms(@Body() body: { to?: string }, @CurrentUser() user: User) {
+    return this.notifications.sendTestSms(body?.to, user);
+  }
 }
