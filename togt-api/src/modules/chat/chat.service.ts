@@ -31,6 +31,15 @@ export class ChatService {
     private readonly gateway: ChatGateway,
   ) {}
 
+  /**
+   * Who is on the "customer side" of a support conversation. Guides chat with
+   * workers exactly like a customer does — they must NOT see other customers'
+   * conversations or messages (only WORKER/ADMIN act as support staff).
+   */
+  private isCustomerSide(user: User) {
+    return user.role === Role.CUSTOMER || user.role === Role.GUIDE;
+  }
+
   async getWorkers() {
     return this.prisma.user.findMany({
       where: { status: 'ACTIVE', role: { in: [Role.WORKER, Role.ADMIN] } },
@@ -40,14 +49,14 @@ export class ChatService {
   }
 
   async getUnreadCount(actor: User) {
-    const where = actor.role === Role.CUSTOMER
+    const where = this.isCustomerSide(actor)
       ? { receiverId: actor.id, isRead: false }
       : { sender: { role: Role.CUSTOMER }, isRead: false };
     return { unreadCount: await this.prisma.chatMessage.count({ where }) };
   }
 
   async start(user: User, receiverId?: string, channel: 'support' | 'worker' = 'support') {
-    if (user.role !== Role.CUSTOMER) throw new ForbiddenException('Only customers start support conversations');
+    if (!this.isCustomerSide(user)) throw new ForbiddenException('Only customers and guides start support conversations');
     const worker = receiverId
       ? await this.prisma.user.findFirst({ where: { id: receiverId, status: 'ACTIVE', role: { in: [Role.WORKER, Role.ADMIN] } } })
       : await this.prisma.user.findFirst({ where: { status: 'ACTIVE', role: { in: [Role.WORKER, Role.ADMIN] } }, orderBy: { createdAt: 'asc' } });
@@ -74,7 +83,8 @@ export class ChatService {
     const page = Math.max(1, Number(query.page ?? 1));
     const filter = query.filter ?? 'all';
     const search = query.search?.trim().toLowerCase();
-    const customers = actor.role === Role.CUSTOMER
+    const viewerIsCustomer = this.isCustomerSide(actor);
+    const customers = viewerIsCustomer
       ? [await this.prisma.user.findUnique({ where: { id: actor.id }, select: safeUserSelect })].filter(Boolean)
       : await this.prisma.user.findMany({ where: { role: Role.CUSTOMER, status: 'ACTIVE' }, select: safeUserSelect, orderBy: { fullName: 'asc' } });
 
@@ -82,19 +92,25 @@ export class ChatService {
     for (const customer of customers) {
       if (!customer) continue;
       const conversation = await this.prisma.conversation.findFirst({
-        where: actor.role === Role.CUSTOMER
+        where: viewerIsCustomer
           ? { customerId: actor.id, channel: 'support' }
           : { customerId: customer.id, channel: 'support' },
         include: { worker: { select: safeUserSelect }, messages: { orderBy: { createdAt: 'desc' }, take: 1 } },
         orderBy: { updatedAt: 'desc' },
       });
-      if (actor.role === Role.CUSTOMER && !conversation) continue;
-      const otherUser = actor.role === Role.CUSTOMER
+      if (viewerIsCustomer && !conversation) continue;
+      const otherUser = viewerIsCustomer
         ? conversation?.worker && { ...conversation.worker, fullName: 'TOGT Support' }
         : customer;
       if (!otherUser) continue;
       const lastMessage = conversation?.messages[0] ?? null;
-      const unreadCount = await this.prisma.chatMessage.count({ where: { conversationId: conversation?.id, senderId: customer.id, isRead: false } });
+      // Customer side: messages addressed TO me that are still unread.
+      // Staff side: messages sent BY the listed customer that are unread.
+      const unreadCount = await this.prisma.chatMessage.count({
+        where: viewerIsCustomer
+          ? { conversationId: conversation?.id, receiverId: actor.id, isRead: false }
+          : { conversationId: conversation?.id, senderId: customer.id, isRead: false },
+      });
       if (filter === 'unread' && unreadCount === 0) continue;
       if (filter === 'read' && unreadCount > 0) continue;
       if (search && !`${otherUser.fullName} ${otherUser.email}`.toLowerCase().includes(search)) continue;
@@ -108,7 +124,7 @@ export class ChatService {
   }
 
   async getMessages(actor: User, otherUserId: string) {
-    const customerId = actor.role === Role.CUSTOMER ? actor.id : otherUserId;
+    const customerId = this.isCustomerSide(actor) ? actor.id : otherUserId;
     const sharedConversation = await this.prisma.conversation.findFirst({
       where: { customerId, channel: 'support' },
     });
@@ -135,15 +151,16 @@ export class ChatService {
     const fileUrl = file ? await this.uploads.upload(file, 'chat') : undefined;
     if (!message?.trim() && !fileUrl) throw new BadRequestException('Message or file is required');
 
-    const customerId = sender.role === Role.CUSTOMER ? sender.id : receiver.id;
-    const workerId = sender.role === Role.CUSTOMER ? undefined : sender.id;
+    const senderIsCustomer = this.isCustomerSide(sender);
+    const customerId = senderIsCustomer ? sender.id : receiver.id;
+    const workerId = senderIsCustomer ? undefined : sender.id;
     let conversation = await this.prisma.conversation.findFirst({ where: { customerId, channel: 'support' } });
     if (!conversation) {
       const supportWorker = workerId ? sender : await this.prisma.user.findFirst({ where: { role: { in: [Role.WORKER, Role.ADMIN] }, status: 'ACTIVE' }, orderBy: { createdAt: 'asc' } });
       if (!supportWorker) throw new NotFoundException('No support worker is available');
       conversation = await this.prisma.conversation.create({ data: { customerId, workerId: supportWorker.id, channel: 'support' } });
     }
-    const actualReceiverId = sender.role === Role.CUSTOMER ? conversation.workerId : customerId;
+    const actualReceiverId = senderIsCustomer ? conversation.workerId : customerId;
     if (!actualReceiverId) throw new NotFoundException('No support worker is available');
     await this.prisma.conversation.update({ where: { id: conversation.id }, data: { updatedAt: new Date() } });
 
@@ -151,7 +168,7 @@ export class ChatService {
       data: { conversationId: conversation.id, senderId: sender.id, receiverId: actualReceiverId, message: message?.trim() ?? '', fileUrl, fileType: file?.mimetype },
       include: { sender: { select: { id: true, fullName: true, role: true } } },
     });
-    if (sender.role === Role.CUSTOMER) {
+    if (senderIsCustomer) {
       this.gateway.emitToRole(Role.WORKER, 'newCustomerMessage', created);
       this.gateway.emitToRole(Role.ADMIN, 'newCustomerMessage', created);
     } else {
@@ -161,7 +178,7 @@ export class ChatService {
     }
     this.gateway.emitToUser(actualReceiverId, 'message:new', created);
     this.gateway.emitToUser(actualReceiverId, 'newMessage', created);
-    await this.notifications.notifyUser(customerId === sender.id ? actualReceiverId : customerId, { title: `New message from ${sender.role === Role.CUSTOMER ? 'a customer' : 'TOGT Support'}`, message: message?.trim()?.slice(0, 120) || 'Sent you a file', type: 'CHAT_MESSAGE' });
+    await this.notifications.notifyUser(customerId === sender.id ? actualReceiverId : customerId, { title: `New message from ${senderIsCustomer ? (sender.role === Role.GUIDE ? 'a guide' : 'a customer') : 'TOGT Support'}`, message: message?.trim()?.slice(0, 120) || 'Sent you a file', type: 'CHAT_MESSAGE' });
     return created;
   }
 

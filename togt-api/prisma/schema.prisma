@@ -41,6 +41,7 @@ enum ServiceType {
   VISA
   CONSULTING
   FOREIGN_TRAVEL
+  CONTACT
 }
 
 enum RequestStatus {

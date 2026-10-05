@@ -7,7 +7,11 @@ export default () => ({
     accessSecret:
       process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET ?? 'dev_access_secret',
     refreshSecret: process.env.JWT_REFRESH_SECRET ?? 'dev_refresh_secret',
-    accessTtl: parseInt(process.env.JWT_ACCESS_TTL ?? '900', 10),
+    // 30 days — one login must keep the user signed in for about a month.
+    // The refresh flow still rotates tokens on every use, but the access
+    // token itself now lives a month so silent re-auth never interrupts the
+    // user mid-action (reviews, payments, chat...).
+    accessTtl: parseInt(process.env.JWT_ACCESS_TTL ?? '2592000', 10),
     // 30 days — one login should keep the user signed in for about a month;
     // the mobile app + web client silently rotate this token on every use.
     refreshTtl: parseInt(process.env.JWT_REFRESH_TTL ?? '2592000', 10),

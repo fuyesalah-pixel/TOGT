@@ -147,7 +147,7 @@ export class AuthService {
       const promoted = await this.prisma.user.update({ where: { id: user.id }, data: { role: Role.ADMIN } });
       Object.assign(user, promoted);
     }
-    const accessTtl = this.config.get<number>('jwt.accessTtl') ?? 900;
+    const accessTtl = this.config.get<number>('jwt.accessTtl') ?? 2_592_000; // 30 days — one login stays a month
     const refreshTtl = this.config.get<number>('jwt.refreshTtl') ?? 2_592_000; // 30 days
     const refreshJti = randomUUID();
 
@@ -172,7 +172,10 @@ export class AuthService {
       sameSite: (secure ? 'none' : 'lax') as 'none' | 'lax',
       path: '/',
     };
-    res.cookie(ACCESS_COOKIE, tokens.accessToken, { ...base, maxAge: 15 * 60 * 1000 });
+    // Access cookie lives as long as the access token (30 days): the user
+    // signs in once and stays signed in for a month. The refresh token
+    // rotates on every /auth/refresh use.
+    res.cookie(ACCESS_COOKIE, tokens.accessToken, { ...base, maxAge: 30 * 24 * 60 * 60 * 1000 });
     // Keep the session alive for a month: the client rotates this cookie on
     // every refresh, so 30 days of inactivity is what logs a user out.
     res.cookie(REFRESH_COOKIE, tokens.refreshToken, { ...base, maxAge: 30 * 24 * 60 * 60 * 1000 });

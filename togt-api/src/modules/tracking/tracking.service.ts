@@ -112,23 +112,33 @@ export class TrackingService {
     return request?.status ?? 'NONE';
   }
 
-  /** People a customer can send a request to (by name/email) + current consent state. */
+  /**
+   * People a customer can send a request to (by name/email) + current consent
+   * state. A search term is REQUIRED (like international location-sharing
+   * apps): an empty query must never enumerate other customers' emails and
+   * phone numbers. Phone numbers are only revealed once the target has
+   * accepted the tracking request.
+   */
   async searchPeople(query: string, actor: User) {
     const q = query.trim();
+    if (q.length < 2) return [];
     const users = await this.prisma.user.findMany({
-      where: { role: Role.CUSTOMER, status: 'ACTIVE', id: { not: actor.id }, ...(q ? { OR: [{ fullName: { contains: q, mode: 'insensitive' } }, { email: { contains: q, mode: 'insensitive' } }, { phone: { contains: q } }] } : {}) },
+      where: { role: Role.CUSTOMER, status: 'ACTIVE', id: { not: actor.id }, OR: [{ fullName: { contains: q, mode: 'insensitive' } }, { email: { contains: q, mode: 'insensitive' } }, { phone: { contains: q } }] },
       select: { id: true, fullName: true, email: true, phone: true, groupMembers: { where: { group: { status: 'IN_PROGRESS' } }, select: { group: { select: { id: true, name: true } } }, take: 1 } },
       take: 20,
     });
-    return Promise.all(users.map(async (user) => ({
-      id: user.id,
-      fullName: user.fullName,
-      email: user.email,
-      phone: user.phone,
-      travelingNow: user.groupMembers.length > 0,
-      groupName: user.groupMembers[0]?.group.name ?? null,
-      consent: await this.consentStatus(actor.id, user.id),
-    })));
+    return Promise.all(users.map(async (user) => {
+      const consent = await this.consentStatus(actor.id, user.id);
+      return {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        phone: consent === TrackingRequestStatus.ACCEPTED ? user.phone : null,
+        travelingNow: user.groupMembers.length > 0,
+        groupName: user.groupMembers[0]?.group.name ?? null,
+        consent,
+      };
+    }));
   }
 
   // ── Live tracking ─────────────────────────────────────────────────────────
