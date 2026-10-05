@@ -7,11 +7,16 @@ import { CreateReviewDto } from './dto/create-review.dto';
 export class ReviewsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Public reviews: manually approved OR older than 24 hours (auto-publish). */
+  /** Public reviews: manually approved OR older than 24 hours (auto-publish).
+   *  Reviews hidden by an admin are excluded regardless of age — the
+   *  admin's hide decision must stick past the 24h auto-publish window. */
   findVisible() {
     const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     return this.prisma.review.findMany({
-      where: { OR: [{ isVisible: true }, { createdAt: { lte: dayAgo } }] },
+      where: {
+        isHiddenByAdmin: false,
+        OR: [{ isVisible: true }, { createdAt: { lte: dayAgo } }],
+      },
       include: { user: { select: { id: true, fullName: true } } },
       orderBy: { createdAt: 'desc' },
       take: 50,
@@ -53,6 +58,12 @@ export class ReviewsService {
   async setVisibility(id: string, isVisible: boolean) {
     const review = await this.prisma.review.findUnique({ where: { id } });
     if (!review) throw new NotFoundException('Review not found');
-    return this.prisma.review.update({ where: { id }, data: { isVisible } });
+    // isVisible=true  => explicit admin approval; clears any previous hide.
+    // isVisible=false => admin hide; isHiddenByAdmin=true keeps the review
+    // out of the public listing even after the 24h auto-publish kicks in.
+    return this.prisma.review.update({
+      where: { id },
+      data: { isVisible, isHiddenByAdmin: !isVisible },
+    });
   }
 }

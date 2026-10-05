@@ -411,6 +411,7 @@ model Review {
   reviewText       String?
   imageUrls        String[]
   isVisible        Boolean         @default(false)
+  isHiddenByAdmin  Boolean         @default(false)
   createdAt        DateTime        @default(now())
 }
 
