@@ -41,7 +41,7 @@ export function ContactFormTab() {
     <Form {...form}>
       <div className="mb-5 rounded-xl border border-togt-blue/15 bg-togt-blue/5 p-4 text-sm text-togt-navy"><p className="font-bold">TOGT Customer Support</p><p className="mt-1">{CONTACT.address}</p><p className="mt-1">{CONTACT.phones.map((phone) => <a key={phone.href} href={phone.href} className="mr-3 text-togt-blue hover:underline">{phone.display}</a>)}<a href={`mailto:${CONTACT.email}`} className="text-togt-blue hover:underline">{CONTACT.email}</a></p><a href={CONTACT.map} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block font-semibold text-togt-orange hover:underline">View on Google Maps</a></div>
       <form
-        onSubmit={form.handleSubmit((values) => submit("consulting", values))}
+        onSubmit={form.handleSubmit((values) => submit("contact", values))}
         className="grid gap-4 sm:grid-cols-2"
       >
         <FormField control={form.control} name="fullName" render={({ field }) => (

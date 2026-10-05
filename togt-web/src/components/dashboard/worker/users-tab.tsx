@@ -20,6 +20,7 @@ const SERVICE_TYPES: ServiceType[] = [
   "VISA",
   "CONSULTING",
   "FOREIGN_TRAVEL",
+  "CONTACT",
 ];
 
 export function UsersTab() {

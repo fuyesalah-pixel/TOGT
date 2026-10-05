@@ -40,21 +40,38 @@ export const organizationSchema = {
   "@id": `${SITE_URL}/#organization`,
   name: "TOGT Tour & Travel",
   alternateName: ["TOGT", "TOGT Travel Ethiopia", "TOGT Tour and Travel Addis Ababa"],
-  description: "Best Umrah travel agency in Ethiopia — IATA-accredited. Best 3, 5 and 10-day Umrah packages, flight booking, domestic and international tours, and visa processing from Addis Ababa.",
+  description: "TOGT Tour & Travel — the best travel agency in Ethiopia. IATA-accredited Umrah packages from Addis Ababa, cheap flight tickets, domestic tours (Lalibela, Bale Mountains, Danakil), tourist packages, foreign travel, visa processing and visa services across Ethiopia.",
   url: SITE_URL,
   image: absoluteUrl("/images/logo/TOGT_Tour_Travel_Final_Logo_For_Print.jpg"),
   logo: absoluteUrl("/images/logo/TOGT_Tour_Travel_Final_Logo_For_Print.jpg"),
   telephone: "+251997979741",
   email: "info@togttrading.com",
   priceRange: "$$",
-  address: { "@type": "PostalAddress", streetAddress: "Jemo 1, Front of Saba Building", addressLocality: "Addis Ababa", addressRegion: "Addis Ababa", addressCountry: "ET" },
+  address: { "@type": "PostalAddress", streetAddress: "Jemo 1, Front of AK Building, 3rd Floor", addressLocality: "Addis Ababa", addressRegion: "Addis Ababa", addressCountry: "ET" },
   geo: { "@type": "GeoCoordinates", latitude: 8.9845, longitude: 38.7036 },
+  hasMap: "https://maps.app.goo.gl/1QFBkEZMVwwjG6Aj9",
   openingHoursSpecification: [{ "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], opens: "08:00", closes: "19:00" }],
+  contactPoint: [{ "@type": "ContactPoint", telephone: "+251997979741", email: "info@togttrading.com", contactType: "customer service", areaServed: "ET", availableLanguage: ["English", "Amharic", "Afaan Oromo", "Arabic"] }],
   areaServed: [
     { "@type": "Country", name: "Ethiopia" },
     { "@type": "City", name: "Addis Ababa" },
   ],
-  sameAs: ["https://facebook.com/togt", "https://www.instagram.com/togt_tourandtravel", "https://t.me/Togttourandtravel", "https://youtube.com/@togt"],
+  sameAs: ["https://facebook.com/togt", "https://www.instagram.com/togt_tourandtravel", "https://t.me/Togttourandtravel", "https://youtube.com/@togt", "https://www.tiktok.com/@islamic.dawa.official11"],
+};
+
+/** LocalBusiness-flavored service list — captures "[service] + Ethiopia" queries. */
+export const servicesSchema = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name: "TOGT Tour & Travel services in Ethiopia",
+  itemListElement: [
+    "Umrah packages from Ethiopia",
+    "Flight booking in Addis Ababa",
+    "Domestic tours in Ethiopia",
+    "Tourist packages in Ethiopia",
+    "Foreign travel packages from Ethiopia",
+    "Visa processing in Ethiopia",
+  ].map((name, index) => ({ "@type": "ListItem", position: index + 1, item: { "@type": "Service", name, provider: { "@id": `${SITE_URL}/#organization` }, areaServed: { "@type": "Country", name: "Ethiopia" } } })),
 };
 
 /** Umrah-focused service schema — reinforces "best umrah travel" queries. */

@@ -24,7 +24,7 @@ export default function AuthCallbackPage() {
         (async () => {
           try {
             const serviceType = pending.serviceType === "foreignTravel" ? "FOREIGN_TRAVEL" : pending.serviceType.toUpperCase();
-            const request = await createServiceRequest({ serviceType: serviceType as "TICKET" | "UMRAH" | "DOMESTIC" | "TOURIST" | "VISA" | "CONSULTING" | "FOREIGN_TRAVEL", formData: pending.payload, packageId: typeof pending.payload.packageId === "string" ? pending.payload.packageId : undefined });
+            const request = await createServiceRequest({ serviceType: serviceType as "TICKET" | "UMRAH" | "DOMESTIC" | "TOURIST" | "VISA" | "CONSULTING" | "FOREIGN_TRAVEL" | "CONTACT", formData: pending.payload, packageId: typeof pending.payload.packageId === "string" ? pending.payload.packageId : undefined });
             window.localStorage.removeItem("pendingFormData");
             if (pending.paymentChoice === "PAY_NOW" && typeof pending.payload.amount === "number" && pending.payload.amount > 0) {
               const payment = await initializePayment(request.id, pending.payload.amount, "ETB");

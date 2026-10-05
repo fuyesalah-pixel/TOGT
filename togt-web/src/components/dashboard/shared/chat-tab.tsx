@@ -23,6 +23,11 @@ import { useStartConversation } from "@/hooks/useChat";
 
 export function ChatTab({ initialUserId, initialMessage }: { initialUserId?: string; initialMessage?: string }) {
   const { user } = useAuth();
+  // Only WORKER/ADMIN run the support inbox. Guides are customer-side:
+  // they chat with TOGT staff exactly like a customer and must never see
+  // other customers' conversations or messages.
+  const staffInbox = user?.role === "WORKER" || user?.role === "ADMIN";
+  const customerSide = !staffInbox;
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(initialUserId);
   const [draft, setDraft] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -39,7 +44,7 @@ export function ChatTab({ initialUserId, initialMessage }: { initialUserId?: str
   const refundStarted = useRef(false);
 
   const socket = useChatSocket();
-  const { data: conversationPageData, isLoading } = useConversations({ page: conversationPage, search: user?.role === "CUSTOMER" ? undefined : conversationSearch, filter: user?.role === "CUSTOMER" ? undefined : conversationFilter });
+  const { data: conversationPageData, isLoading } = useConversations({ page: conversationPage, search: customerSide ? undefined : conversationSearch, filter: customerSide ? undefined : conversationFilter });
   const conversations = conversationPageData?.data ?? [];
   const startConversation = useStartConversation();
   const { data: messages } = useMessages(selectedUserId);
@@ -52,7 +57,7 @@ export function ChatTab({ initialUserId, initialMessage }: { initialUserId?: str
   }, [initialUserId, initialMessage]);
 
   useEffect(() => {
-    if (!initialMessage || selectedUserId || refundStarted.current || user?.role !== "CUSTOMER" || startConversation.isPending) return;
+    if (!initialMessage || selectedUserId || refundStarted.current || !customerSide || startConversation.isPending) return;
     refundStarted.current = true;
     startConversation.mutate({ channel: "support" }, { onSuccess: (conversation) => setSelectedUserId(conversation.workerId) });
   }, [initialMessage, selectedUserId, user?.role, startConversation]);
@@ -74,9 +79,9 @@ export function ChatTab({ initialUserId, initialMessage }: { initialUserId?: str
   useEffect(() => {
     if (!messages || !user) return;
       messages
-      .filter((m) => !m.isRead && (m.receiverId === user.id || (user.role !== "CUSTOMER" && m.sender?.role === "CUSTOMER")))
+      .filter((m) => !m.isRead && (m.receiverId === user.id || (staffInbox && m.sender?.role === "CUSTOMER")))
       .forEach((m) => markRead.mutate(m.id));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, user?.id]);
 
   const selectedConversation = conversations?.find((c) => c.user.id === selectedUserId);
@@ -108,8 +113,8 @@ export function ChatTab({ initialUserId, initialMessage }: { initialUserId?: str
       <div className="chat-container grid min-h-[calc(100dvh-11rem)] grid-cols-1 gap-4 overflow-hidden md:min-h-0 md:grid-cols-3 md:[height:calc(100vh-240px)]">
         {/* Conversations */}
         <div className="chat-sidebar flex min-h-0 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
-          {user?.role === "CUSTOMER" && <div className="border-b border-gray-100 p-3"><Button onClick={() => setNewChatOpen(true)} className="w-full bg-togt-orange text-white hover:bg-togt-orange/90">+ New Chat</Button></div>}
-          {user?.role !== "CUSTOMER" && <div className="space-y-2 border-b border-gray-100 p-3"><div className="relative"><Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" /><Input value={conversationSearch} onChange={(event) => { setConversationSearch(event.target.value); setConversationPage(1); }} placeholder="Search name or email" className="pl-8" /></div><select value={conversationFilter} onChange={(event) => { setConversationFilter(event.target.value as typeof conversationFilter); setConversationPage(1); }} className="h-8 w-full rounded-lg border border-input px-2 text-xs"><option value="all">All conversations</option><option value="unread">Unread</option><option value="read">Read</option></select></div>}
+          {customerSide && <div className="border-b border-gray-100 p-3"><Button onClick={() => setNewChatOpen(true)} className="w-full bg-togt-orange text-white hover:bg-togt-orange/90">+ New Chat</Button></div>}
+          {staffInbox && <div className="space-y-2 border-b border-gray-100 p-3"><div className="relative"><Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" /><Input value={conversationSearch} onChange={(event) => { setConversationSearch(event.target.value); setConversationPage(1); }} placeholder="Search name or email" className="pl-8" /></div><select value={conversationFilter} onChange={(event) => { setConversationFilter(event.target.value as typeof conversationFilter); setConversationPage(1); }} className="h-8 w-full rounded-lg border border-input px-2 text-xs"><option value="all">All conversations</option><option value="unread">Unread</option><option value="read">Read</option></select></div>}
           <div className="chat-user-list min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
           {isLoading ? (
             <LoadingSpinner />
@@ -148,7 +153,7 @@ export function ChatTab({ initialUserId, initialMessage }: { initialUserId?: str
             ))
           )}
           </div>
-          {user?.role !== "CUSTOMER" && conversationPageData && conversationPageData.total > 30 && <button onClick={() => setAllUsersOpen(true)} className="m-3 w-[calc(100%-1.5rem)] rounded-lg border border-togt-blue px-3 py-2 text-xs font-semibold text-togt-blue">See All Users ({conversationPageData.total})</button>}
+          {staffInbox && conversationPageData && conversationPageData.total > 30 && <button onClick={() => setAllUsersOpen(true)} className="m-3 w-[calc(100%-1.5rem)] rounded-lg border border-togt-blue px-3 py-2 text-xs font-semibold text-togt-blue">See All Users ({conversationPageData.total})</button>}
         </div>
 
         {/* Thread */}
@@ -177,7 +182,7 @@ export function ChatTab({ initialUserId, initialMessage }: { initialUserId?: str
                           {m.message && <p className="whitespace-pre-wrap break-words">{m.message}</p>}
                           {m.fileUrl && <a href={m.fileUrl} target="_blank" rel="noreferrer" className={cn("mt-1 flex items-center gap-1.5 text-xs underline", own ? "text-white/90" : "text-togt-blue")}><FileText className="h-3.5 w-3.5" />Attachment</a>}
                           <p className={cn("mt-1 flex items-center justify-end gap-1 text-[10px]", own ? "text-white/70" : "text-gray-400")}>
-                            {user?.role !== "CUSTOMER" && m.sender?.role === "WORKER" && <span className="mr-auto font-medium">{own ? "You" : m.sender.fullName}</span>}
+                            {staffInbox && m.sender?.role === "WORKER" && <span className="mr-auto font-medium">{own ? "You" : m.sender.fullName}</span>}
                             {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                             {own && (
                               <span className={cn("inline-flex items-center justify-center", m.isRead ? "text-sky-200" : "text-white/70")} aria-label={m.isRead ? "Read" : "Sent"}>

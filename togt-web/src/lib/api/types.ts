@@ -23,7 +23,8 @@ export type ServiceType =
   | "TOURIST"
   | "VISA"
   | "CONSULTING"
-  | "FOREIGN_TRAVEL";
+  | "FOREIGN_TRAVEL"
+  | "CONTACT";
 
 export type RequestStatus =
   | "PENDING"

@@ -4,8 +4,8 @@ export const CONTACT = {
     { display: "+251 99 797 9740", href: "tel:+251997979740" },
   ],
   email: "info@togttrading.com",
-  address: "Jemo 1, Front of Saba Building, Addis Ababa, Ethiopia",
-  map: "https://maps.app.goo.gl/rFFRbFUhKS2zZRS46",
+  address: "Jemo 1, Front of AK Building, 3rd Floor, Addis Ababa, Ethiopia",
+  map: "https://maps.app.goo.gl/1QFBkEZMVwwjG6Aj9",
   socials: {
     tiktok: "https://www.tiktok.com/@islamic.dawa.official11",
     instagram: "https://www.instagram.com/togt_tourandtravel",

@@ -20,6 +20,23 @@ export function useMockSubmit() {
 
   async function submit(serviceType: string, payload: Record<string, unknown>) {
     const normalizedType = serviceType === "foreignTravel" ? "FOREIGN_TRAVEL" : serviceType.toUpperCase();
+    // Contact-us requests are pure messages — never a payment flow. They are
+    // created as CONTACT requests our team answers from the dashboard.
+    if (normalizedType === "CONTACT") {
+      if (!user) {
+        localStorage.setItem("pendingFormData", JSON.stringify({ serviceType, payload, paymentChoice: "PAY_LATER" }));
+        window.location.href = `/${locale}/login?redirect=smart-form`;
+        return;
+      }
+      setIsSubmitting(true); setIsSuccess(false); window.dispatchEvent(new Event("togt:submit-start"));
+      try {
+        await createRequest.mutateAsync({ serviceType: "CONTACT", formData: payload, packageId: undefined });
+        localStorage.removeItem("pendingFormData");
+        await new Promise((resolve) => window.setTimeout(resolve, 500));
+        window.location.href = `/${locale}/dashboard/customer?submitted=1`;
+      } catch (error) { window.dispatchEvent(new Event("togt:submit-end")); if (typeof window !== "undefined") window.alert(error instanceof Error ? error.message : "Submission failed"); throw error; } finally { setIsSubmitting(false); }
+      return;
+    }
     const packages = await listPackages();
     const selectedPackage = typeof payload.packageId === "string" ? packages.find((item) => item.id === payload.packageId) : undefined;
     const amount = typeof payload.amount === "number" ? payload.amount : selectedPackage?.price ?? 0;
@@ -31,7 +48,7 @@ export function useMockSubmit() {
     const complete = async (payNow: boolean) => {
       setIsSubmitting(true); setIsSuccess(false); window.dispatchEvent(new Event("togt:submit-start"));
       try {
-        const request = await createRequest.mutateAsync({ serviceType: normalizedType as "TICKET" | "UMRAH" | "DOMESTIC" | "TOURIST" | "VISA" | "CONSULTING" | "FOREIGN_TRAVEL", formData: { ...payload, amount, packageName: selectedPackage?.title }, packageId: typeof payload.packageId === "string" ? payload.packageId : undefined });
+        const request = await createRequest.mutateAsync({ serviceType: normalizedType as "TICKET" | "UMRAH" | "DOMESTIC" | "TOURIST" | "VISA" | "CONSULTING" | "FOREIGN_TRAVEL" | "CONTACT", formData: { ...payload, amount, packageName: selectedPackage?.title }, packageId: typeof payload.packageId === "string" ? payload.packageId : undefined });
         localStorage.removeItem("pendingFormData");
         if (payNow && amount > 0) { const payment = await initializePayment(request.id, amount, selectedPackage?.currency ?? "ETB"); window.location.href = payment.checkoutUrl; return; }
         await new Promise((resolve) => window.setTimeout(resolve, 500)); window.location.href = `/${locale}/dashboard/customer?submitted=1`;

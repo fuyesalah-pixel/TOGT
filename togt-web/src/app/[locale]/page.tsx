@@ -20,7 +20,7 @@ import { Footer } from "@/components/site/footer";
 import { FloatingButtons } from "@/components/site/floating-buttons";
 import { SmartFormProvider } from "@/components/smart-form/smart-form-context";
 import { JsonLd } from "@/components/seo/json-ld";
-import { breadcrumbSchema, organizationSchema, umrahServiceSchema, faqSchema } from "@/lib/seo";
+import { breadcrumbSchema, organizationSchema, umrahServiceSchema, faqSchema, servicesSchema } from "@/lib/seo";
 import { pageMetadata, type SeoLocale } from "@/lib/seo";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -70,6 +70,7 @@ export default function HomePage() {
       <Navbar />
       <main>
         <JsonLd data={organizationSchema} />
+        <JsonLd data={servicesSchema} />
         <JsonLd data={umrahServiceSchema} />
         <JsonLd data={faqSchema(homeFaq)} />
         <JsonLd data={breadcrumbSchema([{ name: "Home", path: "/en" }])} />
