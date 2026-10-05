@@ -214,6 +214,7 @@ export interface Review {
   reviewText?: string | null;
   imageUrls: string[];
   isVisible: boolean;
+  isHiddenByAdmin: boolean;
   createdAt: string;
 }
 

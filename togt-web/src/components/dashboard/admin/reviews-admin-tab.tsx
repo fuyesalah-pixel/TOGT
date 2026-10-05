@@ -22,19 +22,29 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Whether the review is currently shown publicly: approved, or
+ *  auto-published after 24h (unless hidden by an admin). */
+function isLive(r: Review) {
+  return r.isVisible || (!r.isHiddenByAdmin && Date.now() - new Date(r.createdAt).getTime() >= DAY_MS);
+}
+
 export function ReviewsAdminTab() {
   const { data: reviews, isLoading } = useAllReviews();
   const setVisibility = useSetReviewVisibility();
   const [preview, setPreview] = useState<string | null>(null);
 
   const rows = reviews ?? [];
-  const pendingCount = rows.filter((r) => !r.isVisible).length;
+  const liveCount = rows.filter(isLive).length;
+  const hiddenCount = rows.filter((r) => r.isHiddenByAdmin).length;
+  const pendingCount = rows.length - liveCount - hiddenCount;
 
   return (
     <div>
       <PageHeader
         title="Reviews moderation"
-        description="Reviews auto-publish 24h after submission — toggle visibility anytime"
+        description="Reviews auto-publish 24h after submission — hiding one overrides auto-publish and keeps it hidden until approved"
       />
 
       {rows.length > 0 && (
@@ -43,11 +53,16 @@ export function ReviewsAdminTab() {
             {rows.length} total
           </span>
           <span className="rounded-full bg-emerald-50 px-3 py-1 font-semibold text-emerald-700">
-            {rows.length - pendingCount} visible
+            {liveCount} live
           </span>
           <span className="rounded-full bg-amber-50 px-3 py-1 font-semibold text-amber-700">
             {pendingCount} awaiting auto-publish
           </span>
+          {hiddenCount > 0 && (
+            <span className="rounded-full bg-red-50 px-3 py-1 font-semibold text-red-700">
+              {hiddenCount} hidden by admin
+            </span>
+          )}
         </div>
       )}
 
@@ -101,19 +116,29 @@ export function ReviewsAdminTab() {
             { key: "createdAt", label: "Submitted", render: (r) => new Date(r.createdAt).toLocaleDateString() },
             {
               key: "isVisible",
-              label: "Visible",
-              render: (r) => (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setVisibility.mutate({ id: r.id, isVisible: !r.isVisible });
-                  }}
-                  className={`relative h-5 w-9 rounded-full transition-colors ${r.isVisible ? "bg-emerald-500" : "bg-gray-300"}`}
-                  aria-label="Toggle visibility"
-                >
-                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${r.isVisible ? "left-4.5" : "left-0.5"}`} />
-                </button>
-              ),
+              label: "Visibility",
+              render: (r) => {
+                const live = isLive(r);
+                return (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setVisibility.mutate({ id: r.id, isVisible: !live });
+                      }}
+                      className={`relative h-5 w-9 rounded-full transition-colors ${live ? "bg-emerald-500" : "bg-gray-300"}`}
+                      aria-label="Toggle visibility"
+                    >
+                      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${live ? "left-4.5" : "left-0.5"}`} />
+                    </button>
+                    {r.isHiddenByAdmin ? (
+                      <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">Hidden</span>
+                    ) : !live ? (
+                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-600">Pending</span>
+                    ) : null}
+                  </div>
+                );
+              },
             },
           ]}
         />
