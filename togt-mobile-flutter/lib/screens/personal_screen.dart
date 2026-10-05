@@ -46,7 +46,18 @@ class _PersonalScreenState extends State<PersonalScreen> {
     }
     _loadTasbih();
     _loadCustomAlarms();
-    _loadLocation();
+    // The azan pref must be known BEFORE the first schedule() below — the
+    // startup re-arm in main.dart uses the same persisted key.
+    () async {
+      await _loadAzanPref();
+      _loadLocation();
+    }();
+  }
+
+  Future<void> _loadAzanPref() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getBool('togt_azan_enabled');
+    if (mounted && stored != null) setState(() => _azan = stored);
   }
 
   Future<void> _loadTasbih() async {
@@ -171,7 +182,14 @@ class _PersonalScreenState extends State<PersonalScreen> {
         _hero(Icons.access_time_rounded, l10n.prayerTimes, l10n.azanAlarm),
         const SizedBox(height: 18),
         ..._prayerRows(),
-         SwitchListTile(contentPadding: EdgeInsets.zero, title: Text(l10n.azanAlarm), subtitle: Text(l10n.notifyBeforePrayer), value: _azan, activeThumbColor: TOGTColors.orange, onChanged: (v) async { setState(() => _azan = v); if (_times != null) await PrayerService.instance.schedule(_times!, enabled: v, customAlarms: _customAlarms); }),
+         SwitchListTile(contentPadding: EdgeInsets.zero, title: Text(l10n.azanAlarm), subtitle: Text(l10n.notifyBeforePrayer), value: _azan, activeThumbColor: TOGTColors.orange, onChanged: (v) async {
+           setState(() => _azan = v);
+           // Persist the choice: main.dart re-arms the alarm pool at every app
+           // start and reads this same key, so the toggle must survive restarts.
+           final prefs = await SharedPreferences.getInstance();
+           await prefs.setBool('togt_azan_enabled', v);
+           if (_times != null) await PrayerService.instance.schedule(_times!, enabled: v, customAlarms: _customAlarms);
+         }),
         if (_azan && !_exactAlarmHintShown && _times != null) _exactAlarmBanner(),
         _customAlarmsCard(),
         _permissionsCard(),
@@ -324,7 +342,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
       );
 
   Widget _tasbihView() => Column(children: [
-         _hero(Icons.fingerprint_rounded, l10n.azkar, l10n.tapToCount),
+         _hero(Icons.fingerprint_rounded, l10n.tasbih, l10n.tapToCount),
         const SizedBox(height: 30),
         _TasbihDial(
           count: _tasbih,

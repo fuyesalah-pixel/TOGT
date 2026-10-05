@@ -36,13 +36,15 @@ Future<void> main() async {
       final alarms = await CustomAlarm.loadAll();
       final azanOn = (await SharedPreferences.getInstance()).getBool('togt_azan_enabled') ?? true;
       final location = await Geolocator.getLastKnownPosition();
-      if (location != null) {
-        await PrayerService.instance.schedule(
-          PrayerService.instance.calculate(location.latitude, location.longitude),
-          enabled: azanOn,
-          customAlarms: alarms,
-        );
-      }
+      // No location yet (fresh install / permission pending): fall back to
+      // Addis Ababa so the alarm pool still exists instead of staying empty.
+      final lat = location?.latitude ?? 9.005401;
+      final lng = location?.longitude ?? 38.763611;
+      await PrayerService.instance.schedule(
+        PrayerService.instance.calculate(lat, lng),
+        enabled: azanOn,
+        customAlarms: alarms,
+      );
     } catch (_) {}
     // Permissions are asked ONCE, right after the first login (see
     // PermissionService.runAfterLogin + LoginScreen) — never on app open.

@@ -384,15 +384,17 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
             padding: const EdgeInsets.only(top: 18),
             child: Container(
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: (_message!.startsWith('Request') ? TOGTColors.green : TOGTColors.red).withOpacity(.08), borderRadius: BorderRadius.circular(14)),
+              decoration: BoxDecoration(color: TOGTColors.red.withOpacity(.08), borderRadius: BorderRadius.circular(14)),
               child: Row(children: [
-                Icon(_message!.startsWith('Request') ? Icons.check_circle_outline_rounded : Icons.error_outline_rounded, color: _message!.startsWith('Request') ? TOGTColors.green : TOGTColors.red, size: 20),
+                const Icon(Icons.error_outline_rounded, color: TOGTColors.red, size: 20),
                 const SizedBox(width: 10),
-                Expanded(child: Text(_message!, style: TOGTTypography.body.copyWith(color: _message!.startsWith('Request') ? TOGTColors.green : TOGTColors.red))),
+                Expanded(child: Text(_message!, style: TOGTTypography.body.copyWith(color: TOGTColors.red))),
               ]),
             ),
           ),
-           if (_message?.startsWith('Request') == true) Row(children: [Expanded(child: OutlinedButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.paymentReferencePending))), child: Text(l10n.payNow))), const SizedBox(width: 12), Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.payLater)))]),
+          // No payment row here: requests without a staff-set price are paid
+          // later from the request detail screen — contact-us never involves
+          // payment at all.
         ]),
       );
   }

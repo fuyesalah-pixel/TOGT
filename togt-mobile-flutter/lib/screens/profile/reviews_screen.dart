@@ -2,7 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../l10n/app_localizations.dart';
+import '../../navigation/app_navigator.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import '../../services/document_service.dart';
 import '../../theme/colors.dart';
 import '../../theme/typography.dart';
@@ -34,6 +36,12 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
 
   Future<void> _submit() async {
     final l10n = AppLocalizations.of(context);
+    // Guests cannot POST /reviews — surface a clear sign-in prompt instead of
+    // a doomed submission that fails with a raw session error.
+    if (AuthService.instance.currentUser == null) {
+      setState(() => _message = l10n.notSignedIn);
+      return;
+    }
     if (_rating == 0 || _text.text.trim().length < 5) {
       setState(() => _message = l10n.required);
       return;
@@ -86,6 +94,20 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
       if (_images.isNotEmpty) SizedBox(height: 92, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: _images.length, separatorBuilder: (_, __) => const SizedBox(width: 10), itemBuilder: (_, i) => Stack(children: [ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(File(_images[i].path), width: 92, height: 92, fit: BoxFit.cover)), Positioned(right: 2, top: 2, child: GestureDetector(onTap: () => setState(() => _images.removeAt(i)), child: const CircleAvatar(radius: 11, backgroundColor: Colors.black54, child: Icon(Icons.close, color: Colors.white, size: 14))))]))),
       const SizedBox(height: 24),
       AnimatedButton(label: _busy ? l10n.sending : l10n.reviews, icon: Icons.send_rounded, onPressed: _busy ? null : _submit),
+      if (AuthService.instance.currentUser == null) ...[
+        const SizedBox(height: 18),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: TOGTColors.blue.withOpacity(.06), borderRadius: BorderRadius.circular(14), border: Border.all(color: TOGTColors.blue.withOpacity(.25))),
+          child: Row(children: [
+            const Icon(Icons.info_outline_rounded, color: TOGTColors.blue),
+            const SizedBox(width: 12),
+            Expanded(child: Text(l10n.notSignedIn, style: TOGTTypography.body.copyWith(color: TOGTColors.navy))),
+          ]),
+        ),
+        const SizedBox(height: 10),
+        AnimatedButton(label: l10n.signIn, icon: Icons.login_rounded, gradient: TOGTColors.orangeGradient, onPressed: () => AppNavigator.goToLogin()),
+      ],
       if (_message != null) Padding(padding: const EdgeInsets.only(top: 16), child: Text(_message!, style: TOGTTypography.body.copyWith(color: _submitted ? TOGTColors.green : TOGTColors.red))),
     ]),
   ); }

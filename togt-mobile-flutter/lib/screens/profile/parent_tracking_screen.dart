@@ -32,6 +32,11 @@ class _ParentTrackingScreenState extends State<ParentTrackingScreen> {
   bool _following = true;
   String? _focusedId;
   Timer? _poll;
+  // People search: the API only answers with a search term (privacy — no
+  // browsing strangers), so results are typed-in, debounced 400ms.
+  final TextEditingController _search = TextEditingController();
+  Timer? _searchDebounce;
+  String _searchQuery = '';
   final MapController _map = MapController();
 
   AppLocalizations get l10n => AppLocalizations.of(context);
@@ -46,6 +51,8 @@ class _ParentTrackingScreenState extends State<ParentTrackingScreen> {
   @override
   void dispose() {
     _poll?.cancel();
+    _searchDebounce?.cancel();
+    _search.dispose();
     super.dispose();
   }
 
@@ -53,7 +60,7 @@ class _ParentTrackingScreenState extends State<ParentTrackingScreen> {
     if (!silent && mounted) setState(() { _loading = true; _message = null; });
     try {
       final results = await Future.wait([
-        ApiService.instance.get('/tracking/people', query: {'query': ''}),
+        ApiService.instance.get('/tracking/people', query: {'query': _searchQuery}),
         ApiService.instance.get('/tracking/search', query: {'query': ''}),
         ApiService.instance.get('/tracking/requests'),
       ]);
@@ -372,6 +379,24 @@ class _ParentTrackingScreenState extends State<ParentTrackingScreen> {
                   // ── People: send requests ──────────────────────────────────
                   const SizedBox(height: 8),
                   _sectionHeader(l10n.trackingPeopleTitle, Icons.person_search_rounded),
+                  TextField(
+                    controller: _search,
+                    onChanged: (value) {
+                      _searchDebounce?.cancel();
+                      _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+                        if (!mounted) return;
+                        setState(() => _searchQuery = value.trim());
+                        _load(silent: true);
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: l10n.trackingSearchHint,
+                      prefixIcon: const Icon(Icons.search_rounded, color: TOGTColors.orange),
+                      isDense: true,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: TOGTColors.navy.withOpacity(.14))),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   if (_people.isEmpty && !_loading)
                     Padding(
                       padding: const EdgeInsets.all(6),

@@ -203,7 +203,10 @@ class _HomeScreenState extends State<HomeScreen> {
                        _Service(icon: Icons.landscape_rounded, label: l10n.domesticTours, type: 'DOMESTIC'),
                        _Service(icon: Icons.public_rounded, label: l10n.foreignTravel, type: 'FOREIGN'),
                        _Service(icon: Icons.badge_outlined, label: l10n.visa, type: 'VISA'),
-                       _Service(icon: Icons.business_center_outlined, label: l10n.services, type: 'CONSULTING'),
+                       // 2nd row, 2nd button: Tourist → tourist packages grid
+                       // (the old generic "Services/Consulting" button sent
+                       // users into a request form nobody asked for).
+                       _Service(icon: Icons.travel_explore_rounded, label: l10n.touristTours, type: 'TOURIST'),
                        _Service(icon: Icons.phone_in_talk_outlined, label: l10n.contact, type: 'CONTACT'),
                        _Service(icon: Icons.card_giftcard_rounded, label: l10n.umrahGift, type: 'UMRAH_GIFT'),
                     ],
@@ -312,19 +315,20 @@ class _Service extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GestureDetector(
         onTap: () {
-          if (type == 'UMRAH' || type == 'DOMESTIC' || type == 'FOREIGN') {
+          if (type == 'UMRAH' || type == 'DOMESTIC' || type == 'FOREIGN' || type == 'TOURIST') {
             final filter = type == 'UMRAH'
                 ? PackageFilter.umrah
                 : type == 'DOMESTIC'
                     ? PackageFilter.domestic
-                    : PackageFilter.foreign;
+                    : type == 'TOURIST'
+                        ? PackageFilter.tourist
+                        : PackageFilter.foreign;
             Navigator.of(context).push(MaterialPageRoute(builder: (_) => AllPackagesScreen(embedded: false, initialFilter: filter)));
           } else {
             final screen = switch (type) {
               'FLIGHT' => const TicketFormScreen(),
               'UMRAH_GIFT' => const UmrahGiftFormScreen(),
               'VISA' => const VisaFormScreen(),
-              'CONSULTING' => const ServiceRequestScreen(serviceType: 'CONSULTING', title: 'Consulting'),
               'CONTACT' => const ServiceRequestScreen(serviceType: 'CONTACT', title: 'Contact Us'),
               'TOURIST' => const TouristFormScreen(),
               _ => const ForeignTravelFormScreen(),
