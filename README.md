@@ -45,8 +45,9 @@ TOGT web app/
 ├── togt-api/           # NestJS backend (REST API, Prisma, BullMQ)
 ├── togt-mobile/        # React Native (Expo) mobile app
 ├── docs/                # Requirements, DB schema, API spec, project plan
-├── docker-compose.yml   # PostgreSQL + Valkey (local dev infra)
-├── .env.example         # Root-level env vars for docker-compose
+├── docker-compose.yaml  # Production stack (API + web + Postgres + Valkey, see DEPLOY.md)
+├── DEPLOY.md            # Production deploy runbook
+├── .env.example         # Root-level env vars for docker-compose.yaml
 └── README.md
 ```
 

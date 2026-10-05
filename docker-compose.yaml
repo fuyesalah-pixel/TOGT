@@ -1,4 +1,7 @@
-version: "3.9"
+# TOGT production stack — the ONE authoritative compose file.
+# Lives on the VPS at /docker/togt-travel. Deploys via `git pull` + `docker compose up -d --build`.
+# Copy .env.example to .env and fill in real secrets before first deploy.
+# Full runbook: see DEPLOY.md.
 
 services:
   postgres:
@@ -45,11 +48,11 @@ services:
     networks: [togt-network]
 
   togt-api:
-    # Force Hostinger to rebuild the API instead of reusing the stale auth image.
+    # Built from the local checkout: every `git pull` changes the context,
+    # so `up -d --build` always ships the pulled code (no cache-bust needed).
     build:
-      context: https://github.com/fuyesalah-pixel/TOGT.git#main:togt-api
-      args:
-        CACHE_BUST: "20260829093000"
+      context: ./togt-api
+    image: ghcr.io/fuyesalah-pixel/togt-api:latest
     container_name: togt-api-prod
     restart: unless-stopped
     command: sh -c "npx prisma migrate deploy && node dist/main.js"
@@ -105,14 +108,15 @@ services:
       - "traefik.http.services.togt-api.loadbalancer.server.port=3001"
 
   togt-web:
+    # Built from the local checkout; tagged so ghcr tooling can push it if needed.
     build:
-      context: https://github.com/fuyesalah-pixel/TOGT.git#main:togt-web
+      context: ./togt-web
       args:
         NEXT_PUBLIC_API_URL: https://travel.togttrading.com
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
         NEXT_PUBLIC_CHAPA_PUBLIC_KEY: ${NEXT_PUBLIC_CHAPA_PUBLIC_KEY}
         NEXT_PUBLIC_MAPBOX_TOKEN: ${MAPBOX_ACCESS_TOKEN}
-        CACHE_BUST: "20260829111500"
+    image: ghcr.io/fuyesalah-pixel/togt-web:latest
     container_name: togt-web-prod
     restart: unless-stopped
     depends_on: [togt-api]
