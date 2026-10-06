@@ -35,7 +35,12 @@ export class PaymentService {
     const frontend = this.config.get<string>('frontendUrl') ?? 'http://localhost:3000';
     const chapaUrl = this.config.get<string>('CHAPA_API_URL') ?? 'https://api.chapa.co/v1';
     const names = request.user.fullName.trim().split(/\s+/);
-    const phone = request.user.phone?.replace(/[\s()-]/g, '').replace(/^\+251/, '0');
+    // Chapa rejects initialize calls whose phone_number is not exactly
+    // 09xxxxxxxx / 07xxxxxxxx (10 digits, Safaricom/Aethel mobile ranges) —
+    // one malformed phone would kill the whole checkout, so only send it when
+    // it matches the accepted shape.
+    const digits = request.user.phone?.replace(/[\s()-]/g, '').replace(/^\+251/, '0');
+    const phone = digits && /^0[79]\d{8}$/.test(digits) ? digits : undefined;
     const requestBody = { amount: String(dto.amount), currency: dto.currency ?? 'ETB', tx_ref: txRef, email: request.user.email, first_name: names[0] || 'TOGT', last_name: names.slice(1).join(' ') || 'Customer', ...(phone && { phone_number: phone }), callback_url: `${this.config.get<string>('BACKEND_URL') ?? 'http://localhost:3001'}/api/payment/callback`, return_url: `${frontend}/en/payment/callback?tx_ref=${encodeURIComponent(txRef)}`, customization: { title: 'TOGT Travel', description: `${request.serviceType} payment` }, meta: { requestId: request.id } };
     const response = await fetch(`${chapaUrl}/transaction/initialize`, { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
     const payload = await response.json() as { status?: string; message?: unknown; data?: { checkout_url?: string } };
