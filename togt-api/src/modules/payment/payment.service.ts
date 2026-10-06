@@ -9,6 +9,10 @@ import { InitializePaymentDto } from './dto/initialize-payment.dto';
 import { CredentialService } from '../system/credential.service';
 
 const FLIGHT_REF_PREFIX = 'TOGT-FL-';
+// How long a started-but-unconfirmed checkout keeps its slot before another
+// initialize() may auto-release it. Covers "customer closed the checkout by
+// mistake" — the slot frees itself instead of dead-ending every retry.
+const STALE_PAYMENT_MS = 30 * 60 * 1000;
 
 @Injectable()
 export class PaymentService {
@@ -19,7 +23,31 @@ export class PaymentService {
     const request = await this.prisma.serviceRequest.findUnique({ where: { id: dto.requestId }, include: { user: true } });
     if (!request || request.userId !== actor.id) throw new ForbiddenException('Request not found');
     if (request.paymentStatus === PaymentStatus.PAID) throw new BadRequestException('Request is already paid');
-    if (request.paymentId) throw new BadRequestException('A payment is already in progress for this request. Verify it or contact support.');
+    if (request.paymentId) {
+      // A previous checkout never finished (customer closed the window, app
+      // crashed, Chapa never called back). Decide whether it is genuinely
+      // still live or a dead reference blocking every retry.
+      if (Date.now() - request.updatedAt.getTime() > STALE_PAYMENT_MS) {
+        this.logger.log(`Auto-releasing stale payment reference ${request.paymentId} on request ${request.id}`);
+        await this.prisma.serviceRequest.update({ where: { id: request.id }, data: { paymentId: null } });
+      } else {
+        const previous = await this.previousTransactionState(request.paymentId);
+        if (previous?.status === 'success') {
+          // Money actually arrived but the callback was missed — record it and
+          // refuse a second checkout rather than charging the customer twice.
+          if (previous.amount != null) await this.markPaid(request.id, request.paymentId, previous.amount, previous.currency);
+          throw new BadRequestException(`This request is already paid — the payment went through. Refresh the app; if it still shows unpaid, contact TOGT support with reference ${request.paymentId}.`);
+        }
+        if (previous?.status === 'pending' || previous?.status === 'processing') {
+          const minutesLeft = Math.max(1, Math.ceil((STALE_PAYMENT_MS - (Date.now() - request.updatedAt.getTime())) / 60000));
+          throw new BadRequestException(`A checkout for this request is still open. Finish that payment, or wait about ${minutesLeft} min for it to expire and try again. If you already closed the payment window, tap Pay Now once more — it will be released.`);
+        }
+        // Not paid, not pending (or Chapa unreachable): the reference is dead —
+        // free the slot and let the customer start over.
+        this.logger.warn(`Releasing dead payment reference ${request.paymentId} on request ${request.id} (status: ${previous?.status ?? 'unverifiable'})`);
+        await this.prisma.serviceRequest.update({ where: { id: request.id }, data: { paymentId: null } });
+      }
+    }
     if (!Number.isFinite(dto.amount) || dto.amount <= 0) throw new BadRequestException('Payment amount must be greater than zero');
     if (request.amount == null) throw new BadRequestException('This request does not have an approved amount yet');
     if (Math.abs(request.amount - dto.amount) > 0.01) throw new BadRequestException('Payment amount does not match the approved amount');
@@ -44,7 +72,10 @@ export class PaymentService {
     const requestBody = { amount: String(dto.amount), currency: dto.currency ?? 'ETB', tx_ref: txRef, email: request.user.email, first_name: names[0] || 'TOGT', last_name: names.slice(1).join(' ') || 'Customer', ...(phone && { phone_number: phone }), callback_url: `${this.config.get<string>('BACKEND_URL') ?? 'http://localhost:3001'}/api/payment/callback`, return_url: `${frontend}/en/payment/callback?tx_ref=${encodeURIComponent(txRef)}`, customization: { title: 'TOGT Travel', description: `${request.serviceType} payment` }, meta: { requestId: request.id } };
     const response = await fetch(`${chapaUrl}/transaction/initialize`, { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
     const payload = await response.json() as { status?: string; message?: unknown; data?: { checkout_url?: string } };
-    if (!response.ok || payload.status !== 'success' || !payload.data?.checkout_url) { const reason = typeof payload.message === 'string' ? payload.message : JSON.stringify(payload.message ?? payload); throw new BadRequestException(`Chapa initialization failed (${response.status}): ${reason}`); }
+    if (!response.ok || payload.status !== 'success' || !payload.data?.checkout_url) {
+      const raw = typeof payload.message === 'string' ? payload.message : JSON.stringify(payload.message ?? payload);
+      throw new BadRequestException(`Payment could not be started: ${raw.slice(0, 200)}. Check your details and try again; if it keeps failing, contact TOGT support.`);
+    }
     return { checkoutUrl: payload.data.checkout_url, transactionId: txRef };
   }
 
@@ -80,14 +111,29 @@ export class PaymentService {
   async cancel(transactionId: string, actor: User) {
     const request = await this.prisma.serviceRequest.findFirst({ where: { paymentId: transactionId } });
     if (!request || request.userId !== actor.id) throw new ForbiddenException('Payment not found');
-    const secret = await this.credentials.get('CHAPA');
-    if (!secret) throw new ServiceUnavailableException('Chapa is not configured');
-    const chapaUrl = this.config.get<string>('CHAPA_API_URL') ?? 'https://api.chapa.co/v1';
-    const response = await fetch(`${chapaUrl}/transaction/cancel/${encodeURIComponent(transactionId)}`, { method: 'PUT', headers: { Authorization: `Bearer ${secret}` } });
-    const payload = await response.json();
-    if (!response.ok) throw new BadRequestException((payload as { message?: string }).message ?? 'Unable to cancel payment');
+    // Release the slot FIRST. The old code threw when Chapa's cancel failed
+    // (e.g. checkout already expired there) and left paymentId set forever,
+    // permanently dead-ending the request with "already in progress".
     await this.prisma.serviceRequest.update({ where: { id: request.id }, data: { paymentId: null } });
-    return payload;
+    const secret = await this.credentials.get('CHAPA');
+    if (secret) {
+      const chapaUrl = this.config.get<string>('CHAPA_API_URL') ?? 'https://api.chapa.co/v1';
+      try {
+        const response = await fetch(`${chapaUrl}/transaction/cancel/${encodeURIComponent(transactionId)}`, { method: 'PUT', headers: { Authorization: `Bearer ${secret}` } });
+        if (!response.ok) {
+          // Not fatal for the customer — the slot is freed. But if the payment
+          // quietly succeeded, record it instead of letting them pay twice.
+          try {
+            const state = await this.verifyByReference(transactionId);
+            if (state.status === 'success') { await this.markPaid(request.id, transactionId, state.amount, state.currency); return { status: 'paid' }; }
+          } catch { /* fall through to the warning */ }
+          this.logger.warn(`Chapa cancel failed for ${transactionId} (${response.status}) — checkout released anyway`);
+        }
+      } catch (error) {
+        this.logger.warn(`Chapa cancel unreachable for ${transactionId}: ${error instanceof Error ? error.message : error} — checkout released anyway`);
+      }
+    }
+    return { status: 'cancelled' };
   }
 
   async webhook(rawBody: string, signature: string | undefined, payload: { event?: string; status?: string; tx_ref?: string; ref_id?: string; transaction_id?: string; amount?: number; currency?: string; data?: { status?: string; tx_ref?: string; ref_id?: string; amount?: number; currency?: string } }) {
@@ -112,6 +158,19 @@ export class PaymentService {
       return;
     }
     const request = await this.prisma.serviceRequest.findFirst({ where: { paymentId: reference } }); if (request) await this.markPaid(request.id, paymentId, amount, currency); }
+  /// State of a previously-started checkout, or null when it cannot be
+  /// confirmed (Chapa down / not configured). Null must NOT block the customer
+  /// — dead references are released by the caller.
+  private async previousTransactionState(transactionId: string): Promise<{ status: string; amount?: number; currency?: string } | null> {
+    try {
+      const state = await this.verifyByReference(transactionId);
+      return { status: state.status.toLowerCase(), amount: state.amount, currency: state.currency };
+    } catch (error) {
+      this.logger.warn(`Could not verify previous payment attempt ${transactionId}: ${error instanceof Error ? error.message : error}`);
+      return null;
+    }
+  }
+
   private async verifyByReference(transactionId: string) { const secret = await this.credentials.get('CHAPA'); if (!secret) throw new ServiceUnavailableException('Chapa is not configured'); const chapaUrl = this.config.get<string>('CHAPA_API_URL') ?? 'https://api.chapa.co/v1'; const response = await fetch(`${chapaUrl}/transaction/verify/${encodeURIComponent(transactionId)}`, { headers: { Authorization: `Bearer ${secret}` } }); const payload = await response.json() as { status?: string; data?: { status?: string; amount?: number; currency?: string }; amount?: number; currency?: string }; return { status: payload.data?.status ?? payload.status ?? 'pending', amount: payload.data?.amount ?? payload.amount, currency: payload.data?.currency ?? payload.currency }; }
   private async markPaid(requestId: string, paymentId: string, amount?: number, currency?: string) {
     const request = await this.prisma.serviceRequest.findUnique({ where: { id: requestId } });
