@@ -396,7 +396,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
             _saveTasbih();
           },
         ),
-         const SizedBox(height: 20), Text(l10n.tapToCount, style: TOGTTypography.h3),
+         const SizedBox(height: 20),
          Text('${_tasbih ~/ 33} ${_tasbih ~/ 33 == 1 ? 'round' : 'rounds'} of 33 completed', style: TOGTTypography.small.copyWith(color: TOGTColors.grey)),
          Row(mainAxisSize: MainAxisSize.min, children: [
            TextButton(onPressed: () { HapticFeedback.selectionClick(); setState(() => _tasbih = 0); _saveTasbih(); }, child: Text(l10n.reset)),
@@ -622,7 +622,7 @@ class _TasbihDialState extends State<_TasbihDial> with TickerProviderStateMixin 
             alignment: Alignment.topCenter,
             child: SizedBox(
               width: 300,
-              height: 380,
+              height: 372,
               child: Stack(
                 alignment: Alignment.topCenter,
                 children: [
@@ -637,7 +637,7 @@ class _TasbihDialState extends State<_TasbihDial> with TickerProviderStateMixin 
                     ),
                   ),
                   Positioned(
-                    top: 118,
+                    top: 100,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -688,7 +688,7 @@ class _MisbahaPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height * 0.46);
+    final center = Offset(size.width / 2, size.height * 0.42);
     final rx = size.width * 0.36;
     final ry = size.height * 0.30;
 
