@@ -9,6 +9,18 @@ class PaymentService {
   /// reference so the caller can verify it when the customer comes back, or
   /// null when the checkout could not be created/opened.
   Future<String?> payNow({required String requestId, required double amount, String? email}) async {
+    // Release a previously-abandoned checkout first: the backend blocks a
+    // second initialize while paymentId is set, which would dead-end every
+    // retry with "A payment is already in progress".
+    try {
+      final state = await status(requestId: requestId);
+      final pendingTx = state?['paymentId']?.toString();
+      if (pendingTx != null && pendingTx.isNotEmpty) {
+        await ApiService.instance.post('/payment/cancel/$pendingTx');
+      }
+    } catch (_) {
+      // Cancel is best-effort; initialize below reports real problems.
+    }
     final data = await ApiService.instance.post('/payment/initialize', body: {'requestId': requestId, 'amount': amount, 'currency': 'ETB'});
     final url = data is Map ? (data['checkout_url'] ?? data['checkoutUrl'])?.toString() : null;
     final tx = data is Map ? (data['transactionId'] ?? data['transaction_id'])?.toString() : null;
