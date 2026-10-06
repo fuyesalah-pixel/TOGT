@@ -32,7 +32,7 @@ export function WorkerGroupsTab() {
   const selected = groups?.find((group) => group.id === selectedId);
   const { data: plan } = useGroupPlan(selectedId);
   const { data: locations } = useGroupLocations(detailTab === "tracking" ? selectedId : undefined);
-  const { data: users } = useUsers({ role: "CUSTOMER", search: memberSearch || undefined, limit: 100 });
+  const { data: users } = useUsers({ search: memberSearch || undefined, limit: 100 });
 
   if (isLoading) return <LoadingSpinner label="Loading groups..." />;
 
@@ -58,16 +58,17 @@ export function WorkerGroupsTab() {
       </div>
       <Dialog open={addMemberOpen} onClose={() => setAddMemberOpen(false)} title={`Add Members to ${selected?.name ?? "Group"}`} size="md">
         <div className="space-y-3">
-          <Input value={memberSearch} onChange={(event) => setMemberSearch(event.target.value)} placeholder="Search customers by name or email..." />
+          <Input value={memberSearch} onChange={(event) => setMemberSearch(event.target.value)} placeholder="Search all users by name, email, or phone..." />
           <div className="max-h-72 space-y-1 overflow-y-auto rounded-lg border border-gray-100 p-2">
             {(users?.data ?? []).map((candidate) => {
               const alreadyAdded = Boolean(selected?.members.some((member) => member.userId === candidate.id));
               const checked = alreadyAdded || selectedMemberIds.includes(candidate.id);
-              return <label key={candidate.id} className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm ${alreadyAdded ? "cursor-not-allowed bg-slate-50 opacity-60" : "cursor-pointer hover:bg-slate-50"}`}><input type="checkbox" checked={checked} disabled={alreadyAdded} onChange={() => setSelectedMemberIds((current) => checked ? current.filter((id) => id !== candidate.id) : [...current, candidate.id])} /><MemberRoleAvatar role={candidate.role === "GUIDE" ? "GUIDE" : "MEMBER"} /><span><span className="block font-semibold text-togt-navy">{candidate.fullName}</span><MemberRoleLabel role={candidate.role === "GUIDE" ? "GUIDE" : "MEMBER"} /><span className="block text-xs text-gray-500">{candidate.email}</span></span>{alreadyAdded && <span className="ml-auto text-[11px] font-semibold text-gray-400">Already added</span>}</label>;
+              const isGuide = candidate.role === "GUIDE";
+              return <label key={candidate.id} className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm ${alreadyAdded ? "cursor-not-allowed bg-slate-50 opacity-60" : "cursor-pointer hover:bg-slate-50"}`}><input type="checkbox" checked={checked} disabled={alreadyAdded} onChange={() => setSelectedMemberIds((current) => checked ? current.filter((id) => id !== candidate.id) : [...current, candidate.id])} /><MemberRoleAvatar role={isGuide ? "GUIDE" : "MEMBER"} /><span><span className="block font-semibold text-togt-navy">{candidate.fullName}</span>{candidate.role === "CUSTOMER" || candidate.role === "GUIDE" ? <MemberRoleLabel role={isGuide ? "GUIDE" : "MEMBER"} /> : <span className="block text-[10px] font-bold uppercase tracking-wide text-gray-400">{candidate.role}</span>}<span className="block text-xs text-gray-500">{candidate.email}</span></span>{alreadyAdded && <span className="ml-auto text-[11px] font-semibold text-gray-400">Already added</span>}</label>;
             })}
           </div>
-          <p className="text-xs text-gray-500">Selected: {selectedMemberIds.length}</p>
-          <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setAddMemberOpen(false)}>Cancel</Button><Button disabled={!selectedMemberIds.length || !selected || addGroupMembers.isPending} onClick={() => { if (!selected) return; addGroupMembers.mutate({ id: selected.id, userIds: selectedMemberIds, role: "MEMBER" }, { onSuccess: () => { setSelectedMemberIds([]); setMemberSearch(""); setAddMemberOpen(false); } }); }} className="bg-togt-blue text-white">{addGroupMembers.isPending ? "Adding..." : "Add selected"}</Button></div>
+          <p className="text-xs text-gray-500">Selected: {selectedMemberIds.length} — customers join as members; guides join as <span className="font-semibold text-togt-blue">guides</span> (they review the assignment, and the group appears in their My Groups tab).</p>
+          <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setAddMemberOpen(false)}>Cancel</Button><Button disabled={!selectedMemberIds.length || !selected || addGroupMembers.isPending} onClick={async () => { if (!selected) return; const byId = new Map((users?.data ?? []).map((user) => [user.id, user] as const)); const guideIds = selectedMemberIds.filter((id) => byId.get(id)?.role === "GUIDE"); const memberIds = selectedMemberIds.filter((id) => !guideIds.includes(id)); try { if (guideIds.length) await addGroupMembers.mutateAsync({ id: selected.id, userIds: guideIds, role: "GUIDE" }); if (memberIds.length) await addGroupMembers.mutateAsync({ id: selected.id, userIds: memberIds, role: "MEMBER" }); setSelectedMemberIds([]); setMemberSearch(""); setAddMemberOpen(false); } catch { /* keep the dialog open so the worker can retry */ } }} className="bg-togt-blue text-white">{addGroupMembers.isPending ? "Adding..." : "Add selected"}</Button></div>
         </div>
       </Dialog>
     </div>
