@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The azan raw resource is the sound of every prayer/custom alarm channel
+  (RawResourceAndroidNotificationSound('azan')). It is resolved by name at
+  runtime, so the resource shrinker cannot see the reference and strips the
+  file — which made every zonedSchedule call throw invalid_sound and silenced
+  all alarms. Pin it here explicitly.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/azan" />
