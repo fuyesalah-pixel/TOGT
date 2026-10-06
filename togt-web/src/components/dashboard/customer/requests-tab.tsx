@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MessageCircle, Paperclip } from "lucide-react";
+import { MessageCircle, Paperclip, TriangleAlert, X } from "lucide-react";
 import type { ServiceRequest } from "@/lib/api/types";
 import { useRequestHistory, useServiceRequests, useUploadRequestDocument } from "@/hooks/useServiceRequests";
 import { useChatSocket } from "@/hooks/useChat";
@@ -71,7 +71,32 @@ export function RequestsTab({ onChatWith }: { onChatWith: (userId: string) => vo
   const { data, isLoading } = useServiceRequests({ page, limit: 10 });
   const uploadDocument = useUploadRequestDocument();
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const payNow = async (request: ServiceRequest) => { if (!request.amount) return; setPaymentError(null); try { const payment = await initializePayment(request.id, request.amount, request.currency); window.location.href = payment.checkoutUrl; } catch (error) { setPaymentError(error instanceof Error ? error.message : "Payment initialization failed"); } };
+  const [payingId, setPayingId] = useState<string | null>(null);
+
+  // Turns a backend/payment exception into text a customer can act on. The
+  // backend's "already in progress" message already carries retry guidance;
+  // everything else gets a friendly wrapper.
+  const paymentErrorMessage = (error: unknown) => {
+    const raw = error instanceof Error ? error.message : String(error);
+    if (raw.includes("already in progress")) {
+      return "Your previous payment is still being processed. Finish that payment, or wait a few minutes and tap Pay Now again — it will be released automatically. If you already paid, your request updates as soon as the bank confirms.";
+    }
+    if (raw.includes("already paid")) return raw;
+    return `Payment could not be started: ${raw}. You can try again — if it keeps failing, contact TOGT support.`;
+  };
+
+  const payNow = async (request: ServiceRequest) => {
+    if (!request.amount || payingId) return;
+    setPaymentError(null);
+    setPayingId(request.id);
+    try {
+      const payment = await initializePayment(request.id, request.amount, request.currency);
+      window.location.href = payment.checkoutUrl;
+    } catch (error) {
+      setPaymentError(paymentErrorMessage(error));
+      setPayingId(null);
+    }
+  };
 
   useEffect(() => {
     if (selected) {
@@ -84,7 +109,18 @@ export function RequestsTab({ onChatWith }: { onChatWith: (userId: string) => vo
   return (
     <div>
       <PageHeader title="My Requests" description="Track all your service requests" />
-      {paymentError && <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">Payment failed: {paymentError}. Please try again or contact support.</p>}
+      {paymentError && (
+        <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4" role="alert">
+          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+          <div className="flex-1 text-sm">
+            <p className="font-semibold text-red-800">Payment problem</p>
+            <p className="mt-0.5 text-red-700">{paymentError}</p>
+          </div>
+          <button type="button" onClick={() => setPaymentError(null)} className="text-red-400 transition hover:text-red-600" aria-label="Dismiss">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
         <DataTable<ServiceRequest>
@@ -96,7 +132,7 @@ export function RequestsTab({ onChatWith }: { onChatWith: (userId: string) => vo
           columns={[
             { key: "serviceType", label: "Service", render: (r) => <span className="font-semibold">{r.serviceType.replace(/_/g, " ")}</span> },
             { key: "status", label: "Status", render: (r) => <StatusBadge value={r.status} /> },
-            { key: "payment", label: "Payment", render: (r) => <div className="flex items-center gap-2"><StatusBadge value={r.paymentStatus} />{r.paymentStatus === "UNPAID" && r.amount && <Button size="sm" onClick={(event) => { event.stopPropagation(); void payNow(r); }}>Pay Now</Button>}</div> },
+            { key: "payment", label: "Payment", render: (r) => <div className="flex items-center gap-2"><StatusBadge value={r.paymentStatus} />{r.paymentStatus === "UNPAID" && r.amount && <Button size="sm" disabled={payingId === r.id} onClick={(event) => { event.stopPropagation(); void payNow(r); }}>{payingId === r.id ? "Opening…" : "Pay Now"}</Button>}</div> },
             { key: "progress", label: "Progress", render: (r) => <StatusSteps status={r.status} /> },
             { key: "assignedTo", label: "Handled by", render: (r) => r.assignedTo?.fullName ?? "—" },
             { key: "createdAt", label: "Submitted", render: (r) => new Date(r.createdAt).toLocaleDateString() },
