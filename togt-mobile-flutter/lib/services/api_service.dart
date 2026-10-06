@@ -225,8 +225,8 @@ class ApiService {
     }
   }
 
-  Future<dynamic> upload(String path, String filePath, {String field = 'file', Map<String, String>? query}) async {
-    final response = await _sendFile('POST', path, {}, filePath, field: field, query: query?.map((k, v) => MapEntry(k, v.toString())));
+  Future<dynamic> upload(String path, String filePath, {String field = 'file', Map<String, String>? query, String? fileType}) async {
+    final response = await _sendFile('POST', path, {}, filePath, field: field, fileType: fileType, query: query?.map((k, v) => MapEntry(k, v.toString())));
     return _handle(response);
   }
 

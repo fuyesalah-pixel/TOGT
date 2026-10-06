@@ -67,7 +67,10 @@ class DocumentService {
   }
 
   Future<String?> uploadPath(String path, {String folder = 'documents'}) async {
-    final result = await ApiService.instance.upload('/uploads', path, query: {'folder': folder});
+    // Always declare the extension-derived MIME: without it the multipart part
+    // reaches the backend as application/octet-stream and fails the uploads
+    // allow-list (this is what silently broke review photo uploads).
+    final result = await ApiService.instance.upload('/uploads', path, query: {'folder': folder}, fileType: mimeForPath(path));
     return result is Map ? result['url']?.toString() : null;
   }
 
