@@ -16,6 +16,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   Map<String, dynamic>? request;
   List<dynamic> history = [];
   String? error;
+  String? _paymentError;
   bool _paying = false;
 
   @override void initState() { super.initState(); _load(); }
@@ -29,6 +30,22 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       if (found == null) throw Exception('Request not found');
       if (mounted) setState(() { request = found; history = results[1] is List ? results[1] as List : []; });
     } catch (e) { if (mounted) setState(() => error = e.toString()); }
+  }
+
+  /// Turns a raw backend/payment exception into text a customer can act on.
+  /// The backend's "already in progress" message already carries retry
+  /// guidance; everything else gets a friendly wrapper.
+  String _paymentErrorMessage(Object e) {
+    final raw = e.toString();
+    final message = raw.startsWith('ApiException: ') ? raw.substring(15) : raw;
+    if (message.contains('already in progress')) {
+      return 'Your previous payment is still being processed.\n\nFinish that payment, or wait a few minutes and tap Pay Now again — the app will release it automatically. If you already paid, your request updates as soon as the bank confirms.';
+    }
+    if (message.contains('already paid')) return message;
+    if (message.contains('Connection timed out') || message.contains('Network error')) {
+      return 'We could not reach the payment service. Check your internet connection and try again.';
+    }
+    return 'Payment could not be started: $message\n\nYou can try again. If it keeps failing, contact TOGT support — we are happy to help.';
   }
   @override Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -56,6 +73,19 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   Widget _paymentCard(Map<String, dynamic> r, String payment, double? amount) => _card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     const Text('Payment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
     const SizedBox(height: 10),
+    if (_paymentError != null) ...[
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: TOGTColors.red.withValues(alpha: .07), borderRadius: BorderRadius.circular(14), border: Border.all(color: TOGTColors.red.withValues(alpha: .35))),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Row(children: [Icon(Icons.error_outline_rounded, color: TOGTColors.red, size: 20), SizedBox(width: 8), Text('Payment problem', style: TextStyle(fontWeight: FontWeight.bold, color: TOGTColors.red))]),
+          const SizedBox(height: 6),
+          Text(_paymentError!, style: TOGTTypography.small.copyWith(color: TOGTColors.navy, height: 1.5)),
+        ]),
+      ),
+      const SizedBox(height: 12),
+    ],
     if (amount != null) Text('Amount: ${amount.toStringAsFixed(0)} ${r['currency'] ?? 'ETB'}'),
     const SizedBox(height: 6),
     _badge(payment),
@@ -75,10 +105,10 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     if (payment == 'UNPAID' && amount != null && amount > 0) Padding(padding: const EdgeInsets.only(top: 12), child: SizedBox(width: double.infinity, child: FilledButton.icon(
       style: FilledButton.styleFrom(backgroundColor: TOGTColors.orange, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 15)),
       onPressed: _paying ? null : () async {
-        setState(() => _paying = true);
+        setState(() { _paying = true; _paymentError = null; });
         try {
           final tx = await PaymentService.instance.payNow(requestId: widget.id, amount: amount);
-          if (tx == null) { if (mounted) setState(() => error = 'Could not open Chapa checkout.'); return; }
+          if (tx == null) { if (mounted) setState(() => _paymentError = 'We could not open the payment page. Check your internet connection and tap Pay Now again. If it keeps failing, contact TOGT support.'); return; }
           // The customer pays in the browser; the backend confirms through
           // Chapa's callback/webhook. Poll the verify endpoint briefly so the
           // card flips to PAID by itself when they return after paying —
@@ -90,7 +120,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
           }
           await _load();
         } catch (e) {
-          if (mounted) setState(() => error = e.toString());
+          if (mounted) setState(() => _paymentError = _paymentErrorMessage(e));
         } finally {
           if (mounted) setState(() => _paying = false);
         }
