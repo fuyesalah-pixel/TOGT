@@ -564,165 +564,237 @@ const _dhikrOptions = [
   _Dhikr('أَسْتَغْفِرُ اللَّهَ', 'Astaghfirullah'),
 ];
 
-/// A lifelike handheld tasbih (misbaha): a real wire loop threaded with 33
-/// amber wooden beads, a bigger imam (leader) bead with a metal cap, and a
-/// hanging tassel. Beads slide along the wire as you tap — every 33 taps one
-/// full lap has passed through your fingers.
-class _TasbihDial extends StatelessWidget {
+/// A lifelike handheld misbaha: 33 wooden beads threaded on a cord loop with
+/// an imam bead and tassel hanging at the bottom. The loop sways gently like
+/// it is held between fingers, beads glide to the next position on every tap
+/// (with a scale impulse), and each completed lap of 33 pulses with a warm
+/// glow + heavy haptic. All gradients go through Flutter's RadialGradient
+/// (dart:ui Gradient.linear with >2 colors and no stops throws in release).
+class _TasbihDial extends StatefulWidget {
   const _TasbihDial({required this.count, required this.onTap});
 
   final int count;
   final VoidCallback onTap;
 
   @override
+  State<_TasbihDial> createState() => _TasbihDialState();
+}
+
+class _TasbihDialState extends State<_TasbihDial> with TickerProviderStateMixin {
+  late final AnimationController _sway = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
+  late final AnimationController _tap = AnimationController(vsync: this, duration: const Duration(milliseconds: 160), value: 1);
+  late final AnimationController _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+
+  @override
+  void didUpdateWidget(covariant _TasbihDial oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.count != oldWidget.count) {
+      _tap.forward(from: 0);
+      // A completed lap: the tap that crossed a multiple of 33.
+      if (widget.count > oldWidget.count && widget.count % 33 == 0) _pulse.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _sway.dispose();
+    _tap.dispose();
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final inLoop = count % 33;
-    final completed = inLoop == 0 && count > 0;
-    return GestureDetector(
-      onTap: onTap,
-      child: SizedBox(
-        width: 300,
-        height: 340,
-        child: Stack(
-          alignment: Alignment.topCenter,
-          children: [
-            // The wire + beads artwork.
-            CustomPaint(
-              size: const Size(300, 340),
-              painter: _WireTasbihPainter(done: completed ? 33 : inLoop, total: 33),
-            ),
-            // The count floats inside the loop, like fingers holding the misbaha.
-            Positioned(
-              top: 96,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+    final inLoop = widget.count % 33;
+    final completed = inLoop == 0 && widget.count > 0;
+    return AnimatedBuilder(
+      animation: Listenable.merge([_sway, _tap, _pulse]),
+      builder: (context, child) {
+        final sway = math.sin(_sway.value * 2 * math.pi) * 0.026; // ±1.5°
+        final tapScale = 0.965 + 0.035 * Curves.easeOutBack.transform(_tap.value);
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: Transform.scale(
+            scale: tapScale,
+            child: Transform.rotate(
+            angle: sway,
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: 300,
+              height: 380,
+              child: Stack(
+                alignment: Alignment.topCenter,
                 children: [
-                  Text(
-                    '$count',
-                    style: TextStyle(
-                      fontSize: 52,
-                      fontWeight: FontWeight.w800,
-                      color: completed ? TOGTColors.orange : const Color(0xFF12394F),
-                      height: 1.0,
+                  CustomPaint(
+                    size: const Size(300, 380),
+                    painter: _MisbahaPainter(
+                      done: completed ? 33 : inLoop,
+                      total: 33,
+                      phase: _sway.value,
+                      tapT: Curves.easeOutCubic.transform(_tap.value),
+                      pulse: _pulse.value,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$inLoop / 33',
-                    style: TOGTTypography.small.copyWith(color: TOGTColors.grey, fontWeight: FontWeight.w700),
+                  Positioned(
+                    top: 118,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${widget.count}',
+                          style: TextStyle(
+                            fontSize: 54,
+                            fontWeight: FontWeight.w800,
+                            color: completed ? TOGTColors.orange : const Color(0xFF12394F),
+                            height: 1.0,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$inLoop / 33',
+                          style: TOGTTypography.small.copyWith(color: TOGTColors.grey, fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+          ),
+        );
+      },
     );
   }
 }
 
-/// Draws the tasbih: warm brass wire loop, wood-grain beads with specular
-/// highlights, an imam bead with a metal cap at the top, and a tassel.
-class _WireTasbihPainter extends CustomPainter {
-  const _WireTasbihPainter({required this.done, required this.total});
+/// Paints the misbaha: soft drop shadow, dark cord loop, 33 polished wooden
+/// beads (radial-gradient spheres with a specular highlight), the larger imam
+/// bead with a brass cap at the bottom of the loop and a swaying tassel.
+class _MisbahaPainter extends CustomPainter {
+  const _MisbahaPainter({required this.done, required this.total, required this.phase, required this.tapT, required this.pulse});
 
   final int done;
   final int total;
+  final double phase; // 0..1 sway cycle — drives handheld sway + tassel lag
+  final double tapT; // 0..1 pop envelope for the just-counted bead
+  final double pulse;
+
+  // Wooden bead shading: highlight → base → core shadow.
+  static const _wood = [Color(0xFFCBA876), Color(0xFF8B5E34), Color(0xFF46311F)];
+  // Counted beads warm into honey amber, like beads polished by use.
+  static const _glow = [Color(0xFFFFE3AE), Color(0xFFE2A144), Color(0xFF7E4A12)];
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height * 0.42);
-    final radius = size.width * 0.38;
+    final center = Offset(size.width / 2, size.height * 0.46);
+    final rx = size.width * 0.36;
+    final ry = size.height * 0.30;
 
-    // ── Wire: warm brass cable with a subtle sheen ─────────────────────────
-    final wire = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4.5
-      ..strokeCap = StrokeCap.round
-      ..shader = ui.Gradient.linear(
-        Offset(center.dx - radius, center.dy - radius),
-        Offset(center.dx + radius, center.dy + radius),
-        const [Color(0xFFB98A4B), Color(0xFFE0B372), Color(0xFF9A6E35)],
-      );
-    canvas.drawCircle(center, radius, wire);
-    final sheen = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..color = Colors.white.withOpacity(.28);
-    canvas.drawCircle(center, radius - 1.5, sheen);
+    // Soft drop shadow under the whole loop.
+    canvas.drawCircle(center.translate(6, 14), rx * 0.98, Paint()..color = const Color(0x2212394F)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16));
 
-    // ── Beads: 33 wooden beads threaded on the wire ────────────────────────
-    final beadRadius = (2 * math.pi * radius) / total * 0.42;
-    for (var i = 0; i < total; i++) {
-      final angle = -math.pi / 2 + (2 * math.pi * i / total);
-      final position = Offset(center.dx + radius * math.cos(angle), center.dy + radius * math.sin(angle));
-      final isDone = i < done;
-      // Softly blurred fill gives the wood-grain depth.
-      final beadPaint = Paint()
-        ..color = isDone ? const Color(0xFFB34700) : const Color(0xFF8A5A2B)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.6);
-      canvas.drawCircle(position, beadRadius, beadPaint);
-      // Highlight gives the bead its polished 3D look.
+    // Lap-completion glow (behind everything, fades in and out).
+    if (pulse > 0) {
+      final glowStrength = math.sin(pulse * math.pi);
       canvas.drawCircle(
-        position - Offset(beadRadius * .3, beadRadius * .35),
-        beadRadius * .3,
-        Paint()..color = Colors.white.withOpacity(isDone ? .5 : .32),
-      );
-      // Thin dark rim separates beads from the wire.
-      canvas.drawCircle(
-        position,
-        beadRadius,
+        center,
+        rx * (1.02 + 0.10 * glowStrength),
         Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1
-          ..color = const Color(0xFF3E2A12).withOpacity(.55),
+          ..color = const Color(0xFFFF8C2E).withValues(alpha: 0.30 * glowStrength)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22),
       );
     }
 
-    // ── Imam bead + metal cap at the top of the loop ───────────────────────
-    final imam = Offset(center.dx, center.dy - radius);
-    canvas.drawCircle(imam, beadRadius * 1.55, Paint()..color = const Color(0xFF6E4520));
-    canvas.drawCircle(
-      imam - Offset(beadRadius * .35, beadRadius * .4),
-      beadRadius * .45,
-      Paint()..color = Colors.white.withOpacity(.4),
+    // The cord the beads are threaded on.
+    canvas.drawOval(Rect.fromCenter(center: center, width: (rx + 2) * 2, height: (ry + 2) * 2), Paint()..style = PaintingStyle.stroke..strokeWidth = 3.2..color = const Color(0xFF4A2E14));
+
+    // 33 beads around the loop. The imam bead sits at the bottom (θ = 90°),
+    // so beads start just past it and wrap around.
+    final beadR = (2 * math.pi * math.sqrt((rx * rx + ry * ry) / 2)) / (total + 1) * 0.50;
+    final popT = math.sin(math.pi * tapT); // 0→1→0 pop envelope
+    for (var i = 0; i < total; i++) {
+      final t = i / total;
+      final angle = math.pi / 2 + 2 * math.pi * t; // bottom → right → top → left
+      final position = Offset(center.dx + rx * math.cos(angle), center.dy + ry * math.sin(angle));
+      final isDone = i < done;
+      final edge = i == done - 1 && done < total; // the bead just counted
+      final pop = edge ? 0.28 * popT : 0.0;
+      _bead(canvas, position, beadR * (1 + pop), isDone ? _glow : _wood);
+      if (edge) {
+        canvas.drawCircle(position, beadR * (1.6 + pop), Paint()..color = const Color(0x59E2A144)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
+      } else if (isDone) {
+        canvas.drawCircle(position, beadR * 1.55, Paint()..color = const Color(0x2EE2A144)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
+      }
+    }
+
+    // Elongated imam bead + brass cap at the bottom of the loop.
+    final imam = Offset(center.dx, center.dy + ry + beadR * 0.9);
+    final imamRect = Rect.fromCenter(center: imam, width: beadR * 2.4, height: beadR * 3.4);
+    final imamShader = RadialGradient(
+      center: const Alignment(-0.35, -0.4),
+      radius: 1.15,
+      colors: const [Color(0xFFB98A5B), Color(0xFF6B4423), Color(0xFF3A2410)],
+      stops: const [0.0, 0.55, 1.0],
+    ).createShader(imamRect);
+    canvas.drawOval(imamRect, Paint()..shader = imamShader);
+    final capRect = Rect.fromCenter(center: Offset(center.dx, center.dy + ry - beadR * 0.7), width: beadR * 1.3, height: beadR * 1.7);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(capRect, Radius.circular(beadR * 0.3)),
+      Paint()..shader = const RadialGradient(colors: [Color(0xFFF2DFAE), Color(0xFFB8894A)], stops: [0.1, 1.0]).createShader(capRect),
     );
+
+    // Tassel: silk strands hanging from the imam bead, swaying with a slight
+    // lag behind the loop like real cord.
+    final tasselTop = imam.translate(0, beadR * 1.9);
+    final lag = math.sin(phase * 2 * math.pi - 0.55) * 0.09;
+    final cosL = math.cos(lag);
+    final sinL = math.sin(lag);
+    Offset swing(Offset p) => Offset(
+          tasselTop.dx + (p.dx - tasselTop.dx) * cosL - (p.dy - tasselTop.dy) * sinL,
+          tasselTop.dy + (p.dx - tasselTop.dx) * sinL + (p.dy - tasselTop.dy) * cosL,
+        );
+    canvas.drawCircle(tasselTop, 3.0, Paint()..color = const Color(0xFFC9A227));
+    final strand = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(0xFFA03A2A).withValues(alpha: .85);
+    for (final dx in const [-5.0, -3.0, -1.0, 1.0, 3.0, 5.0]) {
+      strand.strokeWidth = dx.abs() < 2 ? 1.5 : 2.1;
+      final ctrl = swing(tasselTop.translate(dx * 0.6, 16 + dx.abs()));
+      final end = swing(tasselTop.translate(dx * 1.5, 30 + dx.abs() * 1.6));
+      canvas.drawPath(
+        Path()
+          ..moveTo(tasselTop.dx, tasselTop.dy + 2)
+          ..quadraticBezierTo(ctrl.dx, ctrl.dy, end.dx, end.dy),
+        strand,
+      );
+    }
+  }
+
+  /// One polished sphere: radial gradient (light top-left → dark bottom-right),
+  /// thin dark rim, and a small specular dot.
+  void _bead(Canvas canvas, Offset position, double radius, List<Color> shades) {
+    final shader = RadialGradient(
+      center: const Alignment(-0.35, -0.4),
+      radius: 1.15,
+      colors: shades,
+      stops: const [0.0, 0.55, 1.0],
+    ).createShader(Rect.fromCircle(center: position, radius: radius));
+    canvas.drawCircle(position, radius, Paint()..shader = shader);
     canvas.drawCircle(
-      imam,
-      beadRadius * 1.55,
+      position,
+      radius,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..color = const Color(0xFF3E2A12).withOpacity(.6),
+        ..strokeWidth = 1
+        ..color = const Color(0xFF3E2A12).withValues(alpha: .5),
     );
-    final cap = Paint()
-      ..shader = ui.Gradient.linear(
-        Offset(imam.dx - 6, imam.dy - 12),
-        Offset(imam.dx + 6, imam.dy - 4),
-        const [Color(0xFFF0D9A0), Color(0xFFB98A4B)],
-      );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: imam - Offset(0, beadRadius * 1.75), width: beadRadius * 1.7, height: beadRadius * 0.8),
-        const Radius.circular(2),
-      ),
-      cap,
-    );
-
-    // ── Tassel hanging from the imam bead ──────────────────────────────────
-    final tasselTop = Offset(imam.dx, imam.dy + beadRadius * 1.6);
-    final tasselPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round
-      ..color = const Color(0xFFB34700).withOpacity(.85);
-    for (final dx in [-3.0, -1.0, 0.0, 1.0, 3.0]) {
-      canvas.drawLine(tasselTop, Offset(imam.dx + dx, tasselTop.dy + 22 + (dx == 0 ? 6.0 : 0)), tasselPaint);
-    }
-    canvas.drawCircle(tasselTop, 2.2, Paint()..color = const Color(0xFFB98A4B));
+    canvas.drawCircle(position.translate(-radius * .32, -radius * .38), radius * .26, Paint()..color = Colors.white.withValues(alpha: .55));
   }
 
   @override
-  bool shouldRepaint(covariant _WireTasbihPainter oldDelegate) =>
-      oldDelegate.done != done || oldDelegate.total != total;
+  bool shouldRepaint(covariant _MisbahaPainter oldDelegate) =>
+      oldDelegate.done != done || oldDelegate.total != total || oldDelegate.phase != phase || oldDelegate.tapT != tapT || oldDelegate.pulse != pulse;
 }

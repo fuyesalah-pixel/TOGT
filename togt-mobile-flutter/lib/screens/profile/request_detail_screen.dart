@@ -16,6 +16,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   Map<String, dynamic>? request;
   List<dynamic> history = [];
   String? error;
+  bool _paying = false;
 
   @override void initState() { super.initState(); _load(); }
   Future<void> _load() async {
@@ -73,8 +74,29 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     if (payment == 'PAID' && r['paymentId'] != null) Text('Transaction: ${r['paymentId']}\n${r['paidAt'] ?? ''}'),
     if (payment == 'UNPAID' && amount != null && amount > 0) Padding(padding: const EdgeInsets.only(top: 12), child: SizedBox(width: double.infinity, child: FilledButton.icon(
       style: FilledButton.styleFrom(backgroundColor: TOGTColors.orange, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 15)),
-      onPressed: () async { final opened = await PaymentService.instance.payNow(requestId: widget.id, amount: amount); if (!opened && mounted) setState(() => error = 'Could not open Chapa checkout.'); },
-      icon: const Icon(Icons.payment), label: Text('Pay Now - ${amount.toStringAsFixed(0)} ${r['currency'] ?? 'ETB'}'),
+      onPressed: _paying ? null : () async {
+        setState(() => _paying = true);
+        try {
+          final tx = await PaymentService.instance.payNow(requestId: widget.id, amount: amount);
+          if (tx == null) { if (mounted) setState(() => error = 'Could not open Chapa checkout.'); return; }
+          // The customer pays in the browser; the backend confirms through
+          // Chapa's callback/webhook. Poll the verify endpoint briefly so the
+          // card flips to PAID by itself when they return after paying —
+          // no app restart, no manual refresh.
+          for (var attempt = 0; attempt < 5; attempt++) {
+            await Future.delayed(const Duration(seconds: 3));
+            final result = await PaymentService.instance.verify(transactionId: tx);
+            if (result.toLowerCase() == 'success') break;
+          }
+          await _load();
+        } catch (e) {
+          if (mounted) setState(() => error = e.toString());
+        } finally {
+          if (mounted) setState(() => _paying = false);
+        }
+      },
+      icon: _paying ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.payment),
+      label: Text('Pay Now - ${amount.toStringAsFixed(0)} ${r['currency'] ?? 'ETB'}'),
     ))),
   ]));
   Widget _badge(String value) => Chip(label: Text(value), backgroundColor: value == 'PAID' || value == 'COMPLETED' ? Colors.green.withOpacity(.15) : TOGTColors.orange.withOpacity(.15));

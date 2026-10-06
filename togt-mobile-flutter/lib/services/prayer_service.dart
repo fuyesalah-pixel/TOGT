@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:adhan/adhan.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -111,13 +112,33 @@ class PrayerService {
     // the alarm experience changes, the channel id must move forward (v1:
     // custom asset that could go missing, v2: silent system default). v3
     // plays the bundled azan.mp3 on the ALARM stream so every prayer/custom
-    // alarm sounds the azan even when the app was killed.
+    // alarm sounds the azan even when the app was killed. The channel is
+    // created EXPLICITLY here (not lazily inside zonedSchedule) so a channel
+    // problem can never silently kill the alarm scheduling below.
     for (final legacy in const ['azan_channel', 'azan_alarms_v2']) {
       try {
         await notifications
             .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
             ?.deleteNotificationChannel(channelId: legacy);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('PrayerService: legacy channel cleanup failed: $e');
+      }
+    }
+    try {
+      await notifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(const AndroidNotificationChannel(
+            'azan_alarms_v3',
+            'Azan Alarms',
+            description: 'Prayer time and custom alarms — plays the azan',
+            importance: Importance.max,
+            playSound: true,
+            sound: RawResourceAndroidNotificationSound('azan'),
+            audioAttributesUsage: AudioAttributesUsage.alarm,
+            enableVibration: true,
+          ));
+    } catch (e) {
+      debugPrint('PrayerService: channel creation failed: $e');
     }
     _ready = true;
   }
@@ -235,8 +256,10 @@ class PrayerService {
               notificationDetails: _details,
               androidScheduleMode: _scheduleMode,
             );
-          } catch (_) {
-            // Individual schedule failures must not abort the remaining alarms.
+          } catch (e) {
+            // Log instead of swallowing: a silent failure here is exactly how
+            // "the alarm does not work" shipped unnoticed.
+            debugPrint('PrayerService: scheduling ${entry.key} +$day failed: $e');
           }
         }
       }
@@ -248,17 +271,18 @@ class PrayerService {
       var first = base.isAfter(now) ? base : base.add(const Duration(days: 1));
       final stableId = alarm.id.hashCode & 0x7fffffff;
       for (var day = 0; day < 7; day++) {
-        final fire = first.add(Duration(days: day));
-        try {
-          await notifications.zonedSchedule(
-            id: (stableId + day * 7) & 0x7fffffff,
-            title: alarm.label.isEmpty ? 'Alarm' : alarm.label,
-            body: 'Your TOGT custom alarm. Tap to hear the azan.',
-            scheduledDate: tz.TZDateTime.from(fire, tz.local),
-            notificationDetails: _details,
-            androidScheduleMode: _scheduleMode,
-          );
-        } catch (_) {}
+        final fire = first.add(Duration(days: day));          try {
+            await notifications.zonedSchedule(
+              id: (stableId + day * 7) & 0x7fffffff,
+              title: alarm.label.isEmpty ? 'Alarm' : alarm.label,
+              body: 'Your TOGT custom alarm. Tap to hear the azan.',
+              scheduledDate: tz.TZDateTime.from(fire, tz.local),
+              notificationDetails: _details,
+              androidScheduleMode: _scheduleMode,
+            );
+          } catch (e) {
+            debugPrint('PrayerService: scheduling custom "${alarm.label}" +$day failed: $e');
+          }
       }
     }
 
@@ -289,6 +313,8 @@ class PrayerService {
         androidScheduleMode: _scheduleMode,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
       );
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('PrayerService: Friday reminder scheduling failed: $e');
+    }
   }
 }

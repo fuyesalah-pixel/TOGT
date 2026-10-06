@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../l10n/app_localizations.dart';
 import '../services/locale_service.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -127,7 +128,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           const SizedBox(height: 12),
-           Center(child: Text('${l10n.appTitle} v1.0.0', style: TOGTTypography.small)),
+           Center(child: FutureBuilder<PackageInfo>(future: PackageInfo.fromPlatform(), builder: (context, info) => Text('${l10n.appTitle} v${info.data?.version ?? ''}', style: TOGTTypography.small))),
         ],
       ),
     );
