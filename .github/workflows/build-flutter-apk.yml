@@ -73,8 +73,10 @@ jobs:
         env:
           UPDATE_BASE: ${{ inputs.update_base }}
         run: |
-          ARGS=""
-          if [ -n "$UPDATE_BASE" ]; then ARGS="--dart-define=TOGT_UPDATE_BASE=$UPDATE_BASE"; fi
+          # MAPBOX_ACCESS_TOKEN is a repo secret (publishable pk.* token).
+          # When unset the app transparently falls back to OpenStreetMap tiles.
+          ARGS="--dart-define=MAPBOX_ACCESS_TOKEN=${{ secrets.MAPBOX_ACCESS_TOKEN }}"
+          if [ -n "$UPDATE_BASE" ]; then ARGS="$ARGS --dart-define=TOGT_UPDATE_BASE=$UPDATE_BASE"; fi
           flutter build apk --release --dart-define=TOGT_LOCAL_API=false $ARGS
 
       - name: Upload APK artifact

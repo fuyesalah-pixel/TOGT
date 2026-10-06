@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../config/map_config.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../theme/colors.dart';
@@ -301,7 +302,7 @@ class _ParentTrackingScreenState extends State<ParentTrackingScreen> {
                                     ),
                                     children: [
                                       TileLayer(
-                                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                        urlTemplate: mapTileUrlTemplate,
                                         userAgentPackageName: 'com.togt.travel',
                                       ),
                                       MarkerLayer(markers: [
