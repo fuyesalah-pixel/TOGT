@@ -22,6 +22,7 @@ class PersonalScreen extends StatefulWidget {
 class _PersonalScreenState extends State<PersonalScreen> {
   int _section = 0;
   int _tasbih = 0;
+  int _dhikr = 0;
   bool _azan = true;
   bool _exactAlarmHintShown = false;
   PrayerTimes? _times;
@@ -45,6 +46,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
       });
     }
     _loadTasbih();
+    _loadDhikr();
     _loadCustomAlarms();
     // The azan pref must be known BEFORE the first schedule() below — the
     // startup re-arm in main.dart uses the same persisted key.
@@ -118,6 +120,16 @@ class _PersonalScreenState extends State<PersonalScreen> {
     await prefs.setInt('togt_tasbih_count', _tasbih);
   }
 
+  Future<void> _loadDhikr() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) setState(() => _dhikr = (prefs.getInt('togt_tasbih_dhikr') ?? 0).clamp(0, _dhikrOptions.length - 1));
+  }
+
+  Future<void> _saveDhikr() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('togt_tasbih_dhikr', _dhikr);
+  }
+
   Future<void> _loadLocation() async {
     try {
       if (!await Geolocator.isLocationServiceEnabled()) throw Exception('Location services are disabled.');
@@ -163,7 +175,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
           const SizedBox(height: 5),
           Text(l10n.personalTools, style: TOGTTypography.body),
           const SizedBox(height: 20),
-           SizedBox(height: 42, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: 4, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (_, i) => ChoiceChip(label: Text([l10n.prayerTimes, l10n.qibla, l10n.azkar, l10n.tasbih][i]), selected: _section == i, selectedColor: TOGTColors.orange, labelStyle: TextStyle(color: _section == i ? TOGTColors.white : TOGTColors.navy, fontWeight: FontWeight.w700), onSelected: (_) => setState(() { _section = i; if (_scrollController.hasClients) _scrollController.jumpTo(0); })))),
+          Wrap(spacing: 8, runSpacing: 8, children: [for (var i = 0; i < 4; i++) ChoiceChip(label: Text([l10n.prayerTimes, l10n.qibla, l10n.azkar, l10n.tasbih][i]), selected: _section == i, selectedColor: TOGTColors.orange, labelStyle: TextStyle(color: _section == i ? TOGTColors.white : TOGTColors.navy, fontWeight: FontWeight.w700), onSelected: (_) => setState(() { _section = i; if (_scrollController.hasClients) _scrollController.jumpTo(0); }))]),
           const SizedBox(height: 18),
           AnimatedSwitcher(duration: const Duration(milliseconds: 350), child: _content()),
         ]),
@@ -191,6 +203,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
            if (_times != null) await PrayerService.instance.schedule(_times!, enabled: v, customAlarms: _customAlarms);
          }),
         if (_azan && !_exactAlarmHintShown && _times != null) _exactAlarmBanner(),
+        const _NotificationsOffBanner(),
         _customAlarmsCard(),
         _permissionsCard(),
       ]);
@@ -295,8 +308,26 @@ class _PersonalScreenState extends State<PersonalScreen> {
 
   List<Widget> _prayerRows() {
     if (_times == null) return [Padding(padding: const EdgeInsets.all(20), child: Text(l10n.allowLocationPrayer))];
-    final values = [('Fajr', _format(_times!.fajr)), ('Dhuhr', _format(_times!.dhuhr)), ('Asr', _format(_times!.asr)), ('Maghrib', _format(_times!.maghrib)), ('Isha', _format(_times!.isha))];
-    return values.map((p) => Card(child: ListTile(leading: Icon(Icons.circle, size: 10, color: p.$1 == 'Dhuhr' ? TOGTColors.orange : TOGTColors.blue), title: Text(p.$1, style: TOGTTypography.h3), trailing: Text(p.$2, style: TOGTTypography.h3.copyWith(color: TOGTColors.blue))))).toList();
+    // Highlight the prayer that is actually up next (domain-correct), not a
+    // hardcoded one.
+    final entries = <String, DateTime>{'Fajr': _times!.fajr, 'Dhuhr': _times!.dhuhr, 'Asr': _times!.asr, 'Maghrib': _times!.maghrib, 'Isha': _times!.isha};
+    final now = DateTime.now();
+    String nextName = 'Fajr'; // after Isha the next prayer is tomorrow's Fajr
+    for (final entry in entries.entries) {
+      if (entry.value.isAfter(now)) {
+        nextName = entry.key;
+        break;
+      }
+    }
+    return entries.entries.map((entry) {
+      final isNext = entry.key == nextName;
+      return Card(child: ListTile(
+        leading: Icon(Icons.circle, size: 10, color: isNext ? TOGTColors.orange : TOGTColors.blue),
+        title: Text(entry.key, style: TOGTTypography.h3),
+        subtitle: isNext ? Text('Up next', style: TOGTTypography.small.copyWith(color: TOGTColors.orange, fontWeight: FontWeight.w800)) : null,
+        trailing: Text(_format(entry.value), style: TOGTTypography.h3.copyWith(color: isNext ? TOGTColors.blue : TOGTColors.grey)),
+      ));
+    }).toList();
   }
 
   String _format(DateTime time) => TimeOfDay.fromDateTime(time).format(context);
@@ -343,7 +374,19 @@ class _PersonalScreenState extends State<PersonalScreen> {
 
   Widget _tasbihView() => Column(children: [
          _hero(Icons.fingerprint_rounded, l10n.tasbih, l10n.tapToCount),
-        const SizedBox(height: 30),
+        const SizedBox(height: 14),
+        Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
+          for (var i = 0; i < _dhikrOptions.length; i++)
+            ChoiceChip(
+              label: Text(_dhikrOptions[i].transliteration, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _dhikr == i ? TOGTColors.white : TOGTColors.navy)),
+              selected: _dhikr == i,
+              selectedColor: TOGTColors.blue,
+              onSelected: (_) { HapticFeedback.selectionClick(); setState(() => _dhikr = i); _saveDhikr(); },
+            ),
+        ]),
+        const SizedBox(height: 16),
+        Text(_dhikrOptions[_dhikr].arabic, textDirection: TextDirection.rtl, textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, height: 1.7, fontWeight: FontWeight.w600, color: Color(0xFF12394F))),
+        const SizedBox(height: 16),
         _TasbihDial(
           count: _tasbih,
           onTap: () {
@@ -354,6 +397,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
           },
         ),
          const SizedBox(height: 20), Text(l10n.tapToCount, style: TOGTTypography.h3),
+         Text('${_tasbih ~/ 33} ${_tasbih ~/ 33 == 1 ? 'round' : 'rounds'} of 33 completed', style: TOGTTypography.small.copyWith(color: TOGTColors.grey)),
          Row(mainAxisSize: MainAxisSize.min, children: [
            TextButton(onPressed: () { HapticFeedback.selectionClick(); setState(() => _tasbih = 0); _saveTasbih(); }, child: Text(l10n.reset)),
            TextButton(onPressed: () { HapticFeedback.selectionClick(); setState(() => _tasbih = (_tasbih - 1).clamp(0, 1 << 30)); _saveTasbih(); }, child: const Text('−1')),
@@ -371,6 +415,56 @@ class _PersonalScreenState extends State<PersonalScreen> {
         _AzkarCategory(title: (l10n) => l10n.azkarDistress, items: _distressAzkar),
         _AzkarCategory(title: (l10n) => l10n.commonDuas, items: _commonAzkar),
       ];
+}
+
+/// Android 13+ silently swallows every scheduled alarm when notifications
+/// are denied — surface that right where the alarms live, with a one-tap
+/// fix that re-checks when the user comes back from Settings.
+class _NotificationsOffBanner extends StatefulWidget {
+  const _NotificationsOffBanner();
+
+  @override
+  State<_NotificationsOffBanner> createState() => _NotificationsOffBannerState();
+}
+
+class _NotificationsOffBannerState extends State<_NotificationsOffBanner> {
+  late Future<bool> _check;
+
+  @override
+  void initState() {
+    super.initState();
+    _check = PermissionService.instance.notificationsEnabled();
+  }
+
+  void _recheck() => setState(() => _check = PermissionService.instance.notificationsEnabled());
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _check,
+      builder: (context, snapshot) {
+        if (snapshot.data != false) return const SizedBox.shrink();
+        return Container(
+          margin: const EdgeInsets.only(top: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: TOGTColors.red.withValues(alpha: .08), borderRadius: BorderRadius.circular(16), border: Border.all(color: TOGTColors.red.withValues(alpha: .35))),
+          child: Row(children: [
+            const Icon(Icons.notifications_off_rounded, color: TOGTColors.red),
+            const SizedBox(width: 12),
+            Expanded(child: Text('Notifications are turned off — alarms cannot ring. Tap to allow them.', style: TOGTTypography.small.copyWith(color: TOGTColors.navy))),
+            TextButton(
+              onPressed: () async {
+                await PermissionService.instance.openAppSettings();
+                // Re-check once the user is back from system settings.
+                if (mounted) _recheck();
+              },
+              child: const Text('Open settings', style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ]),
+        );
+      },
+    );
+  }
 }
 
 class _AzkarCategory {
@@ -454,6 +548,22 @@ const _commonAzkar = [
   _Azkar(arabic: 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ', transliteration: 'Rabbanā ātinā fid-dunyā ḥasanah...', meaning: 'The most frequent dua of the Quran.', count: 1),
   _Azkar(arabic: 'اللَّهُمَّ إِنِّي أَسْأَلُكَ الْجَنَّةَ وَأَعُوذُ بِكَ مِنَ النَّارِ', transliteration: 'Allāhumma innī as\u2019alukal-jannah...', meaning: 'Ask for Paradise and refuge from the Fire.', count: 1),
 ];
+/// What the counter is counting — the classic after-prayer and morning
+/// adhkar. The dial counts 33 per lap regardless of choice.
+class _Dhikr {
+  const _Dhikr(this.arabic, this.transliteration);
+  final String arabic;
+  final String transliteration;
+}
+
+const _dhikrOptions = [
+  _Dhikr('سُبْحَانَ اللَّهِ', 'Subhanallah'),
+  _Dhikr('الْحَمْدُ لِلَّهِ', 'Alhamdulillah'),
+  _Dhikr('اللَّهُ أَكْبَرُ', 'Allahu Akbar'),
+  _Dhikr('لَا إِلَٰهَ إِلَّا اللَّهُ', 'La ilaha illallah'),
+  _Dhikr('أَسْتَغْفِرُ اللَّهَ', 'Astaghfirullah'),
+];
+
 /// A lifelike handheld tasbih (misbaha): a real wire loop threaded with 33
 /// amber wooden beads, a bigger imam (leader) bead with a metal cap, and a
 /// hanging tassel. Beads slide along the wire as you tap — every 33 taps one

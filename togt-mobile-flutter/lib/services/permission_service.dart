@@ -213,6 +213,17 @@ class PermissionService {
     }
   }
 
+  /// True when the OS will show this app's notifications at all. When this
+  /// is false every azan alarm is silently swallowed (Android 13+).
+  Future<bool> notificationsEnabled() async {
+    try {
+      final enabled = await _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.areNotificationsEnabled();
+      return enabled ?? true;
+    } catch (_) {
+      return true;
+    }
+  }
+
   /// True when the OS will honour exact alarm scheduling for azan.
   Future<bool> canScheduleExactAlarms() async {
     try {

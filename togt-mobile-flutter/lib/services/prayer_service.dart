@@ -79,31 +79,54 @@ class PrayerService {
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
         iOS: DarwinInitializationSettings(),
       ),
-      onDidReceiveNotificationResponse: (_) => playAzan(),
+      onDidReceiveNotificationResponse: (response) {
+        // The Friday reminder is a gentle notice — no azan audio.
+        if (response.id == fridayKahfId) return;
+        playAzan();
+      },
     );
+    // Cold start: the user tapped an alarm notification while the app was
+    // fully killed — onDidReceiveNotificationResponse above never fires, so
+    // replay the azan from the launch details instead.
+    try {
+      final launch = await notifications.getNotificationAppLaunchDetails();
+      final response = launch?.notificationResponse;
+      if ((launch?.didNotificationLaunchApp ?? false) && response != null && response.id != fridayKahfId) {
+        // Give the engine a beat so the audio plugin is attached.
+        Future.delayed(const Duration(milliseconds: 600), () => playAzan());
+      }
+    } catch (_) {}
     await notifications
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
     // Full-screen alarm intents need the special USE_FULL_SCREEN_INTENT grant
-    // on Android 14+ — request it so alarms break through silently-dropped    //    notifications instead of never showing at all.
+    // on Android 14+ — request it so alarms break through silently-dropped
+    // notifications instead of never showing at all.
     try {
       await notifications
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
           ?.requestFullScreenIntentPermission();
     } catch (_) {}
-    // Android freezes notification-channel settings at creation — the legacy
-    // channel shipped with a custom sound that could be missing, leaving
-    // alarms silent. The channel id was bumped (see _details) and the old
-    // channel is removed so only the system-ringtone channel remains.
-    try {
-      await notifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.deleteNotificationChannel(channelId: 'azan_channel');
-    } catch (_) {}
+    // Android freezes notification-channel settings at creation — every time
+    // the alarm experience changes, the channel id must move forward (v1:
+    // custom asset that could go missing, v2: silent system default). v3
+    // plays the bundled azan.mp3 on the ALARM stream so every prayer/custom
+    // alarm sounds the azan even when the app was killed.
+    for (final legacy in const ['azan_channel', 'azan_alarms_v2']) {
+      try {
+        await notifications
+            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+            ?.deleteNotificationChannel(channelId: legacy);
+      } catch (_) {}
+    }
     _ready = true;
   }
 
-  PrayerTimes calculate(double latitude, double longitude) =>
+  PrayerTimes calculate(double latitude, double longitude) => calculateFor(latitude, longitude);
+
+  /// Pure calculation — safe to call from tests without constructing the
+  /// audio/notification plugins.
+  static PrayerTimes calculateFor(double latitude, double longitude) =>
       PrayerTimes.today(Coordinates(latitude, longitude), CalculationMethod.umm_al_qura.getParameters());
 
   Future<void> playAzan() async {
@@ -112,20 +135,23 @@ class PrayerService {
   }
 
   NotificationDetails get _details {
-    // Use the SYSTEM ringtone (no custom sound file): a missing/misnamed
-    // custom asset can end up silently — the device's default alarm sound is
-    // always present and always audible.
+    // Play the bundled azan.mp3 as the channel sound on the ALARM stream:
+    // the azan itself rings at prayer time even when the app process was
+    // killed — no tap required. RawResourceAndroidNotificationSound reads
+    // from android/app/src/main/res/raw/azan.mp3 (checked into the repo, so
+    // the sound can never go missing the way a downloadable file could).
     const android = AndroidNotificationDetails(
-      'azan_alarms_v2',
+      'azan_alarms_v3',
       'Azan Alarms',
-      channelDescription: 'Prayer time notifications',
+      channelDescription: 'Prayer time and custom alarms — plays the azan',
       importance: Importance.max,
       priority: Priority.max,
       playSound: true,
-      // No `sound:` → falls back to the system default notification/alarm
-      // sound. Route it through the ALARM stream and mark the notification as
-      // an alarm so the OS plays it even in silent mode and breaks through DND.
+      sound: RawResourceAndroidNotificationSound('azan'),
+      // Route it through the ALARM stream so the OS plays it even in silent
+      // mode and breaks through DND.
       audioAttributesUsage: AudioAttributesUsage.alarm,
+      enableVibration: true,
       showWhen: false,
       fullScreenIntent: true,
       category: AndroidNotificationCategory.alarm,
