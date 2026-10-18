@@ -5,6 +5,29 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  async headers() {
+    return [
+      {
+        // HTML entry points must never be served stale: every navigation gets
+        // a fresh check at the origin so deploys are visible immediately.
+        // Hashed build assets are excluded — they are content-addressed and
+        // safe to cache forever.
+        source: "/((?!_next/|api/).*)",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
+      {
+        // Immutable, content-hashed assets (JS/CSS/fonts in _next/static).
+        // The filename changes whenever content changes, so long-term caching
+        // is always correct and keeps the page fast.
+        source: "/_next/static/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+    ];
+  },
   images: {
     unoptimized: false,
     remotePatterns: [
