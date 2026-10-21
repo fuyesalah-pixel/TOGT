@@ -118,7 +118,10 @@ export function jsonLd(value: unknown) {
 export async function fetchPublic<T>(path: string, locale?: string): Promise<T | null> {
   const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").replace(/\/$/, "");
   try {
-    const response = await fetch(`${apiUrl}/api${path}${locale ? `${path.includes("?") ? "&" : "?"}locale=${encodeURIComponent(locale)}` : ""}`, { next: { revalidate: 300, tags: ["seo-content"] } });
+    // Always fetch live data: public pages (packages, gallery, visa pages)
+    // must show current DB prices, not a 5-minute-old cache snapshot.
+    // revalidate: 0 ≡ cache: "no-store" for Next.js data fetching.
+    const response = await fetch(`${apiUrl}/api${path}${locale ? `${path.includes("?") ? "&" : "?"}locale=${encodeURIComponent(locale)}` : ""}`, { next: { revalidate: 0 } });
     if (!response.ok) return null;
     return response.json() as Promise<T>;
   } catch {

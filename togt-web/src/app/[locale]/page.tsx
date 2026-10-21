@@ -34,6 +34,11 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   );
 }
 
+// Render on every request. The homepage renders package/gallery/FAQ data via
+// client-side React Query, so guarantees the server HTML shell (and anything
+// added to it later) is never a stale build-time snapshot.
+export const dynamic = "force-dynamic";
+
 // Keyword-rich Q&A matched to what Ethiopian travelers actually search:
 // "umrah", "best umrah travel", "best 3/5/10 travel in Ethiopia".
 const homeFaq = [
