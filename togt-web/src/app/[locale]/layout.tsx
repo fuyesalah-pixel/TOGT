@@ -110,6 +110,9 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       follow: true,
       googleBot: { index: locale !== "om", follow: true, "max-image-preview": "large", "max-snippet": -1 },
     },
+    verification: {
+      google: "EwF0OQrRYuQwuTTwGqHVtJ8LwVf4cVyX-qvmIg5YXc4",
+    },
   };
 }
 
