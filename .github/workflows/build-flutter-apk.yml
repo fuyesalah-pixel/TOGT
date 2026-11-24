@@ -87,6 +87,26 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
+      # Google Play only accepts an App Bundle. Built after the APK so it reuses
+      # the same Gradle/Flutter outputs, and signed with the same release
+      # keystore injected above (upload key: togt-release.jks, alias `togt`).
+      - name: Build release App Bundle (AAB)
+        working-directory: togt-mobile-flutter
+        env:
+          UPDATE_BASE: ${{ inputs.update_base }}
+        run: |
+          ARGS="--dart-define=MAPBOX_ACCESS_TOKEN=${{ secrets.MAPBOX_ACCESS_TOKEN }}"
+          if [ -n "$UPDATE_BASE" ]; then ARGS="$ARGS --dart-define=TOGT_UPDATE_BASE=$UPDATE_BASE"; fi
+          flutter build appbundle --release --dart-define=TOGT_LOCAL_API=false $ARGS
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TOGT-Android-AAB
+          path: togt-mobile-flutter/build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+          if-no-files-found: error
+
       - name: Publish APK to website downloads
         if: github.event_name == 'push' || inputs.update_base == ''
         run: |
