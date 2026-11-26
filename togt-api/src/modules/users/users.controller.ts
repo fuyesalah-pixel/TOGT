@@ -63,6 +63,11 @@ export class UsersController {
   }
 
 
+  @Delete('me')
+  deleteMe(@CurrentUser() actor: User) {
+    return this.users.deleteMe(actor);
+  }
+
   @Delete(':id')
   @Roles(Role.ADMIN)
   terminate(@Param('id') id: string, @CurrentUser() actor: User) {

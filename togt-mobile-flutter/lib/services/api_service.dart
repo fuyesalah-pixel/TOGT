@@ -166,6 +166,19 @@ class ApiService {
     }
   }
 
+  Future<dynamic> delete(String path) async {
+    try {
+      final res = await _send('DELETE', path);
+      return _handle(res);
+    } on TimeoutException {
+      throw ApiException('Connection timed out');
+    } on ApiException {
+      rethrow;
+    } catch (_) {
+      throw ApiException('Network error. Check your connection and try again.', statusCode: 0);
+    }
+  }
+
   Future<dynamic> patch(String path, {Map<String, dynamic>? body}) async {
     try {
       final res = await _send('PATCH', path, body: body);

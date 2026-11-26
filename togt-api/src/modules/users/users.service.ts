@@ -2,6 +2,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
@@ -13,6 +14,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ChatGateway } from '../chat/chat.gateway';
+import { UploadsService } from '../uploads/uploads.service';
 
 /** User fields safe to expose via the API (never expose googleId). */
 export const safeUserSelect = {
@@ -36,11 +38,14 @@ export const safeUserSelect = {
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly valkey: ValkeyService,
     private readonly notifications: NotificationsService,
     private readonly chatGateway: ChatGateway,
+    private readonly uploads: UploadsService,
   ) {}
 
   async findAll(query: QueryUsersDto) {
@@ -246,6 +251,131 @@ export class UsersService {
     const target = await this.prisma.user.findUnique({ where: { id }, select: { id: true } });
     if (!target) throw new NotFoundException('User not found');
     return this.prisma.profileChangeLog.findMany({ where: { userId: id }, orderBy: { changedAt: 'desc' } });
+  }
+
+  /**
+   * Self-service account deletion (the signed-in user only).
+   *
+   * The user row is kept as an anonymous tombstone because paid tickets,
+   * invoices and flight orders must survive for the 7-year financial-records
+   * retention period. Everything personal is removed or anonymised:
+   * profile fields, passport/ID scans and other R2 objects, reviews, chat
+   * messages and attachments, notifications, device tokens, known-device
+   * fingerprints, location history, tracking requests, group membership and
+   * profile-change logs. Requests are kept for their payment ledger fields
+   * but their `formData` (which holds personal details and document keys) is
+   * erased. Sessions are revoked and the account can no longer authenticate.
+   */
+  async deleteMe(actor: User) {
+    const user = await this.prisma.user.findUnique({ where: { id: actor.id } });
+    if (!user) throw new NotFoundException('User not found');
+    if (user.role === Role.ADMIN) {
+      throw new ForbiddenException(
+        'Administrator accounts cannot be deleted in the app. Contact info@togttrading.com.',
+      );
+    }
+
+    const [requests, reviews, messages] = await Promise.all([
+      this.prisma.serviceRequest.findMany({
+        where: { userId: user.id },
+        select: { id: true, formData: true },
+      }),
+      this.prisma.review.findMany({ where: { userId: user.id }, select: { imageUrls: true } }),
+      this.prisma.chatMessage.findMany({
+        where: { OR: [{ senderId: user.id }, { receiverId: user.id }] },
+        select: { fileUrl: true },
+      }),
+    ]);
+
+    // Uploaded documents live either as public-bucket URLs or as
+    // `r2-private://<key>` values inside a request's formData.
+    const documentKeys = requests.flatMap((request) => {
+      const formData =
+        request.formData && typeof request.formData === 'object' && !Array.isArray(request.formData)
+          ? (request.formData as Record<string, unknown>)
+          : {};
+      return Array.isArray(formData.documents)
+        ? formData.documents.filter((value): value is string => typeof value === 'string')
+        : [];
+    });
+    const fileUrls = [
+      user.avatarUrl,
+      ...reviews.flatMap((review) => review.imageUrls),
+      ...messages.map((message) => message.fileUrl),
+      ...documentKeys,
+    ];
+
+    let filesDeleted = 0;
+    try {
+      filesDeleted = await this.uploads.deleteFiles(fileUrls);
+    } catch (error) {
+      // Storage cleanup is retried manually if needed; erasing the database
+      // records must not be blocked by an R2 outage.
+      this.logger.warn(`R2 cleanup failed for deleted user ${user.id}: ${String(error)}`);
+    }
+
+    await this.valkey.delPattern(`refresh:${user.id}:*`);
+
+    const anonymousId = randomUUID();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.chatMessage.deleteMany({
+        where: { OR: [{ senderId: user.id }, { receiverId: user.id }] },
+      });
+      await tx.conversation.deleteMany({
+        where: { OR: [{ customerId: user.id }, { workerId: user.id }] },
+      });
+      await tx.review.deleteMany({ where: { userId: user.id } });
+      await tx.notification.deleteMany({ where: { userId: user.id } });
+      await tx.deviceToken.deleteMany({ where: { userId: user.id } });
+      await tx.knownDevice.deleteMany({ where: { userId: user.id } });
+      await tx.profileChangeLog.deleteMany({ where: { userId: user.id } });
+      await tx.locationTracking.deleteMany({ where: { userId: user.id } });
+      await tx.geofenceAlert.deleteMany({ where: { memberId: user.id } });
+      await tx.trackingRequest.deleteMany({
+        where: { OR: [{ requesterId: user.id }, { targetId: user.id }] },
+      });
+      await tx.groupMember.deleteMany({ where: { userId: user.id } });
+      await tx.tourPlanStep.updateMany({
+        where: { confirmedById: user.id },
+        data: { confirmedById: null },
+      });
+      // Staff accounts: drop any request assignment so the tombstone is not
+      // shown as an active handler.
+      await tx.serviceRequest.updateMany({
+        where: { assignedToId: user.id },
+        data: { assignedToId: null },
+      });
+      // Keep the payment ledger fields (amount, paymentId, status, dates)
+      // for financial retention; erase personal form answers and file keys.
+      await tx.serviceRequest.updateMany({
+        where: { userId: user.id },
+        data: { formData: {} },
+      });
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          email: `deleted+${anonymousId}@deleted.togt.local`,
+          googleId: `deleted:${anonymousId}`,
+          fullName: 'Deleted account',
+          phone: null,
+          address: null,
+          birthday: null,
+          nationality: null,
+          passportIssueDate: null,
+          passportNumber: null,
+          passportExpiry: null,
+          avatarUrl: null,
+          languagePref: 'en',
+          role: Role.CUSTOMER,
+          status: 'TERMINATED',
+        },
+      });
+    });
+
+    this.logger.log(
+      `Account ${user.id} deleted (anonymised, ${filesDeleted} stored file(s) removed)`,
+    );
+    return { deleted: true, filesDeleted };
   }
 
   /** Soft-terminate a user (admin only). Also revokes all sessions. */

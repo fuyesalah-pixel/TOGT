@@ -4,7 +4,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectsCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 import { CredentialService } from '../system/credential.service';
@@ -102,6 +102,46 @@ export class UploadsService {
     const key = `${safeFolder}/${Date.now()}-${randomUUID()}-${safeName}`;
     await client.send(new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: file.buffer, ContentType: file.mimetype }));
     return key;
+  }
+
+  /**
+   * Best-effort deletion of stored files referenced by public URLs or
+   * `r2-private://<key>` values (used when an account is deleted). Missing
+   * credentials or a storage outage must not block the database erasure, so
+   * failures are reported through the returned count instead of thrown.
+   */
+  async deleteFiles(urls: Array<string | null | undefined>): Promise<number> {
+    const keys = Array.from(
+      new Set(
+        urls
+          .map((url) => this.storageKey(url))
+          .filter((key): key is string => Boolean(key)),
+      ),
+    );
+    if (!keys.length) return 0;
+    const client = await this.getClient();
+    if (!client) return 0;
+    let deleted = 0;
+    for (let i = 0; i < keys.length; i += 1000) {
+      const chunk = keys.slice(i, i + 1000);
+      await client.send(
+        new DeleteObjectsCommand({
+          Bucket: this.bucket,
+          Delete: { Objects: chunk.map((Key) => ({ Key })), Quiet: true },
+        }),
+      );
+      deleted += chunk.length;
+    }
+    return deleted;
+  }
+
+  private storageKey(url: string | null | undefined): string | null {
+    if (!url) return null;
+    if (url.startsWith('r2-private://')) return url.slice('r2-private://'.length) || null;
+    if (this.publicUrl && url.startsWith(`${this.publicUrl}/`)) {
+      return decodeURIComponent(url.slice(this.publicUrl.length + 1).split('?')[0]) || null;
+    }
+    return null;
   }
 
   async signedUrl(key: string): Promise<string> {
