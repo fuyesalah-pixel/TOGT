@@ -72,9 +72,17 @@ export class AuthService {
   }
 
   async loginWithMobileGoogle(idToken: string) {
-    const clientId = this.config.get<string>('google.clientId');
+    const clientId = this.config.get<string>('google.mobileClientId');
     if (!clientId) throw new UnauthorizedException('Google OAuth is not configured');
-    const ticket = await new OAuth2Client(clientId).verifyIdToken({ idToken, audience: clientId });
+    // google-auth-library throws a plain Error for malformed/expired tokens and for an
+    // audience mismatch, which the exception filter turns into a 500. Surface it as 401.
+    const ticket = await new OAuth2Client(clientId)
+      .verifyIdToken({ idToken, audience: clientId })
+      .catch((error: unknown) => {
+        throw new UnauthorizedException(
+          `Google ID token verification failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+        );
+      });
     const payload = ticket.getPayload();
     if (!payload?.sub || !payload.email || payload.email_verified === false) {
       throw new UnauthorizedException('Invalid Google ID token');
@@ -84,7 +92,9 @@ export class AuthService {
       email: payload.email.toLowerCase(),
       fullName: payload.name || payload.email.split('@')[0],
     });
-    if (isNew) await this.sendWelcome(user);
+    // The welcome notification/email is best-effort: an SMTP or queue outage must not
+    // turn a successful Google sign-in into a 500.
+    if (isNew) await this.sendWelcome(user).catch(() => undefined);
     const tokens = await this.issueTokens(user);
     return { token: tokens.accessToken, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, user };
   }

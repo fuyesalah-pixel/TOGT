@@ -18,6 +18,9 @@ export default () => ({
   },
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID ?? '',
+    // Audience accepted by the mobile app's ID token. Kept separate from clientId so the
+    // web OAuth flow can live in a different Google project; falls back when unset.
+    mobileClientId: process.env.GOOGLE_MOBILE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID ?? '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
     callbackUrl:
       process.env.GOOGLE_CALLBACK_URL ??
