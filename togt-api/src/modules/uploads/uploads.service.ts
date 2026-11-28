@@ -46,7 +46,18 @@ export class UploadsService {
     const accessKeyId = this.config.get<string>('r2.accessKeyId');
     const secretAccessKey = await this.credentials.get('R2');
     if ((endpoint || accountId) && accessKeyId && secretAccessKey && (!this.client || this.clientSecret !== secretAccessKey)) {
-      this.client = new S3Client({ region: 'auto', endpoint: endpoint || `https://${accountId}.r2.cloudflarestorage.com`, credentials: { accessKeyId, secretAccessKey } });
+      this.client = new S3Client({
+        region: 'auto',
+        endpoint: endpoint || `https://${accountId}.r2.cloudflarestorage.com`,
+        credentials: { accessKeyId, secretAccessKey },
+        // Since @aws-sdk/client-s3 3.729.0 the SDK sends `x-amz-checksum-crc32`
+        // on every PutObject by default. R2 does not implement those checksum
+        // headers and rejects the request (501 NotImplemented), which surfaced
+        // as a plain 500 "Internal server error" for every upload. R2's own
+        // docs ask for this pair of flags when using aws-sdk-js v3.
+        requestChecksumCalculation: 'WHEN_REQUIRED',
+        responseChecksumValidation: 'WHEN_REQUIRED',
+      });
       this.clientSecret = secretAccessKey;
     }
     return this.client;

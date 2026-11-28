@@ -414,6 +414,7 @@
   },
   "Floating": {
     "whatsapp": "Chat on WhatsApp",
-    "ai": "Ask our AI Assistant"
+    "ai": "Ask our AI Assistant",
+    "phone": "Talk to an agent"
   }
 }
