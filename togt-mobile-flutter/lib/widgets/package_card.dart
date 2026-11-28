@@ -16,6 +16,21 @@ class PackageCard extends StatelessWidget {
   final VoidCallback onTap;
   final double? width;
 
+  /// Height this card needs at the current text scale: the fixed 150px image plus
+  /// the title/meta block. Callers that place the card in a fixed-height tile
+  /// (grid or horizontal list) must size it with this, otherwise a larger
+  /// accessibility text size overflows the card by a few pixels.
+  static double heightFor(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    double lineHeight(TextStyle style) =>
+        scaler.scale(style.fontSize ?? 14) * (style.height ?? 1);
+    final title = lineHeight(TOGTTypography.h3);
+    final meta = lineHeight(TOGTTypography.small);
+    final durationChip = meta + 6; // chip has 3px vertical padding each side
+    const chrome = 150 + 12 + 4 + 14; // image, padding 12/14, 4px title gap
+    return chrome + title + (durationChip > meta ? durationChip : meta) + 32;
+  }
+
   @override
   Widget build(BuildContext context) {
     final card = ClipRRect(
@@ -84,20 +99,35 @@ class PackageCard extends StatelessWidget {
                         ),
                         if (package.duration != null) ...[
                           const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: TOGTColors.blue.withOpacity(.08),
-                              borderRadius: BorderRadius.circular(20),
+                          Flexible(
+                            // The duration chip keeps its natural width while it
+                            // fits and only then lets the text ellipsize. Without
+                            // this it is a fixed-size child that can grow wider
+                            // than the card and overflow past the right edge.
+                            flex: 100,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: TOGTColors.blue.withOpacity(.08),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                Icon(Icons.calendar_today_rounded,
+                                    size: 11, color: TOGTColors.blue),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  // Without this the text gets an unbounded width
+                                  // (non-flex Row children are laid out unconstrained)
+                                  // so the ellipsis never applies and the inner row
+                                  // overflows the chip's allocated width.
+                                  child: Text(package.duration!,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TOGTTypography.small
+                                          .copyWith(color: TOGTColors.blue)),
+                                ),
+                              ]),
                             ),
-                            child: Row(children: [
-                              Icon(Icons.calendar_today_rounded,
-                                  size: 11, color: TOGTColors.blue),
-                              const SizedBox(width: 4),
-                              Text(package.duration!,
-                                  style: TOGTTypography.small
-                                      .copyWith(color: TOGTColors.blue)),
-                            ]),
                           ),
                         ],
                       ],
@@ -111,9 +141,14 @@ class PackageCard extends StatelessWidget {
       ),
     );
 
-    return width == null
-        ? card
-        : SizedBox(width: width, child: card);
+    final maxH = PackageCard.heightFor(context);
+    return ClipRect(
+      child: SizedBox(
+        height: maxH,
+        width: width,
+        child: card,
+      ),
+    );
   }
 
   static IconData _iconFor(PackageType t) {

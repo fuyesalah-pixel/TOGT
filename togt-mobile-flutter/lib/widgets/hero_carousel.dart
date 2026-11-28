@@ -120,8 +120,17 @@ class _HeroCarouselState extends State<HeroCarousel>
                               tween: Tween(begin: active ? 0 : 0.001, end: active ? 1 : 1),
                               duration: const Duration(milliseconds: 500),
                               curve: Curves.easeOutBack,
-                              builder: (_, v, child) =>
-                                  Transform.translate(offset: Offset(0, 20 * (1 - v)), child: Opacity(opacity: v, child: child)),
+                              builder: (_, v, child) {
+                                // easeOutBack overshoots above 1.0, but Opacity
+                                // asserts 0..1 — an unclamped value throws and
+                                // paints the red debug error box over the slide
+                                // exactly when a page re-activates (e.g. the
+                                // wrap from the last slide back to the first).
+                                final t = v.clamp(0.0, 1.0);
+                                return Transform.translate(
+                                    offset: Offset(0, 20 * (1 - t)),
+                                    child: Opacity(opacity: t, child: child));
+                              },
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
