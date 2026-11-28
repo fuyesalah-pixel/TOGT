@@ -315,5 +315,9 @@
   "tasbih": "ተስቢሕ",
   "paymentNotSetYet": "ክፍያው ገና አልተወሰነም — ወጪዎን እስኪያወስን እባክዎ ይጠብቁ።",
   "reviewSubmittedThanks": "እናመሰግናለን! ግምገማዎ ተልኳል።",
-  "reviewSubmittedNoPhotos": "እናመሰግናለን! ግምገማዎ ተልኳል፣ ነገር ግን {count} ፎቶዎች መላክ አልተቻሉም።"
+  "reviewSubmittedNoPhotos": "እናመሰግናለን! ግምገማዎ ተልኳል፣ ነገር ግን {count} ፎቶዎች መላክ አልተቻሉም።",
+  "deleteAccount": "መለያዬን ሰርዝ",
+  "deleteAccountLink": "የመለያ ሰርዝ ጥያቄ ገፅን ክፈት",
+  "deleteAccountTitle": "መለያዎን ሰርዝ",
+  "deleteAccountSubtitle": "መለያዎን እና ሁሉም የግል ውስጥ የሆኑ ውሂቦችን በቂጠር ሰርዝ"
 }

@@ -322,5 +322,9 @@
   "tasbih": "Tasbih",
   "paymentNotSetYet": "The payment was not set yet — please wait for our team to set your cost.",
   "reviewSubmittedThanks": "Thank you! Your review has been submitted.",
-  "reviewSubmittedNoPhotos": "Thank you! Your review was submitted, but {count} photo(s) could not be uploaded."
+  "reviewSubmittedNoPhotos": "Thank you! Your review was submitted, but {count} photo(s) could not be uploaded.",
+  "deleteAccount": "Delete my account",
+  "deleteAccountLink": "Open account deletion request page",
+  "deleteAccountTitle": "Delete Your Account",
+  "deleteAccountSubtitle": "Permanently delete your account and all personal data"
 }

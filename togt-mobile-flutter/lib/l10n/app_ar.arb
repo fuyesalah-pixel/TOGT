@@ -315,5 +315,9 @@
   "tasbih": "المسبحة",
   "paymentNotSetYet": "لم يتم تحديد المبلغ بعد — يرجى انتظار فريقنا لتحديد التكلفة.",
   "reviewSubmittedThanks": "شكرًا لك! تم إرسال تقييمك.",
-  "reviewSubmittedNoPhotos": "شكرًا لك! تم إرسال تقييمك، لكن تعذر رفع {count} من الصور."
+  "reviewSubmittedNoPhotos": "شكرًا لك! تم إرسال تقييمك، لكن تعذر رفع {count} من الصور.",
+  "deleteAccount": "حذف حسابي",
+  "deleteAccountLink": "فتح صفحة طلب حذف الحساب",
+  "deleteAccountTitle": "حذف حسابك",
+  "deleteAccountSubtitle": "حذف حسابك وجميع بياناتك الشخصية نهائيًا"
 }

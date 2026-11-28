@@ -104,6 +104,8 @@ class _AllPackagesScreenState extends State<AllPackagesScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final cardExtent = PackageCard.heightFor(context);
+    debugPrint('CARD_EXTENT=$cardExtent loading=$_loading count=${_filtered.length} err=$_error');
     final body = RefreshIndicator(
       color: TOGTColors.orange,
       onRefresh: () => _load(force: true),
@@ -156,14 +158,14 @@ class _AllPackagesScreenState extends State<AllPackagesScreen>
               padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverGrid(
                 delegate: SliverChildBuilderDelegate(
-                  (_, __) => const ShimmerPackageCard(width: double.infinity),
+                  (_, __) => const ShimmerPackageCard(width: 260),
                   childCount: 4,
                 ),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     mainAxisSpacing: 14,
                     crossAxisSpacing: 14,
-                    mainAxisExtent: 225),
+                    mainAxisExtent: cardExtent),
               ),
             )
           else if (_error != null)
@@ -196,11 +198,11 @@ else if (_filtered.isEmpty)
                   },
                   childCount: _filtered.length,
                 ),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     mainAxisSpacing: 14,
                     crossAxisSpacing: 14,
-                    mainAxisExtent: 235),
+                    mainAxisExtent: cardExtent),
               ),
             ),
         ],

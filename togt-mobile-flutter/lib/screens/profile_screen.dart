@@ -96,7 +96,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _MenuCard(children: [
              _MenuItem(icon: Icons.notifications_none_rounded, label: l10n.notifications, onTap: () => _push(context, const NotificationsScreen())),
              _MenuItem(icon: Icons.settings_outlined, label: l10n.settings, onTap: () => _push(context, const SettingsScreen())),
-             _MenuItem(icon: Icons.delete_forever_outlined, label: 'Delete my account', onTap: () => _push(context, const DeleteAccountScreen())),
+                           _MenuItem(icon: Icons.delete_forever_outlined, label: l10n.deleteAccount, onTap: () => _push(context, const DeleteAccountScreen())),
              _MenuItem(icon: Icons.language_rounded, label: l10n.language, trailing: l10n.english, onTap: () => _language(context)),
              // Help & Support goes straight to the live human support chat.
              _MenuItem(icon: Icons.support_agent_rounded, label: l10n.helpSupport, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatScreen(human: true)))),

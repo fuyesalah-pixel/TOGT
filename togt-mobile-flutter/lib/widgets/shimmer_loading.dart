@@ -33,42 +33,46 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _c,
-      builder: (context, child) {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(widget.borderRadius),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Container(color: TOGTColors.lightGrey.withOpacity(.55)),
-              Positioned(
-                left: -(widget.width ?? 300),
-                top: 0,
-                bottom: 0,
-                width: (widget.width ?? 300) * .9,
-                child: Transform.translate(
-                  offset: Offset(_c.value * ((widget.width ?? 300) * 2.2), 0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: [
-                          Colors.transparent,
-                          Colors.white.withOpacity(.75),
-                          Colors.transparent,
-                        ],
+    return SizedBox(
+      width: widget.width,
+      height: widget.height,
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, child) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Container(color: TOGTColors.lightGrey.withOpacity(.55)),
+                Positioned(
+                  left: -(widget.width ?? 300),
+                  top: 0,
+                  bottom: 0,
+                  width: (widget.width ?? 300) * .9,
+                  child: Transform.translate(
+                    offset: Offset(_c.value * ((widget.width ?? 300) * 2.2), 0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [
+                            Colors.transparent,
+                            Colors.white.withOpacity(.75),
+                            Colors.transparent,
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              if (widget.child != null) widget.child!,
-            ],
-          ),
-        );
-      },
+                if (widget.child != null) widget.child!,
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }

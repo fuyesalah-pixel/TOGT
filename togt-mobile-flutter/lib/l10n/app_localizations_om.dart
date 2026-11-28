@@ -1002,4 +1002,17 @@ class AppLocalizationsOm extends AppLocalizations {
   String reviewSubmittedNoPhotos(Object count) {
     return 'Galatoomi! Ilbaaxsi kee ergameera, garuu suufii $count hin olkaa\'inne.';
   }
+
+  @override
+  String get deleteAccount => 'Hojii koo qabxii';
+
+  @override
+  String get deleteAccountLink => 'Maqaa kaarii qabxii galo';
+
+  @override
+  String get deleteAccountTitle => 'Hojii kee qabxii';
+
+  @override
+  String get deleteAccountSubtitle =>
+      'Hojii kee fi odeeffannoo kaffaltii jiru dabalataan qabxii';
 }

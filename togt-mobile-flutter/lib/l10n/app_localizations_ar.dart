@@ -995,4 +995,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String reviewSubmittedNoPhotos(Object count) {
     return 'شكرًا لك! تم إرسال تقييمك، لكن تعذر رفع $count من الصور.';
   }
+
+  @override
+  String get deleteAccount => 'حذف حسابي';
+
+  @override
+  String get deleteAccountLink => 'فتح صفحة طلب حذف الحساب';
+
+  @override
+  String get deleteAccountTitle => 'حذف حسابك';
+
+  @override
+  String get deleteAccountSubtitle => 'حذف حسابك وجميع بياناتك الشخصية نهائيًا';
 }

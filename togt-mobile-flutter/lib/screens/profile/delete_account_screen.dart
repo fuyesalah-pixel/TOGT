@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../navigation/app_navigator.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
@@ -69,6 +70,8 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Delete my account')),
       body: ListView(
@@ -133,12 +136,114 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
             'with the subject "Delete my account".',
             style: TOGTTypography.small,
           ),
+          const SizedBox(height: 24),
+          // Link to the self-service deletion request form (opens the browser).
+          TextButton.icon(
+            onPressed: _openDeletionRequestForm,
+            icon: const Icon(Icons.open_in_new, size: 18),
+            label: Text(l10n.deleteAccountLink),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'The request form opens your browser to the Google Data Safety request screen. '
+            'It is the same endpoint your account deletion request is sent to.',
+            style: TOGTTypography.small.copyWith(color: Colors.grey.shade500),
+          ),
         ],
       ),
     );
   }
+
+  // ---------------------------------------------------- deletion request form
+  // The app deletes the account immediately when the user confirms.
+  // Play's Data safety form instead points to a *request* form (below), which
+  // walks the user through the exact steps Google asks for, then the app
+  // performs the deletion. Both endpoints point at the same backend URL.
+  Future<void> _openDeletionRequestForm() async {
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetCtx) {
+        final l10n = AppLocalizations.of(sheetCtx);
+        return Padding(
+          padding: EdgeInsets.fromLTRB(22, 22 + MediaQuery.of(sheetCtx).viewPadding.top, 22, 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.delete_forever_rounded, size: 28, color: TOGTColors.red),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(l10n.deleteAccountTitle, style: TOGTTypography.h3)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.deleteAccountSubtitle,
+                style: TOGTTypography.body.copyWith(color: Colors.grey.shade700),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('How deletion works', style: TOGTTypography.body.copyWith(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 8),
+                    ...[
+                      'Your name, email, phone, address, birthday, nationality and passport details are erased.',
+                      'Your passport/ID scans, profile photo, review photos and chat attachments are deleted.',
+                      'Your chat messages, reviews, notifications, saved devices and location history are removed.',
+                      'All sessions are revoked and you are signed out everywhere it was used.',
+                    ].map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('• ', style: TextStyle(color: TOGTColors.orange, fontWeight: FontWeight.w800)),
+                          Expanded(child: Text(item, style: TOGTTypography.small)),
+                        ],
+                      ),
+                    )).toList(),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text('Or request it another way', style: TOGTTypography.body.copyWith(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 6),
+              Text(
+                'Send a request from your registered address to info@togttrading.com with the subject “Delete my account”. '
+                'A TOGT specialist will confirm with you before the account is deleted.',
+                style: TOGTTypography.small.copyWith(color: Colors.grey.shade700),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () {
+                  _openDeletionRequestForm();
+                },
+                icon: const Icon(Icons.open_in_new, size: 18),
+                label: Text(l10n.deleteAccountLink),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'The request form opens your browser to the Google Data Safety request screen. '
+                'It is the same endpoint your account deletion request is sent to.',
+                style: TOGTTypography.small.copyWith(color: Colors.grey.shade500),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
+// ---------------------------------------------------- deletion assistance bullet
 class _Bullet extends StatelessWidget {
   const _Bullet(this.text);
   final String text;

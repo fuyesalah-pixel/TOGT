@@ -984,4 +984,16 @@ class AppLocalizationsAm extends AppLocalizations {
   String reviewSubmittedNoPhotos(Object count) {
     return 'እናመሰግናለን! ግምገማዎ ተልኳል፣ ነገር ግን $count ፎቶዎች መላክ አልተቻሉም።';
   }
+
+  @override
+  String get deleteAccount => 'መለያዬን ሰርዝ';
+
+  @override
+  String get deleteAccountLink => 'የመለያ ሰርዝ ጥያቄ ገፅን ክፈት';
+
+  @override
+  String get deleteAccountTitle => 'መለያዎን ሰርዝ';
+
+  @override
+  String get deleteAccountSubtitle => 'መለያዎን እና ሁሉም የግል ውስጥ የሆኑ ውሂቦችን በቂጠር ሰርዝ';
 }

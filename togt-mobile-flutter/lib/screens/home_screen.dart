@@ -70,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildFeatured(List<TPackage> featured) {
     if (packages == null) {
       return SizedBox(
-        height: 220,
+        height: PackageCard.heightFor(context),
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           itemCount: 3,
@@ -81,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     if (error != null) return _ErrorPanel(message: error!, onRetry: _load);
     return SizedBox(
-      height: 235,
+      height: PackageCard.heightFor(context),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: featured.length,

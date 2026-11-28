@@ -1004,4 +1004,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String reviewSubmittedNoPhotos(Object count) {
     return 'Thank you! Your review was submitted, but $count photo(s) could not be uploaded.';
   }
+
+  @override
+  String get deleteAccount => 'Delete my account';
+
+  @override
+  String get deleteAccountLink => 'Open account deletion request page';
+
+  @override
+  String get deleteAccountTitle => 'Delete Your Account';
+
+  @override
+  String get deleteAccountSubtitle =>
+      'Permanently delete your account and all personal data';
 }

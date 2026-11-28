@@ -1,7 +1,7 @@
 ﻿name: togt_mobile_app
 description: "TOGT Tour & Travel â€” native mobile app."
 publish_to: 'none'
-version: 1.4.3+12
+version: 1.4.3+13
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -54,6 +54,6 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/logo/togt_mobile_logo.jpg
-  adaptive_icon_background: "#1F67B1"
-  adaptive_icon_foreground: assets/logo/togt_mobile_logo.jpg
+  image_path: assets/logo/TOGT_app_icon_1024_white.png
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/logo/TOGT_app_icon_1024_white_padded.png

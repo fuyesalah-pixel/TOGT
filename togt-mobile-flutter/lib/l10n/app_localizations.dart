@@ -1955,6 +1955,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Thank you! Your review was submitted, but {count} photo(s) could not be uploaded.'**
   String reviewSubmittedNoPhotos(Object count);
+
+  /// No description provided for @deleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete my account'**
+  String get deleteAccount;
+
+  /// No description provided for @deleteAccountLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Open account deletion request page'**
+  String get deleteAccountLink;
+
+  /// No description provided for @deleteAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Your Account'**
+  String get deleteAccountTitle;
+
+  /// No description provided for @deleteAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently delete your account and all personal data'**
+  String get deleteAccountSubtitle;
 }
 
 class _AppLocalizationsDelegate

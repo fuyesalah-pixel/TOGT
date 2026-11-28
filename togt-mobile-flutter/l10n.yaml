@@ -3,4 +3,6 @@ template-arb-file: app_en.arb
 output-localization-file: app_localizations.dart
 output-class: AppLocalizations
 nullable-getter: false
-synthetic-package: false
+# Flutter 3.47 removed "synthetic-package"; the generated files must live in
+# lib/l10n because the app imports them with relative paths.
+output-dir: lib/l10n

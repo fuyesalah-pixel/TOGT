@@ -308,5 +308,9 @@
   "tasbih": "Tasbihaa",
   "paymentNotSetYet": "Kaffaalni amma hin qindaa'in — maaloo gatiin kee qindaa'uuf karaa timma eegadhu.",
   "reviewSubmittedThanks": "Galatoomi! Ilbaaxsi kee ergameera.",
-  "reviewSubmittedNoPhotos": "Galatoomi! Ilbaaxsi kee ergameera, garuu suufii {count} hin olkaa'inne."
+  "reviewSubmittedNoPhotos": "Galatoomi! Ilbaaxsi kee ergameera, garuu suufii {count} hin olkaa'inne.",
+  "deleteAccount": "Hojii koo qabxii",
+  "deleteAccountLink": "Maqaa kaarii qabxii galo",
+  "deleteAccountTitle": "Hojii kee qabxii",
+  "deleteAccountSubtitle": "Hojii kee fi odeeffannoo kaffaltii jiru dabalataan qabxii"
 }

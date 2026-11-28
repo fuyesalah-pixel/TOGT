@@ -12,7 +12,12 @@ class PackageService {
   Future<List<TPackage>> fetchPackages({bool forceRefresh = false}) async {
     if (!forceRefresh && _cache.isNotEmpty) return _cache;
     final data = await ApiService.instance.get('/packages');
-    final list = (data is List ? data : (data['items'] ?? data['data'] ?? [])) as List<dynamic>;
+    final raw = data is List
+        ? data
+        : (data is Map
+            ? (data['packages'] ?? data['results'] ?? data['content'] ?? data['items'] ?? data['data'] ?? [])
+            : []);
+    final list = raw as List<dynamic>;
     _cache = list.map((e) => TPackage.fromJson(e as Map<String, dynamic>)).toList();
     return _cache;
   }
